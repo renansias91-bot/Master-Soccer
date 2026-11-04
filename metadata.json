@@ -1,0 +1,8 @@
+{
+  "name": "Remix BaseFC - Gestão e Avaliação de Atletas",
+  "description": "Sistema de controle e avaliação de atletas para categorias de base de futebol (Sub-15, Sub-16 e Sub-17) com análise técnica, tática, física, mental, disciplinar e relatórios de temporada.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
