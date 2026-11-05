@@ -7,26 +7,56 @@ export interface BeforeInstallPromptEvent extends Event {
 
 export function usePWAInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
+  
+  // Verifica se já está instalado usando window.matchMedia('(display-mode: standalone)').matches
+  const [isInstalled, setIsInstalled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
+      document.referrer.startsWith('android-app://')
+    );
+  });
 
   useEffect(() => {
-    // Detecta se já está rodando em modo standalone (PWA instalado)
-    const isStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-    setIsInstalled(isStandalone);
+    const checkIsInstalled = () => {
+      const standalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
+        document.referrer.startsWith('android-app://');
+      
+      setIsInstalled(standalone);
+      if (standalone) {
+        setDeferredPrompt(null);
+      }
+    };
 
-    // Detecta dispositivo iOS (Safari não dispara beforeinstallprompt)
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIOSDevice = /iphone|ipad|ipod/.test(userAgent);
-    setIsIOS(isIOSDevice);
+    checkIsInstalled();
 
+    // Escuta alterações na media query (display-mode: standalone)
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleMediaChange = (e: MediaQueryListEvent) => {
+      if (e.matches) {
+        setIsInstalled(true);
+        setDeferredPrompt(null);
+      }
+    };
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleMediaChange);
+    }
+
+    // Escuta evento beforeinstallprompt (só dispara se NÃO estiver instalado)
     const handleBeforeInstallPrompt = (e: Event) => {
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        setIsInstalled(true);
+        setDeferredPrompt(null);
+        return;
+      }
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
 
+    // Escuta evento appinstalled para esconder imediatamente o botão
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
@@ -36,6 +66,9 @@ export function usePWAInstall() {
     window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleMediaChange);
+      }
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
@@ -43,12 +76,16 @@ export function usePWAInstall() {
 
   const install = async () => {
     if (!deferredPrompt) return false;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstalled(true);
-      setDeferredPrompt(null);
-      return true;
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+        setDeferredPrompt(null);
+        return true;
+      }
+    } catch (err) {
+      console.warn('Erro ao disparar prompt de instalação:', err);
     }
     return false;
   };
@@ -56,7 +93,8 @@ export function usePWAInstall() {
   return {
     isInstallable: !!deferredPrompt,
     isInstalled,
-    isIOS,
+    isIOS: typeof window !== 'undefined' ? /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase()) : false,
     install,
   };
+
 }

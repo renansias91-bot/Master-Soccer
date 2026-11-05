@@ -265,7 +265,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans w-full max-w-[100vw] overflow-x-hidden box-border">
       {/* Toast Notification */}
       {toastMensagem && (
         <div className="fixed bottom-20 sm:bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xl border border-slate-700 dark:border-slate-200 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3 duration-200">
@@ -275,14 +275,14 @@ export default function App() {
       )}
 
       {/* Top Bar Contract (1 Row, 3 Zones: Brand - Nav - Action) */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 no-print">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-8">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 no-print w-full max-w-[100vw] overflow-x-hidden box-border">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 md:gap-8 w-full max-w-full box-border">
           {/* Zone 1: Brand Wordmark & Escudo Oficial Master Soccer */}
           <div
             onClick={() => setAbaAtiva('painel')}
-            className="flex items-center gap-3 cursor-pointer whitespace-nowrap shrink-0 group select-none"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer whitespace-nowrap shrink-0 group select-none min-w-0"
           >
-            <MasterSoccerEscudo size={42} className="group-hover:scale-105 transition-transform drop-shadow-xs" />
+            <MasterSoccerEscudo size={40} className="group-hover:scale-105 transition-transform drop-shadow-xs shrink-0" />
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
@@ -355,46 +355,49 @@ export default function App() {
           </nav>
 
           {/* Zone 3: Primary Action & Menu */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Selinho ONLINE / OFFLINE (Requisito 2) */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Selinho ONLINE / OFFLINE */}
             {isOnline ? (
               <span
                 title="Conectado à internet. Sincronização em tempo real com o Firebase ativa."
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 ONLINE
               </span>
             ) : (
               <span
                 title="Sem conexão com a internet. Modo offline ativo com persistência IndexedDB."
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300 dark:border-orange-800 shrink-0 animate-pulse"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300 dark:border-orange-800 shrink-0 animate-pulse"
               >
-                <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500 shrink-0" />
                 OFFLINE
               </span>
             )}
 
-            {/* Botão Instalar App (Requisito 3) */}
-            <button
-              onClick={handleInstalarApp}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 rounded-xl transition-all shadow-xs shrink-0"
-              title="Instalar Master Soccer RJ no seu celular ou computador"
-            >
-              <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span className="hidden sm:inline">Instalar App</span>
-              <span className="sm:hidden">Instalar</span>
-            </button>
+            {/* Botão Instalar App: Só aparece se ainda NÃO estiver instalado e se o beforeinstallprompt estiver disponível */}
+            {!isInstalled && isInstallable && (
+              <button
+                onClick={handleInstalarApp}
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 rounded-xl transition-all shadow-xs shrink-0"
+                title="Instalar Master Soccer RJ no seu celular ou computador"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="hidden sm:inline">Instalar App</span>
+                <span className="sm:hidden">Instalar</span>
+              </button>
+            )}
 
             {/* Botão de Nova Avaliação (Azul Master Soccer com detalhe Dourado) */}
             <button
               onClick={() => handleAbrirNovaAvaliacao()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all whitespace-nowrap shrink-0 border border-blue-500/30"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all whitespace-nowrap shrink-0 border border-blue-500/30"
             >
-              <Plus className="w-4 h-4 text-amber-300" />
+              <Plus className="w-4 h-4 text-amber-300 shrink-0" />
               <span className="hidden sm:inline">Avaliar Jogo</span>
               <span className="sm:hidden">Avaliar</span>
             </button>
+
 
 
             {/* Configurações / Backup Dropdown */}
@@ -452,7 +455,7 @@ export default function App() {
       </header>
 
       {/* Conteúdo Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 max-w-[100vw] overflow-x-hidden box-border">
         {abaAtiva === 'painel' && (
           <PainelGeral
             atletas={atletas}
@@ -512,7 +515,8 @@ export default function App() {
       </main>
 
       {/* Mobile Bottom Navigation Bar (Pattern from references/10_mobile_touch_apps.md) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 no-print">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 no-print w-full max-w-[100vw] overflow-x-hidden box-border">
+
         <div className="grid grid-cols-4 items-center h-14">
           <button
             onClick={() => setAbaAtiva('painel')}
