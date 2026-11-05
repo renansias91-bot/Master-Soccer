@@ -60,39 +60,30 @@ export default function App() {
   const [toastMensagem, setToastMensagem] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Carrega dados iniciais do LocalStorage e sincroniza com Firebase Firestore
+  // Carrega dados e sincroniza via onSnapshot do Firestore (fonte única da lista de atletas)
   useEffect(() => {
-    // 1. Carregamento instantâneo do armazenamento local para zero atraso
-    const atlsLocais = storageService.getAtletas();
-    const avsLocais = storageService.getAvaliacoes();
-    const catsLocais = storageService.getCategorias();
-    setAtletas(atlsLocais);
-    setAvaliacoes(avsLocais);
-    setCategorias(catsLocais);
+    // 1. Escuta em tempo real a coleção 'athletes' do Firestore
+    const unsubscribe = firebaseService.observarDados(
+      (novosAtletas) => {
+        setAtletas(novosAtletas);
+        storageService.salvarAtletas(novosAtletas);
+      },
+      (novasAvaliacoes) => {
+        setAvaliacoes(novasAvaliacoes);
+        storageService.salvarAvaliacoes(novasAvaliacoes);
+      }
+    );
 
-    // 2. Busca dados do Firestore (prioritário ao abrir o app)
-    async function inicializarFirebase() {
+    // 2. Se a coleção 'athletes' estiver vazia pela primeira vez, semeia os atletas iniciais no Firestore
+    async function inicializarAtletasNoFirestore() {
       try {
         const dadosRemotos = await firebaseService.buscarDados();
-
-        if (dadosRemotos.atletas.length > 0) {
-          setAtletas(dadosRemotos.atletas);
-          storageService.salvarAtletas(dadosRemotos.atletas);
-        } else if (atlsLocais.length > 0) {
-          // Se o Firestore estiver vazio pela primeira vez, sincroniza os atletas iniciais
-          for (const atl of atlsLocais) {
-            await firebaseService.salvarAtleta(atl).catch(() => {});
-          }
-        }
-
-        if (dadosRemotos.avaliacoes.length > 0) {
-          setAvaliacoes(dadosRemotos.avaliacoes);
-          storageService.salvarAvaliacoes(dadosRemotos.avaliacoes);
-        } else if (avsLocais.length > 0) {
-          // Popula avaliações de exemplo no Firestore caso vazio
-          for (const av of avsLocais) {
-            const atleta = atlsLocais.find((a) => a.id === av.atletaId);
-            await firebaseService.salvarAvaliacao(av, atleta?.nome).catch(() => {});
+        if (dadosRemotos.atletas.length === 0) {
+          const atlsLocais = storageService.getAtletas();
+          if (atlsLocais.length > 0) {
+            for (const atl of atlsLocais) {
+              await firebaseService.cadastrarAtleta(atl).catch(() => {});
+            }
           }
         }
       } catch (err) {
@@ -100,23 +91,7 @@ export default function App() {
       }
     }
 
-    inicializarFirebase();
-
-    // 3. Ouvinte em tempo real: sincroniza automaticamente quando a internet volta
-    const unsubscribe = firebaseService.observarDados(
-      (novosAtletas) => {
-        if (novosAtletas.length > 0) {
-          setAtletas(novosAtletas);
-          storageService.salvarAtletas(novosAtletas);
-        }
-      },
-      (novasAvaliacoes) => {
-        if (novasAvaliacoes.length > 0) {
-          setAvaliacoes(novasAvaliacoes);
-          storageService.salvarAvaliacoes(novasAvaliacoes);
-        }
-      }
-    );
+    inicializarAtletasNoFirestore();
 
     return () => {
       unsubscribe();
@@ -128,39 +103,46 @@ export default function App() {
     setTimeout(() => setToastMensagem(null), 3500);
   };
 
-  // Handlers para Atletas (Salva localmente + Firestore)
+  // Handlers para Atletas: Salva com await no Firestore SEM setState manual (o onSnapshot atualiza sozinho)
   const handleSalvarAtleta = async (atleta: Atleta) => {
-    storageService.salvarAtleta(atleta);
-    setAtletas(storageService.getAtletas());
-    if (atletaSelecionado && atletaSelecionado.id === atleta.id) {
-      setAtletaSelecionado(atleta);
-    }
     try {
-      await firebaseService.salvarAtleta(atleta);
-    } catch (e) {
-      console.warn('Atleta gravado offline na fila IndexedDB:', e);
+      if (atletaEditando && atleta.id) {
+        await firebaseService.atualizarAtleta(atleta.id, atleta);
+      } else {
+        // Cadastra com addDoc(collection(db, 'athletes'), ...)
+        await firebaseService.cadastrarAtleta(atleta);
+      }
+      // NÃO dá setState manual: o onSnapshot do Firestore atualiza sozinho a lista de atletas!
+      if (atletaSelecionado && atletaSelecionado.id === atleta.id) {
+        setAtletaSelecionado(atleta);
+      }
+      exibirToast(`Atleta ${atleta.nome.split(' ')[0]} salvo com sucesso no Firestore!`);
+    } catch (e: any) {
+      console.error('Erro ao salvar atleta no Firestore:', e);
+      alert(e?.message || 'Erro ao salvar atleta no Firestore');
+      throw e; // Lança para que o AtletaModal capture e exiba sem fechar
     }
-    exibirToast(`Atleta ${atleta.nome.split(' ')[0]} salvo com sucesso!`);
   };
 
+  // Excluir atleta: usa deleteDoc(doc(db, 'athletes', id)) SEM setState manual (o onSnapshot atualiza sozinho)
   const handleExcluirAtleta = async (id: string) => {
     const atleta = atletas.find((a) => a.id === id);
     if (window.confirm(`Tem certeza que deseja excluir o atleta ${atleta?.nome || ''}?`)) {
-      storageService.excluirAtleta(id);
-      setAtletas(storageService.getAtletas());
-      setAvaliacoes(storageService.getAvaliacoes());
-      if (atletaSelecionado && atletaSelecionado.id === id) {
-        setAtletaSelecionado(null);
-        setAbaAtiva('plantel');
-      }
       try {
         await firebaseService.excluirAtleta(id);
-      } catch (e) {
-        console.warn('Exclusão enfileirada no modo offline:', e);
+        // NÃO dá setState manual: o onSnapshot do Firestore remove sozinho!
+        if (atletaSelecionado && atletaSelecionado.id === id) {
+          setAtletaSelecionado(null);
+          setAbaAtiva('plantel');
+        }
+        exibirToast('Atleta removido com sucesso do Firestore.');
+      } catch (e: any) {
+        console.error('Erro ao excluir atleta:', e);
+        alert(`Erro ao excluir atleta do Firestore: ${e?.message || e}`);
       }
-      exibirToast('Atleta e histórico removidos com sucesso.');
     }
   };
+
 
   const handleAbrirEditarAtleta = (atleta: Atleta) => {
     setAtletaEditando(atleta);

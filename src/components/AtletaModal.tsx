@@ -5,7 +5,7 @@ import { Atleta, CategoriaBase, PernaDominante, PosicaoAtleta, StatusAtleta } fr
 interface AtletaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (atleta: Atleta) => void;
+  onSave: (atleta: Atleta) => Promise<void> | void;
   atletaEditando?: Atleta | null;
   categoriasDisponiveis: string[];
   categoriaPadrao?: string;
@@ -45,6 +45,7 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
   const [status, setStatus] = useState<StatusAtleta>('Ativo');
   const [fotoUrl, setFotoUrl] = useState('');
   const [erro, setErro] = useState('');
+  const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
     if (atletaEditando) {
@@ -71,36 +72,62 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
       setFotoUrl('');
     }
     setErro('');
+    setSalvando(false);
   }, [atletaEditando, isOpen, categoriaPadrao]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome.trim()) {
       setErro('Por favor, informe o nome completo do atleta.');
       return;
     }
 
+    // Monta o objeto SEM nenhum campo undefined ou null para o Firestore não rejeitar
     const atletaSalvo: Atleta = {
-      id: atletaEditando ? atletaEditando.id : `atl-${Date.now()}`,
+      id: atletaEditando ? atletaEditando.id : '',
       nome: nome.trim(),
-      apelido: apelido.trim() || undefined,
       categoria,
       posicao,
-      numeroCamisa: atletaEditando?.numeroCamisa,
       dataNascimento,
       pernaDominante,
-      altura: altura ? Number(altura) : undefined,
-      peso: peso ? Number(peso) : undefined,
       status,
       dataCadastro: atletaEditando ? atletaEditando.dataCadastro : new Date().toISOString().split('T')[0],
-      fotoUrl: fotoUrl.trim() || undefined,
     };
 
-    onSave(atletaSalvo);
-    onClose();
+    if (apelido.trim()) {
+      atletaSalvo.apelido = apelido.trim();
+    }
+    if (altura && !isNaN(Number(altura))) {
+      atletaSalvo.altura = Number(altura);
+    }
+    if (peso && !isNaN(Number(peso))) {
+      atletaSalvo.peso = Number(peso);
+    }
+    if (fotoUrl.trim()) {
+      atletaSalvo.fotoUrl = fotoUrl.trim();
+    }
+    if (atletaEditando?.numeroCamisa && !isNaN(Number(atletaEditando.numeroCamisa))) {
+      atletaSalvo.numeroCamisa = Number(atletaEditando.numeroCamisa);
+    }
+
+    setSalvando(true);
+    setErro('');
+
+    try {
+      // Aguarda addDoc terminar no Firestore antes de fechar o modal
+      await onSave(atletaSalvo);
+      onClose();
+    } catch (error: any) {
+      console.error('Erro ao cadastrar atleta:', error);
+      alert(error?.message || 'Erro ao cadastrar atleta no Firestore');
+      setErro(error?.message || 'Erro ao cadastrar atleta no Firestore.');
+    } finally {
+      setSalvando(false);
+    }
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
@@ -305,10 +332,16 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-lg shadow-sm transition-all"
+              disabled={salvando}
+              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-all"
             >
-              {atletaEditando ? 'Salvar Alterações' : 'Cadastrar Atleta'}
+              {salvando
+                ? 'Salvando no Firestore...'
+                : atletaEditando
+                ? 'Salvar Alterações'
+                : 'Cadastrar Atleta'}
             </button>
+
           </div>
         </form>
       </div>

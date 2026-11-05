@@ -19,7 +19,7 @@
         "dataCadastro": { "type": "string" },
         "fotoUrl": { "type": "string" }
       },
-      "required": ["id", "nome", "categoria", "posicao", "status"]
+      "required": ["nome", "categoria", "posicao", "status"]
     },
     "Avaliacao": {
       "title": "Avaliacao",
@@ -43,13 +43,17 @@
         "titular": { "type": "boolean" },
         "resultado": { "type": "string" }
       },
-      "required": ["id", "atletaId", "categoria", "notaGeral", "observacoes"]
+      "required": ["atletaId", "categoria", "notaGeral", "observacoes"]
     }
   },
   "firestore": {
+    "/athletes/{athleteId}": {
+      "schema": "Atleta",
+      "description": "Cadastro e fichas de atletas do clube (coleção athletes)"
+    },
     "/atletas/{atletaId}": {
       "schema": "Atleta",
-      "description": "Cadastro e fichas de atletas do clube"
+      "description": "Cadastro e fichas de atletas do clube (coleção atletas)"
     },
     "/avaliacoes/{avaliacaoId}": {
       "schema": "Avaliacao",
