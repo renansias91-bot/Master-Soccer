@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+
+    <!-- Shield Blue Gradient -->
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="50%" stop-color="#1d4ed8" />
+      <stop offset="100%" stop-color="#1e3a8a" />
+    </linearGradient>
+
+    <!-- Gold Accent Gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#ca8a04" />
+    </linearGradient>
+
+    <!-- Shadow filter -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <!-- Background Base (Rounded Rect) -->
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)" />
+
+  <!-- Subtle Glow -->
+  <circle cx="256" cy="240" r="190" fill="#3b82f6" opacity="0.18" />
+
+  <!-- Shield Outer Border (Gold) -->
+  <path d="M 256 50 
+           C 350 50, 420 75, 420 100
+           C 420 280, 360 380, 256 460
+           C 152 380, 92 280, 92 100
+           C 92 75, 162 50, 256 50 Z"
+        fill="url(#goldGrad)"
+        filter="url(#dropShadow)" />
+
+  <!-- Shield Inner Body (Blue) -->
+  <path d="M 256 62 
+           C 342 62, 406 85, 406 108
+           C 406 272, 350 366, 256 442
+           C 162 366, 106 272, 106 108
+           C 106 85, 170 62, 256 62 Z"
+        fill="url(#shieldGrad)" />
+
+  <!-- Inner Gold Stroke Border -->
+  <path d="M 256 74 
+           C 334 74, 392 95, 392 116
+           C 392 264, 340 352, 256 424
+           C 172 352, 120 264, 120 116
+           C 120 95, 178 74, 256 74 Z"
+        fill="none"
+        stroke="url(#goldGrad)"
+        stroke-width="3"
+        stroke-dasharray="8 4"
+        opacity="0.6" />
+
+  <!-- Top Star (Gold) -->
+  <polygon points="256,92 263,110 282,110 267,121 272,139 256,128 240,139 245,121 230,110 249,110" 
+           fill="url(#goldGrad)" />
+
+  <!-- Banner Ribbons for MS -->
+  <path d="M 150 160 L 362 160 L 342 270 L 256 295 L 170 270 Z" 
+        fill="#0f172a" 
+        opacity="0.35" />
+
+  <!-- Text "MS" -->
+  <text x="256" y="245" 
+        font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" 
+        font-weight="900" 
+        font-size="94" 
+        text-anchor="middle" 
+        fill="#ffffff" 
+        letter-spacing="2">
+    MS
+  </text>
+
+  <!-- Divider Line (Gold) -->
+  <line x1="180" y1="270" x2="332" y2="270" stroke="url(#goldGrad)" stroke-width="4" stroke-linecap="round" />
+
+  <!-- Text "RJ" -->
+  <text x="256" y="340" 
+        font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" 
+        font-weight="800" 
+        font-size="52" 
+        text-anchor="middle" 
+        fill="url(#goldGrad)" 
+        letter-spacing="6">
+    RJ
+  </text>
+
+  <!-- Soccer Ball Mini Motif at bottom -->
+  <circle cx="256" cy="385" r="14" fill="#ffffff" />
+  <circle cx="256" cy="385" r="14" fill="none" stroke="#0f172a" stroke-width="2" />
+  <polygon points="256,378 261,382 259,388 253,388 251,382" fill="#0f172a" />
+</svg>

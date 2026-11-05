@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "Atleta": {
+      "title": "Atleta",
+      "description": "Atleta de base do Master Soccer RJ",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "apelido": { "type": "string" },
+        "categoria": { "type": "string" },
+        "posicao": { "type": "string" },
+        "numeroCamisa": { "type": "number" },
+        "dataNascimento": { "type": "string" },
+        "pernaDominante": { "type": "string" },
+        "altura": { "type": "number" },
+        "peso": { "type": "number" },
+        "status": { "type": "string" },
+        "dataCadastro": { "type": "string" },
+        "fotoUrl": { "type": "string" }
+      },
+      "required": ["id", "nome", "categoria", "posicao", "status"]
+    },
+    "Avaliacao": {
+      "title": "Avaliacao",
+      "description": "Avaliação pós-jogo do atleta com os 5 pilares fundamentais",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "atletaId": { "type": "string" },
+        "nomeAtleta": { "type": "string" },
+        "categoria": { "type": "string" },
+        "dataJogo": { "type": "string" },
+        "data": { "type": "string" },
+        "nota": { "type": "number" },
+        "notaGeral": { "type": "number" },
+        "observacoes": { "type": "string" },
+        "nomeProfessor": { "type": "string" },
+        "avaliador": { "type": "string" },
+        "adversario": { "type": "string" },
+        "competicao": { "type": "string" },
+        "minutosJogados": { "type": "number" },
+        "titular": { "type": "boolean" },
+        "resultado": { "type": "string" }
+      },
+      "required": ["id", "atletaId", "categoria", "notaGeral", "observacoes"]
+    }
+  },
+  "firestore": {
+    "/atletas/{atletaId}": {
+      "schema": "Atleta",
+      "description": "Cadastro e fichas de atletas do clube"
+    },
+    "/avaliacoes/{avaliacaoId}": {
+      "schema": "Avaliacao",
+      "description": "Avaliações individuais pós-jogo registradas pelos professores"
+    }
+  }
+}

@@ -14,9 +14,15 @@ import {
   CheckCircle2,
   Settings,
   Flame,
+  Wifi,
+  WifiOff,
+  Smartphone,
 } from 'lucide-react';
 import { Atleta, AvaliacaoJogo } from './types';
 import { storageService, CATEGORIAS_PADRAO } from './services/storage';
+import { firebaseService } from './services/firebase';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { usePWAInstall } from './hooks/usePWAInstall';
 import { PainelGeral } from './components/PainelGeral';
 import { PlantelView } from './components/PlantelView';
 import { RelatorioIndividual } from './components/RelatorioIndividual';
@@ -31,6 +37,9 @@ import { MasterSoccerEscudo } from './components/MasterSoccerEscudo';
 type AbaNavegacao = 'painel' | 'plantel' | 'avaliacoes' | 'comparativo' | 'relatorio';
 
 export default function App() {
+  const isOnline = useOnlineStatus();
+  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
+
   const [atletas, setAtletas] = useState<Atleta[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoJogo[]>([]);
   const [categorias, setCategorias] = useState<string[]>(CATEGORIAS_PADRAO);
@@ -47,17 +56,71 @@ export default function App() {
   const [atletaPreSelecionadoId, setAtletaPreSelecionadoId] = useState<string | undefined>();
 
   const [isCategoriasModalOpen, setIsCategoriasModalOpen] = useState(false);
+  const [isInstalarModalOpen, setIsInstalarModalOpen] = useState(false);
   const [toastMensagem, setToastMensagem] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Carrega dados iniciais do LocalStorage
+  // Carrega dados iniciais do LocalStorage e sincroniza com Firebase Firestore
   useEffect(() => {
-    const atls = storageService.getAtletas();
-    const avs = storageService.getAvaliacoes();
-    const cats = storageService.getCategorias();
-    setAtletas(atls);
-    setAvaliacoes(avs);
-    setCategorias(cats);
+    // 1. Carregamento instantâneo do armazenamento local para zero atraso
+    const atlsLocais = storageService.getAtletas();
+    const avsLocais = storageService.getAvaliacoes();
+    const catsLocais = storageService.getCategorias();
+    setAtletas(atlsLocais);
+    setAvaliacoes(avsLocais);
+    setCategorias(catsLocais);
+
+    // 2. Busca dados do Firestore (prioritário ao abrir o app)
+    async function inicializarFirebase() {
+      try {
+        const dadosRemotos = await firebaseService.buscarDados();
+
+        if (dadosRemotos.atletas.length > 0) {
+          setAtletas(dadosRemotos.atletas);
+          storageService.salvarAtletas(dadosRemotos.atletas);
+        } else if (atlsLocais.length > 0) {
+          // Se o Firestore estiver vazio pela primeira vez, sincroniza os atletas iniciais
+          for (const atl of atlsLocais) {
+            await firebaseService.salvarAtleta(atl).catch(() => {});
+          }
+        }
+
+        if (dadosRemotos.avaliacoes.length > 0) {
+          setAvaliacoes(dadosRemotos.avaliacoes);
+          storageService.salvarAvaliacoes(dadosRemotos.avaliacoes);
+        } else if (avsLocais.length > 0) {
+          // Popula avaliações de exemplo no Firestore caso vazio
+          for (const av of avsLocais) {
+            const atleta = atlsLocais.find((a) => a.id === av.atletaId);
+            await firebaseService.salvarAvaliacao(av, atleta?.nome).catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.warn('Conexão inicial com Firestore offline ou em segundo plano:', err);
+      }
+    }
+
+    inicializarFirebase();
+
+    // 3. Ouvinte em tempo real: sincroniza automaticamente quando a internet volta
+    const unsubscribe = firebaseService.observarDados(
+      (novosAtletas) => {
+        if (novosAtletas.length > 0) {
+          setAtletas(novosAtletas);
+          storageService.salvarAtletas(novosAtletas);
+        }
+      },
+      (novasAvaliacoes) => {
+        if (novasAvaliacoes.length > 0) {
+          setAvaliacoes(novasAvaliacoes);
+          storageService.salvarAvaliacoes(novasAvaliacoes);
+        }
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const exibirToast = (msg: string) => {
@@ -65,17 +128,22 @@ export default function App() {
     setTimeout(() => setToastMensagem(null), 3500);
   };
 
-  // Handlers para Atletas
-  const handleSalvarAtleta = (atleta: Atleta) => {
+  // Handlers para Atletas (Salva localmente + Firestore)
+  const handleSalvarAtleta = async (atleta: Atleta) => {
     storageService.salvarAtleta(atleta);
     setAtletas(storageService.getAtletas());
     if (atletaSelecionado && atletaSelecionado.id === atleta.id) {
       setAtletaSelecionado(atleta);
     }
+    try {
+      await firebaseService.salvarAtleta(atleta);
+    } catch (e) {
+      console.warn('Atleta gravado offline na fila IndexedDB:', e);
+    }
     exibirToast(`Atleta ${atleta.nome.split(' ')[0]} salvo com sucesso!`);
   };
 
-  const handleExcluirAtleta = (id: string) => {
+  const handleExcluirAtleta = async (id: string) => {
     const atleta = atletas.find((a) => a.id === id);
     if (window.confirm(`Tem certeza que deseja excluir o atleta ${atleta?.nome || ''}?`)) {
       storageService.excluirAtleta(id);
@@ -84,6 +152,11 @@ export default function App() {
       if (atletaSelecionado && atletaSelecionado.id === id) {
         setAtletaSelecionado(null);
         setAbaAtiva('plantel');
+      }
+      try {
+        await firebaseService.excluirAtleta(id);
+      } catch (e) {
+        console.warn('Exclusão enfileirada no modo offline:', e);
       }
       exibirToast('Atleta e histórico removidos com sucesso.');
     }
@@ -99,17 +172,36 @@ export default function App() {
     setIsAtletaModalOpen(true);
   };
 
-  // Handlers para Avaliações
-  const handleSalvarAvaliacao = (avaliacao: AvaliacaoJogo) => {
+  // Handlers para Avaliações (Salva no Firestore com nome do atleta, categoria, data, nota, observações, nome do professor)
+  const handleSalvarAvaliacao = async (avaliacao: AvaliacaoJogo) => {
     storageService.salvarAvaliacao(avaliacao);
     setAvaliacoes(storageService.getAvaliacoes());
-    exibirToast('Avaliação pós-jogo registrada com sucesso!');
+
+    const atleta = atletas.find((a) => a.id === avaliacao.atletaId);
+    const nomeAtleta = atleta ? atleta.nome : '';
+
+    try {
+      await firebaseService.salvarAvaliacao(avaliacao, nomeAtleta);
+      if (isOnline) {
+        exibirToast('Avaliação salva e sincronizada com o Firebase!');
+      } else {
+        exibirToast('Avaliação salva offline no aparelho! Sincronizará quando online.');
+      }
+    } catch (e) {
+      console.warn('Avaliação salva no cache offline:', e);
+      exibirToast('Avaliação salva no aparelho (modo offline ativo).');
+    }
   };
 
-  const handleExcluirAvaliacao = (id: string) => {
+  const handleExcluirAvaliacao = async (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir esta avaliação de partida?')) {
       storageService.excluirAvaliacao(id);
       setAvaliacoes(storageService.getAvaliacoes());
+      try {
+        await firebaseService.excluirAvaliacao(id);
+      } catch (e) {
+        console.warn('Exclusão salva no cache offline:', e);
+      }
       exibirToast('Avaliação excluída com sucesso.');
     }
   };
@@ -125,6 +217,21 @@ export default function App() {
     setAtletaPreSelecionadoId(avaliacao.atletaId);
     setIsAvaliacaoModalOpen(true);
   };
+
+  // Handler para instalação do PWA
+  const handleInstalarApp = async () => {
+    if (isInstallable) {
+      const instalado = await install();
+      if (instalado) {
+        exibirToast('Master Soccer RJ instalado com sucesso!');
+      }
+    } else if (isInstalled) {
+      exibirToast('O aplicativo Master Soccer RJ já está instalado no seu dispositivo.');
+    } else {
+      setIsInstalarModalOpen(true);
+    }
+  };
+
 
   // Navegações
   const handleAbrirRelatorioAtleta = (atleta: Atleta) => {
@@ -267,6 +374,36 @@ export default function App() {
 
           {/* Zone 3: Primary Action & Menu */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Selinho ONLINE / OFFLINE (Requisito 2) */}
+            {isOnline ? (
+              <span
+                title="Conectado à internet. Sincronização em tempo real com o Firebase ativa."
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                ONLINE
+              </span>
+            ) : (
+              <span
+                title="Sem conexão com a internet. Modo offline ativo com persistência IndexedDB."
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300 dark:border-orange-800 shrink-0 animate-pulse"
+              >
+                <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+                OFFLINE
+              </span>
+            )}
+
+            {/* Botão Instalar App (Requisito 3) */}
+            <button
+              onClick={handleInstalarApp}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 rounded-xl transition-all shadow-xs shrink-0"
+              title="Instalar Master Soccer RJ no seu celular ou computador"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="hidden sm:inline">Instalar App</span>
+              <span className="sm:hidden">Instalar</span>
+            </button>
+
             {/* Botão de Nova Avaliação (Azul Master Soccer com detalhe Dourado) */}
             <button
               onClick={() => handleAbrirNovaAvaliacao()}
@@ -276,6 +413,7 @@ export default function App() {
               <span className="hidden sm:inline">Avaliar Jogo</span>
               <span className="sm:hidden">Avaliar</span>
             </button>
+
 
             {/* Configurações / Backup Dropdown */}
             <div className="relative group">
@@ -472,6 +610,80 @@ export default function App() {
           exibirToast('Categorias atualizadas!');
         }}
       />
+
+      {/* Modal de Instalação do App (PWA) */}
+      {isInstalarModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200 no-print">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
+            <button
+              onClick={() => setIsInstalarModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center p-2 text-white shadow-md">
+                <MasterSoccerEscudo size={36} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Instalar Master Soccer RJ
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Acesso rápido direto da tela inicial, funciona 100% offline
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 my-4 text-xs text-slate-600 dark:text-slate-300">
+              {isIOS ? (
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2">
+                  <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    Como instalar no iPhone ou iPad (Safari):
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1.5 pl-1">
+                    <li>Toque no botão <strong>Compartilhar</strong> (ícone do quadrado com seta para cima) no Safari.</li>
+                    <li>Role para baixo e toque em <strong>Adicionar à Tela de Início</strong>.</li>
+                    <li>Toque em <strong>Adicionar</strong> no topo direito.</li>
+                  </ol>
+                </div>
+              ) : (
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2">
+                  <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    Como instalar no seu celular ou computador:
+                  </div>
+                  <ul className="space-y-1.5 pl-1">
+                    <li>
+                      <strong>Android (Chrome):</strong> Toque no menu (3 pontinhos) e escolha <strong>"Adicionar à tela inicial"</strong> ou <strong>"Instalar aplicativo"</strong>.
+                    </li>
+                    <li>
+                      <strong>Computador (Chrome/Edge):</strong> Clique no ícone de instalar (⭳) localizado no canto direito da barra de endereços do navegador.
+                    </li>
+                  </ul>
+                </div>
+              )}
+
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <span className="text-emerald-800 dark:text-emerald-300 text-[11px] leading-relaxed">
+                  O aplicativo funcionará mesmo no campo sem sinal de internet, sincronizando as avaliações automaticamente com o Firebase assim que reconectar.
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsInstalarModalOpen(false)}
+              className="w-full mt-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-sm"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
