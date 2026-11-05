@@ -31,6 +31,7 @@ import { ComparativoView } from './components/ComparativoView';
 import { AtletaModal } from './components/AtletaModal';
 import { AvaliacaoModal } from './components/AvaliacaoModal';
 import { GerenciarCategoriasModal } from './components/GerenciarCategoriasModal';
+import { ConfirmacaoApagarModal } from './components/ConfirmacaoApagarModal';
 
 import { MasterSoccerEscudo } from './components/MasterSoccerEscudo';
 
@@ -59,6 +60,14 @@ export default function App() {
   const [isInstalarModalOpen, setIsInstalarModalOpen] = useState(false);
   const [toastMensagem, setToastMensagem] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Estado do modal de confirmação de exclusão (SIM / NÃO, sem digitação)
+  const [itemParaExcluir, setItemParaExcluir] = useState<{
+    tipo: 'atleta' | 'avaliacao';
+    id: string;
+    nome?: string;
+  } | null>(null);
+  const [excluindoCarregando, setExcluindoCarregando] = useState(false);
 
   // Carrega dados e sincroniza via onSnapshot do Firestore (fonte única da lista de atletas)
   useEffect(() => {
@@ -124,25 +133,15 @@ export default function App() {
     }
   };
 
-  // Excluir atleta: usa deleteDoc(doc(db, 'athletes', id)) SEM setState manual (o onSnapshot atualiza sozinho)
-  const handleExcluirAtleta = async (id: string) => {
+  // Dispara modal de exclusão para Atleta (pergunta se tem certeza com botões SIM e NÃO)
+  const handleExcluirAtleta = (id: string) => {
     const atleta = atletas.find((a) => a.id === id);
-    if (window.confirm(`Tem certeza que deseja excluir o atleta ${atleta?.nome || ''}?`)) {
-      try {
-        await firebaseService.excluirAtleta(id);
-        // NÃO dá setState manual: o onSnapshot do Firestore remove sozinho!
-        if (atletaSelecionado && atletaSelecionado.id === id) {
-          setAtletaSelecionado(null);
-          setAbaAtiva('plantel');
-        }
-        exibirToast('Atleta removido com sucesso do Firestore.');
-      } catch (e: any) {
-        console.error('Erro ao excluir atleta:', e);
-        alert(`Erro ao excluir atleta do Firestore: ${e?.message || e}`);
-      }
-    }
+    setItemParaExcluir({
+      tipo: 'atleta',
+      id,
+      nome: atleta ? atleta.nome : undefined,
+    });
   };
-
 
   const handleAbrirEditarAtleta = (atleta: Atleta) => {
     setAtletaEditando(atleta);
@@ -175,16 +174,47 @@ export default function App() {
     }
   };
 
-  const handleExcluirAvaliacao = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta avaliação de partida?')) {
-      storageService.excluirAvaliacao(id);
-      setAvaliacoes(storageService.getAvaliacoes());
-      try {
-        await firebaseService.excluirAvaliacao(id);
-      } catch (e) {
-        console.warn('Exclusão salva no cache offline:', e);
+  // Dispara modal de exclusão para Avaliação (pergunta se tem certeza com botões SIM e NÃO)
+  const handleExcluirAvaliacao = (id: string) => {
+    const av = avaliacoes.find((a) => a.id === id);
+    setItemParaExcluir({
+      tipo: 'avaliacao',
+      id,
+      nome: av ? `Partida vs ${av.adversario} (${av.categoria})` : undefined,
+    });
+  };
+
+  // Executa a exclusão confirmada pelo usuário no botão SIM
+  const handleConfirmarExclusao = async () => {
+    if (!itemParaExcluir) return;
+    setExcluindoCarregando(true);
+
+    try {
+      if (itemParaExcluir.tipo === 'atleta') {
+        // Exclui o atleta e TODAS as avaliações dele no Firestore em cascata
+        await firebaseService.excluirAtleta(itemParaExcluir.id);
+        // Exclui o atleta e TODAS as avaliações dele no storage local
+        storageService.excluirAtleta(itemParaExcluir.id);
+        setAvaliacoes(storageService.getAvaliacoes());
+
+        if (atletaSelecionado && atletaSelecionado.id === itemParaExcluir.id) {
+          setAtletaSelecionado(null);
+          setAbaAtiva('plantel');
+        }
+        exibirToast('Atleta e todas as suas avaliações foram apagados com sucesso.');
+      } else {
+        // Exclui apenas a avaliação específica no Firestore e local
+        await firebaseService.excluirAvaliacao(itemParaExcluir.id);
+        storageService.excluirAvaliacao(itemParaExcluir.id);
+        setAvaliacoes(storageService.getAvaliacoes());
+        exibirToast('Avaliação apagada com sucesso.');
       }
-      exibirToast('Avaliação excluída com sucesso.');
+    } catch (e: any) {
+      console.error('Erro ao excluir:', e);
+      alert(`Erro ao apagar: ${e?.message || e}`);
+    } finally {
+      setExcluindoCarregando(false);
+      setItemParaExcluir(null);
     }
   };
 
@@ -595,6 +625,23 @@ export default function App() {
           setCategorias(novas);
           exibirToast('Categorias atualizadas!');
         }}
+      />
+
+      {/* Modal de Confirmação de Apagar (Sem digitação de palavra, apenas pergunta com botões SIM e NÃO) */}
+      <ConfirmacaoApagarModal
+        isOpen={!!itemParaExcluir}
+        onClose={() => {
+          if (!excluindoCarregando) setItemParaExcluir(null);
+        }}
+        onConfirm={handleConfirmarExclusao}
+        titulo={itemParaExcluir?.tipo === 'atleta' ? 'Apagar Atleta' : 'Apagar Avaliação'}
+        mensagem="Tem certeza que deseja apagar?"
+        detalhes={
+          itemParaExcluir?.tipo === 'atleta'
+            ? `${itemParaExcluir.nome || 'Atleta'} (todas as avaliações deste atleta também serão apagadas)`
+            : itemParaExcluir?.nome
+        }
+        carregando={excluindoCarregando}
       />
 
       {/* Modal de Instalação do App (PWA) */}

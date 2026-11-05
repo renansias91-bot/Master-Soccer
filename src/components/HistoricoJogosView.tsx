@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search, Plus, Trash2, Edit, Calendar, Download, Award } from 'lucide-react';
 import { Atleta, AvaliacaoJogo } from '../types';
 import { storageService } from '../services/storage';
+import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
 
 interface HistoricoJogosViewProps {
   avaliacoes: AvaliacaoJogo[];
@@ -37,7 +38,7 @@ export const HistoricoJogosView: React.FC<HistoricoJogosViewProps> = ({
         (atleta && atleta.nome.toLowerCase().includes(busca.toLowerCase()));
       return matchCat && matchBusca;
     })
-    .sort((a, b) => new Date(b.dataJogo).getTime() - new Date(a.dataJogo).getTime());
+    .sort((a, b) => dataParaValorOrdenacao(b.dataJogo) - dataParaValorOrdenacao(a.dataJogo));
 
   const getCorNota = (nota: number) => {
     if (nota >= 8.5) return 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800';
@@ -173,7 +174,7 @@ export const HistoricoJogosView: React.FC<HistoricoJogosViewProps> = ({
                         <span aria-hidden="true">·</span>
                         <span>{av.competicao}</span>
                         <span aria-hidden="true">·</span>
-                        <span className="font-mono">{new Date(av.dataJogo).toLocaleDateString('pt-BR')}</span>
+                        <span className="font-mono">{formatarDataExibicao(av.dataJogo)}</span>
                         <span aria-hidden="true">·</span>
                         <span className="font-mono">
                           {av.minutosJogados}'

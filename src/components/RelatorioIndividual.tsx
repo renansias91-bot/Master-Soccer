@@ -16,6 +16,7 @@ import { Atleta, AvaliacaoJogo } from '../types';
 import { storageService } from '../services/storage';
 import { RadarChart } from './RadarChart';
 import { EvolucaoChart } from './EvolucaoChart';
+import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
 
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
 
@@ -37,7 +38,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
   // Filtra as avaliações deste atleta
   const avaliacoesAtleta = avaliacoes
     .filter((av) => av.atletaId === atleta.id)
-    .sort((a, b) => new Date(b.dataJogo).getTime() - new Date(a.dataJogo).getTime());
+    .sort((a, b) => dataParaValorOrdenacao(b.dataJogo) - dataParaValorOrdenacao(a.dataJogo));
 
   const stats = storageService.getEstatisticasAtleta(atleta.id);
 
@@ -366,7 +367,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                       <span className="text-slate-600 dark:text-slate-400">{av.competicao}</span>
                       <span className="text-slate-400">·</span>
                       <span className="font-mono text-slate-500">
-                        {new Date(av.dataJogo).toLocaleDateString('pt-BR')}
+                        {formatarDataExibicao(av.dataJogo)}
                       </span>
                       <span className="text-slate-400">·</span>
                       <span className="font-mono text-slate-500">{av.minutosJogados}' jogados</span>

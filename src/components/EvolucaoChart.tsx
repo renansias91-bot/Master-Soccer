@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AvaliacaoJogo, NotasPilares } from '../types';
+import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
 
 interface EvolucaoChartProps {
   avaliacoes: AvaliacaoJogo[];
@@ -12,7 +13,7 @@ export const EvolucaoChart: React.FC<EvolucaoChartProps> = ({ avaliacoes }) => {
 
   // Ordena cronologicamente
   const sorted = [...avaliacoes].sort(
-    (a, b) => new Date(a.dataJogo).getTime() - new Date(b.dataJogo).getTime()
+    (a, b) => dataParaValorOrdenacao(a.dataJogo) - dataParaValorOrdenacao(b.dataJogo)
   );
 
   if (sorted.length === 0) {
@@ -176,7 +177,7 @@ export const EvolucaoChart: React.FC<EvolucaoChartProps> = ({ avaliacoes }) => {
                 textAnchor="middle"
                 className="text-[8px] font-mono fill-slate-400 dark:fill-slate-500"
               >
-                {new Date(p.av.dataJogo).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                {formatarDataExibicao(p.av.dataJogo).substring(0, 5)}
               </text>
             </g>
           ))}

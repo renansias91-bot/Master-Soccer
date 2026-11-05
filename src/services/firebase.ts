@@ -11,9 +11,12 @@ import {
   setDoc,
   addDoc,
   deleteDoc,
+  query,
+  where,
   onSnapshot,
   getDocFromServer,
 } from 'firebase/firestore';
+
 import { getAuth } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Atleta, AvaliacaoJogo } from '../types';
@@ -214,16 +217,30 @@ export const firebaseService = {
     }
   },
 
-  // Excluir atleta no Firestore (EXATAMENTE a mesma coleção 'athletes')
+  // Excluir atleta no Firestore (coleção 'athletes') e TODAS as avaliações dele vinculadas
   async excluirAtleta(id: string): Promise<void> {
     const path = `athletes/${id}`;
     try {
+      // 1. Apaga o atleta da coleção 'athletes'
       await deleteDoc(doc(db, 'athletes', id));
     } catch (error) {
       console.error('Erro no deleteDoc de athlete:', error);
       handleFirestoreError(error, OperationType.DELETE, path);
     }
+
+    // 2. Apaga todas as avaliações deste atleta no Firestore para não deixar avaliação órfã
+    try {
+      const q = query(collection(db, 'avaliacoes'), where('atletaId', '==', id));
+      const snap = await getDocs(q);
+      const promessasExclusao = snap.docs.map((docSnap) =>
+        deleteDoc(doc(db, 'avaliacoes', docSnap.id))
+      );
+      await Promise.all(promessasExclusao);
+    } catch (err) {
+      console.warn('Aviso ao excluir avaliações vinculadas do atleta:', err);
+    }
   },
+
 
   // Salvar avaliação no Firestore
   async salvarAvaliacao(avaliacao: AvaliacaoJogo, nomeAtleta?: string): Promise<void> {

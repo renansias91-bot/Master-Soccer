@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Award, CheckCircle2, Info, Plus, Clock, Users, ArrowRight } from 'lucide-react';
+import { X, Award, CheckCircle2, Info, Plus, Clock, Users, ArrowRight, Calendar } from 'lucide-react';
 import { Atleta, AvaliacaoJogo, NotasPilares } from '../types';
+import { getDataAtualBrasil, formatarDataExibicao } from '../utils/dateUtils';
 
 interface AvaliacaoModalProps {
   isOpen: boolean;
@@ -60,7 +61,7 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
   const [atletaId, setAtletaId] = useState('');
 
   // Dados da Partida
-  const [dataJogo, setDataJogo] = useState(new Date().toISOString().split('T')[0]);
+  const [dataJogo, setDataJogo] = useState(() => getDataAtualBrasil());
   const [adversario, setAdversario] = useState('');
   const [competicao, setCompeticao] = useState('Campeonato Estadual');
   const [resultado, setResultado] = useState('');
@@ -109,7 +110,7 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
     if (avaliacaoEditando) {
       setCategoriaSelecionada(avaliacaoEditando.categoria);
       setAtletaId(avaliacaoEditando.atletaId);
-      setDataJogo(avaliacaoEditando.dataJogo);
+      setDataJogo(formatarDataExibicao(avaliacaoEditando.dataJogo));
       setAdversario(avaliacaoEditando.adversario);
       setCompeticao(avaliacaoEditando.competicao);
 
@@ -159,7 +160,7 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
 
       setCategoriaSelecionada(catInicial);
       setAtletaId(idInicial);
-      setDataJogo(new Date().toISOString().split('T')[0]);
+      setDataJogo(getDataAtualBrasil());
       setAdversario('');
       setCompeticao('Campeonato Estadual');
       setMinutos1Tempo(40);
@@ -234,11 +235,16 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
       disciplinar: Number(disciplinar),
     };
 
+    // A data é criada NA HORA em que clica em SALVAR, com fuso horário America/Sao_Paulo no formato DD/MM/AAAA
+    const dataJogoSalva = avaliacaoEditando?.dataJogo
+      ? (formatarDataExibicao(dataJogo) || formatarDataExibicao(avaliacaoEditando.dataJogo) || getDataAtualBrasil())
+      : getDataAtualBrasil();
+
     const novaAvaliacao: AvaliacaoJogo = {
       id: avaliacaoEditando ? avaliacaoEditando.id : `av-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       atletaId,
       categoria: categoriaSelecionada,
-      dataJogo,
+      dataJogo: dataJogoSalva,
       adversario: adversario.trim(),
       competicao: competicao.trim(),
       minutos1Tempo: Number(minutos1Tempo) || 0,
@@ -470,17 +476,22 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
               />
             </div>
 
-            {/* Data do Jogo */}
+            {/* Data do Jogo / Avaliação */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Data da Partida
+                Data do Registro (Horário de Brasília)
               </label>
-              <input
-                type="date"
-                value={dataJogo}
-                onChange={(e) => setDataJogo(e.target.value)}
-                className="w-full h-10 px-3.5 py-2 text-sm font-mono leading-normal bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="flex items-center justify-between h-10 px-3.5 py-2 text-sm font-mono leading-normal bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span className="font-bold">
+                    {avaliacaoEditando ? formatarDataExibicao(dataJogo) : getDataAtualBrasil()}
+                  </span>
+                </div>
+                <span className="text-[11px] font-sans text-slate-500 font-medium">
+                  {avaliacaoEditando ? 'Data gravada' : 'Automática (Hoje)'}
+                </span>
+              </div>
             </div>
 
             {/* Competição */}

@@ -13,6 +13,7 @@ import {
 import { Atleta, AvaliacaoJogo, NotasPilares } from '../types';
 import { RadarChart } from './RadarChart';
 import { storageService } from '../services/storage';
+import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
 
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
 
@@ -75,7 +76,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
 
   // Últimas avaliações cadastradas
   const ultimasAvaliacoes = [...avaliacoes]
-    .sort((a, b) => new Date(b.dataJogo).getTime() - new Date(a.dataJogo).getTime())
+    .sort((a, b) => dataParaValorOrdenacao(b.dataJogo) - dataParaValorOrdenacao(a.dataJogo))
     .slice(0, 5);
 
   const getCorNota = (nota: number) => {
@@ -367,7 +368,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
 
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-slate-400">
-                      {new Date(av.dataJogo).toLocaleDateString('pt-BR')}
+                      {formatarDataExibicao(av.dataJogo)}
                     </span>
                     <span
                       className={`text-xs font-mono font-bold px-2 py-0.5 rounded border tabular-nums ${getCorNota(
