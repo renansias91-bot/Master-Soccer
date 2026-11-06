@@ -499,8 +499,32 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Itens do Menu Solicitados: Financeiro, Histórico / Relatório, Teste Físico */}
+              {/* Itens do Menu Solicitados: Cadastrar Atleta, Financeiro, Histórico / Relatório, Teste Físico */}
               <div className="py-4 space-y-2">
+                {/* 0. Cadastrar Atleta (conforme solicitado: só nos 3 risquinhos ☰ lá em cima) */}
+                <button
+                  onClick={() => {
+                    setMenuDrawerOpen(false);
+                    handleAbrirNovoAtleta();
+                  }}
+                  className="w-full flex items-center justify-between p-3.5 rounded-2xl text-left transition-all hover:bg-amber-100/70 dark:hover:bg-amber-950/40 text-slate-800 dark:text-slate-200 font-semibold border border-amber-300 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-amber-400 text-slate-950 font-bold shadow-xs">
+                      <Plus className="w-5 h-5 text-slate-950" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-white">
+                        + Cadastrar Atleta
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        Adicionar novo atleta à base
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-70" />
+                </button>
+
                 {/* 1. Financeiro */}
                 <button
                   onClick={() => handleNavegarMenuTopo('financeiro')}
@@ -662,10 +686,13 @@ export default function App() {
             onExcluirJogo={handleExcluirJogo}
             onSalvarAvaliacao={handleSalvarAvaliacao}
             onSelecionarAtleta={handleAbrirRelatorioAtleta}
+            onNavegarEscalacao={() => {
+              setAbaAtiva('escalacao');
+            }}
           />
         )}
 
-        {/* ABA 3: ESCALAÇÃO (onde monta o time / PlantelView) */}
+        {/* ABA 3: ESCALAÇÃO (onde monta o time / convocação do jogo) */}
         {abaAtiva === 'escalacao' && (
           <PlantelView
             atletas={atletas}
@@ -673,13 +700,11 @@ export default function App() {
             categorias={categorias}
             categoriaSelecionada={categoriaAtiva}
             onSelecionarCategoria={setCategoriaAtiva}
-            onNovoAtleta={handleAbrirNovoAtleta}
             onSelecionarAtleta={handleAbrirRelatorioAtleta}
-            onNovaAvaliacao={() => {
-              setAbaAtiva('jogo');
-            }}
             onEditarAtleta={handleAbrirEditarAtleta}
             onExcluirAtleta={handleExcluirAtleta}
+            jogos={jogos}
+            onSalvarJogo={handleSalvarJogo}
           />
         )}
 

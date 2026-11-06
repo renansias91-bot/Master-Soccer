@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Calendar,
   Clock,
@@ -14,8 +14,11 @@ import {
   Users,
   AlertCircle,
   Sliders,
+  Shield,
+  Activity,
+  Flame,
 } from 'lucide-react';
-import { Atleta, AvaliacaoJogo, JogoAgenda, NotasPilares } from '../types';
+import { Atleta, AvaliacaoJogo, JogoAgenda, NotasPilares, POSICOES_JOGO } from '../types';
 import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
@@ -30,6 +33,7 @@ interface AgendaJogosViewProps {
   onExcluirJogo: (id: string, nome?: string) => void;
   onSalvarAvaliacao: (avaliacao: AvaliacaoJogo) => void;
   onSelecionarAtleta: (atleta: Atleta) => void;
+  onNavegarEscalacao?: (jogoId: string) => void;
 }
 
 export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
@@ -42,11 +46,12 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   onExcluirJogo,
   onSalvarAvaliacao,
   onSelecionarAtleta,
+  onNavegarEscalacao,
 }) => {
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('TODAS');
   const [jogoSelecionadoParaAvaliar, setJogoSelecionadoParaAvaliar] = useState<JogoAgenda | null>(null);
 
-  // Estados para a tela de avaliação dentro do jogo
+  // Estados para o formulário de avaliação do jogador selecionado
   const [atletaIndexAtivo, setAtletaIndexAtivo] = useState<number>(0);
   const [tecnica, setTecnica] = useState<number>(8.0);
   const [tatica, setTatica] = useState<number>(8.0);
@@ -59,7 +64,13 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   const [obsTatica, setObsTatica] = useState('');
   const [obsMental, setObsMental] = useState('');
   const [obsDisciplinar, setObsDisciplinar] = useState('');
+
   const [minutosJogados, setMinutosJogados] = useState<number>(80);
+  const [posicaoJogo, setPosicaoJogo] = useState<string>('Meia (10)');
+  const [gols, setGols] = useState<number>(0);
+  const [assistencias, setAssistencias] = useState<number>(0);
+  const [cartoesAmarelos, setCartoesAmarelos] = useState<number>(0);
+  const [cartaoVermelho, setCartaoVermelho] = useState<boolean>(false);
   const [feedbackSalvo, setFeedbackSalvo] = useState<string | null>(null);
 
   // Filtra jogos por categoria
@@ -76,10 +87,31 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     .filter((j) => j.realizado)
     .sort((a, b) => dataParaValorOrdenacao(b.dataJogo) - dataParaValorOrdenacao(a.dataJogo));
 
-  // Atletas da categoria do jogo selecionado
-  const atletasDoJogo = jogoSelecionadoParaAvaliar
-    ? atletas.filter((a) => a.categoria === jogoSelecionadoParaAvaliar.categoria)
-    : [];
+  // =========================================================
+  // LIGAÇÃO COM A ESCALAÇÃO:
+  // Mostra SÓ os jogadores que foram selecionados na escalação daquele jogo,
+  // todos juntos (sem separar por categoria), independentemente da categoria original.
+  // =========================================================
+  const atletasDoJogo = useMemo(() => {
+    if (!jogoSelecionadoParaAvaliar) return [];
+    const escalacao = jogoSelecionadoParaAvaliar.escalacao || {};
+    const idsEscalados = Object.keys(escalacao);
+
+    if (idsEscalados.length > 0) {
+      // Filtrar apenas os escalados e ordenar titulares primeiro
+      return atletas
+        .filter((a) => idsEscalados.includes(a.id))
+        .sort((a, b) => {
+          const titA = escalacao[a.id]?.titular ? 0 : 1;
+          const titB = escalacao[b.id]?.titular ? 0 : 1;
+          if (titA !== titB) return titA - titB;
+          return a.nome.localeCompare(b.nome);
+        });
+    }
+
+    // Fallback amigável caso a escalação ainda não tenha sido montada
+    return atletas.filter((a) => a.categoria === jogoSelecionadoParaAvaliar.categoria);
+  }, [jogoSelecionadoParaAvaliar, atletas]);
 
   const atletaAtual = atletasDoJogo[atletaIndexAtivo] || null;
 
@@ -93,6 +125,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             av.categoria === jogo.categoria))
     );
 
+    // Obtém a posição escalada na montagem do time como padrão
+    const escalacaoInfo = jogo.escalacao ? jogo.escalacao[atletaId] : null;
+    const atletaObj = atletas.find((a) => a.id === atletaId);
+
     if (avExistente) {
       setTecnica(avExistente.notas.tecnica);
       setTatica(avExistente.notas.tatica);
@@ -100,6 +136,11 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       setMental(avExistente.notas.mental);
       setDisciplinar(avExistente.notas.disciplinar);
       setMinutosJogados(avExistente.minutosJogados || 80);
+      setPosicaoJogo(avExistente.posicaoJogo || escalacaoInfo?.posicaoJogo || 'Meia (10)');
+      setGols(avExistente.gols || 0);
+      setAssistencias(avExistente.assistencias || 0);
+      setCartoesAmarelos(avExistente.cartoesAmarelos || 0);
+      setCartaoVermelho(Boolean(avExistente.cartaoVermelho));
 
       if (avExistente.observacoesPorPilar) {
         setObsFisica(avExistente.observacoesPorPilar.fisica || '');
@@ -128,6 +169,11 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       setMental(8.0);
       setDisciplinar(9.0);
       setMinutosJogados(80);
+      setPosicaoJogo(escalacaoInfo?.posicaoJogo || (atletaObj ? atletaObj.posicao : 'Meia (10)'));
+      setGols(0);
+      setAssistencias(0);
+      setCartoesAmarelos(0);
+      setCartaoVermelho(false);
       setObsFisica('');
       setObsTecnica('');
       setObsTatica('');
@@ -140,9 +186,21 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     setJogoSelecionadoParaAvaliar(jogo);
     setAtletaIndexAtivo(0);
     setFeedbackSalvo(null);
-    const atls = atletas.filter((a) => a.categoria === jogo.categoria);
-    if (atls.length > 0) {
-      carregarAvaliacaoDoAtleta(atls[0].id, jogo);
+
+    // Calcular atletas escalados deste jogo
+    const escalacao = jogo.escalacao || {};
+    const idsEscalados = Object.keys(escalacao);
+    let primeiroAtletaId: string | null = null;
+
+    if (idsEscalados.length > 0) {
+      primeiroAtletaId = idsEscalados[0];
+    } else {
+      const atlsCat = atletas.filter((a) => a.categoria === jogo.categoria);
+      if (atlsCat.length > 0) primeiroAtletaId = atlsCat[0].id;
+    }
+
+    if (primeiroAtletaId) {
+      carregarAvaliacaoDoAtleta(primeiroAtletaId, jogo);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -177,7 +235,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
     const notaGeral = Number(((tecnica + tatica + fisica + mental + disciplinar) / 5).toFixed(1));
 
-    // Procura avaliação existente deste atleta no jogo para atualizar o mesmo id
     const avExistente = avaliacoes.find(
       (av) =>
         av.atletaId === atletaAtual.id &&
@@ -186,16 +243,25 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             av.categoria === jogoSelecionadoParaAvaliar.categoria))
     );
 
+    const escaladoInfo = jogoSelecionadoParaAvaliar.escalacao
+      ? jogoSelecionadoParaAvaliar.escalacao[atletaAtual.id]
+      : null;
+
     const novaAvaliacao: AvaliacaoJogo = {
       id: avExistente ? avExistente.id : `av-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       atletaId: atletaAtual.id,
-      categoria: jogoSelecionadoParaAvaliar.categoria,
+      categoria: atletaAtual.categoria,
       dataJogo: jogoSelecionadoParaAvaliar.dataJogo,
       adversario: jogoSelecionadoParaAvaliar.adversario,
       competicao: jogoSelecionadoParaAvaliar.tipo || 'Campeonato',
       minutosJogados: Number(minutosJogados) || 80,
       resultado: jogoSelecionadoParaAvaliar.placar || undefined,
-      titular: true,
+      titular: escaladoInfo ? escaladoInfo.titular : true,
+      posicaoJogo: posicaoJogo || 'Meia (10)',
+      gols: Number(gols) || 0,
+      assistencias: Number(assistencias) || 0,
+      cartoesAmarelos: Number(cartoesAmarelos) || 0,
+      cartaoVermelho: Boolean(cartaoVermelho),
       notas: notasObj,
       notaGeral,
       observacoes: textoObservacoesFinal,
@@ -221,12 +287,35 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     }
   };
 
+  // Helper para renderizar resumo da escalação no card do jogo
+  const renderResumoEscalacaoCard = (jogo: JogoAgenda) => {
+    const escalacao = jogo.escalacao;
+    if (!escalacao || Object.keys(escalacao).length === 0) {
+      return (
+        <span className="text-[11px] text-slate-400 font-medium">
+          Escalação não definida
+        </span>
+      );
+    }
+
+    const items = Object.values(escalacao);
+    const total = items.length;
+    const titulares = items.filter((e) => e.titular).length;
+    const reservas = total - titulares;
+
+    return (
+      <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200/50">
+        {titulares} titulares + {reservas} reservas ({total} selecionados)
+      </span>
+    );
+  };
+
   // ==========================================
   // RENDERIZAÇÃO 1: DENTRO DE CADA JOGO - AVALIAÇÃO
   // ==========================================
   if (jogoSelecionadoParaAvaliar) {
     return (
-      <div className="space-y-6 pb-[120px]">
+      <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
         {/* Barra Superior de Retorno */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
           <button
@@ -247,7 +336,11 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           </div>
         </div>
 
-        {/* Card do Jogo em Avaliação */}
+        {/* ========================================================= */}
+        {/* TOPO DA AVALIAÇÃO: */}
+        {/* Master Soccer vs [Adversário] */}
+        {/* Data, Hora, Local, Categoria, Tipo de Jogo */}
+        {/* ========================================================= */}
         <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white p-5 sm:p-6 rounded-2xl shadow-md border border-blue-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <MasterSoccerEscudo size={48} className="drop-shadow-sm shrink-0" />
@@ -280,17 +373,21 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <MapPin className="w-3.5 h-3.5" />
                   {jogoSelecionadoParaAvaliar.local || 'Campo Master Soccer'}
                 </span>
+                <span>·</span>
+                <span className="font-bold text-amber-300">
+                  {jogoSelecionadoParaAvaliar.categoria} ({jogoSelecionadoParaAvaliar.tipo})
+                </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Abinhas dos Jogadores da Categoria do Jogo */}
+        {/* Abinhas dos Jogadores Selecionados na Escalação deste Jogo */}
         <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
               <Users className="w-4 h-4 text-blue-600" />
-              Selecione o Jogador ({atletasDoJogo.length} no {jogoSelecionadoParaAvaliar.categoria}):
+              Jogadores Escalados ({atletasDoJogo.length} atletas):
             </span>
             <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
               Jogador {atletaIndexAtivo + 1} de {atletasDoJogo.length || 1}
@@ -307,6 +404,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     av.adversario.toLowerCase().includes(jogoSelecionadoParaAvaliar.adversario.toLowerCase()))
               );
 
+              const escalado = jogoSelecionadoParaAvaliar.escalacao
+                ? jogoSelecionadoParaAvaliar.escalacao[atl.id]
+                : null;
+
               return (
                 <button
                   key={atl.id}
@@ -318,6 +419,11 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   }`}
                 >
                   <span>{atl.nome.split(' ')[0]}</span>
+                  {escalado?.titular ? (
+                    <span className="text-[10px] opacity-80">(Tit)</span>
+                  ) : (
+                    <span className="text-[10px] opacity-75">(Res)</span>
+                  )}
                   {avFeita && (
                     <span
                       className={`w-2 h-2 rounded-full ${
@@ -346,11 +452,16 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   )}
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    {atletaAtual.nome}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                      {atletaAtual.categoria}
+                    </span>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                      {atletaAtual.nome}
+                    </h3>
+                  </div>
                   <p className="text-xs text-slate-500">
-                    Posição: <strong>{atletaAtual.posicao}</strong> · Pé:{' '}
+                    Posição Original: <strong>{atletaAtual.posicao}</strong> · Pé:{' '}
                     <strong>{atletaAtual.pernaDominante}</strong>
                   </p>
                 </div>
@@ -373,25 +484,156 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               </div>
             )}
 
-            {/* Minutos Jogados */}
-            <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Minutos Jogados nesta Partida:
-              </span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  max="120"
-                  value={minutosJogados}
-                  onChange={(e) => setMinutosJogados(Number(e.target.value) || 0)}
-                  className="w-20 h-9 px-2 text-center text-sm font-mono font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
-                />
-                <span className="text-xs text-slate-500">min</span>
+            {/* ========================================================= */}
+            {/* CAMPOS OBRIGATÓRIOS EM CADA JOGADOR (SEM SUMIR): */}
+            {/* - Minutos Jogados nesta Partida: [ 80 ] min */}
+            {/* - Jogou de: [ selecionar posição ] */}
+            {/* - Gol, Assistência, Cartão Amarelo, Cartão Vermelho */}
+            {/* ========================================================= */}
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Minutos Jogados nesta Partida */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Minutos Jogados nesta Partida:</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="120"
+                      value={minutosJogados}
+                      onChange={(e) => setMinutosJogados(Number(e.target.value) || 0)}
+                      className="w-24 h-10 px-3 text-center text-sm font-mono font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    />
+                    <span className="text-xs font-bold text-slate-500">min</span>
+                  </div>
+                </div>
+
+                {/* Jogou de: [ selecionar posição das 10 opções ] */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Jogou de:</span>
+                  </label>
+                  <select
+                    value={posicaoJogo}
+                    onChange={(e) => setPosicaoJogo(e.target.value)}
+                    className="w-full h-10 px-3 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  >
+                    {POSICOES_JOGO.map((pos) => (
+                      <option key={pos} value={pos}>
+                        {pos}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Estatísticas da Partida: Gol, Assistência, Cartão Amarelo, Cartão Vermelho */}
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-700/60 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* Gols */}
+                <div className="bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
+                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                    ⚽ Gols
+                  </span>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setGols((prev) => Math.max(0, prev - 1))}
+                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm"
+                    >
+                      -
+                    </button>
+                    <span className="w-7 font-mono font-bold text-sm text-slate-900 dark:text-white">
+                      {gols}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setGols((prev) => prev + 1)}
+                      className="w-7 h-7 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Assistências */}
+                <div className="bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
+                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
+                    🎯 Assistências
+                  </span>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setAssistencias((prev) => Math.max(0, prev - 1))}
+                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm"
+                    >
+                      -
+                    </button>
+                    <span className="w-7 font-mono font-bold text-sm text-slate-900 dark:text-white">
+                      {assistencias}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAssistencias((prev) => prev + 1)}
+                      className="w-7 h-7 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cartões Amarelos */}
+                <div className="bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
+                  <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 block mb-1">
+                    🟨 Cartão Amarelo
+                  </span>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setCartoesAmarelos((prev) => Math.max(0, prev - 1))}
+                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm"
+                    >
+                      -
+                    </button>
+                    <span className="w-7 font-mono font-bold text-sm text-slate-900 dark:text-white">
+                      {cartoesAmarelos}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCartoesAmarelos((prev) => Math.min(2, prev + 1))}
+                      className="w-7 h-7 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cartão Vermelho */}
+                <div className="bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center flex flex-col items-center justify-center">
+                  <span className="text-[11px] font-bold text-rose-700 dark:text-rose-400 block mb-1">
+                    🟥 Cartão Vermelho
+                  </span>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold select-none">
+                    <input
+                      type="checkbox"
+                      checked={cartaoVermelho}
+                      onChange={(e) => setCartaoVermelho(e.target.checked)}
+                      className="w-4 h-4 rounded text-rose-600 accent-rose-600 focus:ring-rose-500 cursor-pointer"
+                    />
+                    <span className={cartaoVermelho ? 'text-rose-600' : 'text-slate-400'}>
+                      {cartaoVermelho ? 'Expulso' : 'Não'}
+                    </span>
+                  </label>
+                </div>
               </div>
             </div>
 
-            {/* OS 5 QUESITOS: TÍTULO + SLIDER AZUL + LEGENDA + CAIXINHA FIXA 120px */}
+            {/* ========================================================= */}
+            {/* OS 5 QUESITOS: TÍTULO + SLIDER AZUL + NOTA: X/10 - TEXTO + LEGENDA + CAIXINHA FIXA 120px */}
+            {/* ========================================================= */}
             <div className="space-y-4">
               {/* 1. FÍSICO */}
               <div
@@ -690,7 +932,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleSalvarAvaliacaoJogador(true)}
-                  className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition flex items-center gap-2"
+                  style={{ backgroundColor: '#2563eb' }}
+                  className="px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition flex items-center gap-2"
                 >
                   <CheckCircle2 className="w-4 h-4 text-amber-300" />
                   <span>Salvar & Próximo Jogador</span>
@@ -699,8 +942,16 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             </div>
           </div>
         ) : (
-          <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-500 text-xs">
-            Nenhum atleta cadastrado nesta categoria ({jogoSelecionadoParaAvaliar.categoria}). Cadastre atletas no Plantel.
+          <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-500 text-xs space-y-2">
+            <p>Nenhum atleta escalado para este jogo ainda.</p>
+            {onNavegarEscalacao && (
+              <button
+                onClick={() => onNavegarEscalacao(jogoSelecionadoParaAvaliar.id)}
+                className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-xs"
+              >
+                Montar Escalação do Jogo
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -711,7 +962,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   // RENDERIZAÇÃO 2: LISTA DE JOGOS DA AGENDA
   // ==========================================
   return (
-    <div className="space-y-6 pb-[120px]">
+    <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
       {/* Topo com Título, Categorias e Botão + NOVO JOGO */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div>
@@ -724,14 +975,15 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Cadastre os jogos na agenda, dispute a partida e avalie os atletas diretamente dentro de cada jogo
+            Cadastre os jogos na agenda, monte a escalação e avalie os atletas diretamente dentro de cada partida
           </p>
         </div>
 
         {/* Botão + NOVO JOGO */}
         <button
           onClick={onNovoJogo}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all whitespace-nowrap shrink-0 border border-blue-500/40"
+          style={{ backgroundColor: '#2563eb' }}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all whitespace-nowrap shrink-0 border border-blue-500/40"
         >
           <Plus className="w-4 h-4 text-amber-300" />
           <span>+ Novo Jogo</span>
@@ -806,6 +1058,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     {jogo.adversario}
                   </h4>
 
+                  {/* Resumo da Escalação */}
+                  <div className="mt-1.5">{renderResumoEscalacaoCard(jogo)}</div>
+
                   <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 mt-2">
                     <div className="flex items-center gap-1.5 font-mono font-semibold">
                       <Calendar className="w-3.5 h-3.5 text-blue-600" />
@@ -844,7 +1099,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
                   <button
                     onClick={() => handleAbrirAvaliacaoJogo(jogo)}
-                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs"
+                    style={{ backgroundColor: '#2563eb' }}
+                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs"
                     title="Avaliar os jogadores desta partida"
                   >
                     <span>Avaliar</span>
@@ -910,6 +1166,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                       <span>{jogo.adversario}</span>
                     </h4>
 
+                    {/* Resumo da Escalação */}
+                    <div className="mt-1">{renderResumoEscalacaoCard(jogo)}</div>
+
                     <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1 font-medium">
                       <span className="font-mono">{formatarDataExibicao(jogo.dataJogo)}</span>
                       <span>·</span>
@@ -941,10 +1200,12 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     </button>
                     <button
                       onClick={() => handleAbrirAvaliacaoJogo(jogo)}
-                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs"
+                      style={{ backgroundColor: '#2563eb' }}
+                      className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs"
+                      title="Ver ou continuar avaliações"
                     >
-                      <span>Abrir Avaliação</span>
-                      <ChevronRight className="w-4 h-4 text-amber-300" />
+                      <span>Avaliar</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>

@@ -121,7 +121,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
             onClick={onNovaAvaliacao}
             className="px-4 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 active:scale-98 rounded-xl transition-all shadow-sm border border-blue-400/30"
           >
-            + Avaliar Jogo
+            Agenda de Jogos
           </button>
         </div>
       </div>

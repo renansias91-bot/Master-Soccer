@@ -25,7 +25,7 @@ export const JogoModal: React.FC<JogoModalProps> = ({
   const [hora, setHora] = useState('09:00');
   const [categoria, setCategoria] = useState(categoriaPadrao);
   const [local, setLocal] = useState('CT Ninho do Galo');
-  const [tipo, setTipo] = useState<TipoJogo>('Campeonato');
+  const [tipo, setTipo] = useState<string>('Campeonato');
   const [placar, setPlacar] = useState('');
   const [realizado, setRealizado] = useState(false);
   const [erro, setErro] = useState('');
@@ -79,10 +79,11 @@ export const JogoModal: React.FC<JogoModalProps> = ({
       hora: hora.trim() || '09:00',
       categoria,
       local: local.trim() || 'Campo Master Soccer',
-      tipo,
+      tipo: tipo.trim() || 'Campeonato',
       placar: placar.trim() || undefined,
       realizado: realizado || Boolean(placar.trim()),
       criadoEm: jogoEditando?.criadoEm || new Date().toISOString(),
+      escalacao: jogoEditando?.escalacao || {},
     };
 
     onSave(novoJogo);
@@ -194,15 +195,23 @@ export const JogoModal: React.FC<JogoModalProps> = ({
                 <Trophy className="w-3.5 h-3.5 text-amber-500" />
                 Tipo de Jogo *
               </label>
-              <select
+              <input
+                type="text"
+                list="tipos-jogo-opcoes"
                 value={tipo}
-                onChange={(e) => setTipo(e.target.value as TipoJogo)}
-                className="w-full h-10 px-3 py-2 text-sm font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+                onChange={(e) => setTipo(e.target.value)}
+                placeholder="Ex: Campeonato, Amistoso, Torneio, Copa..."
+                className="w-full h-10 px-3 py-2 text-sm font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <datalist id="tipos-jogo-opcoes">
                 <option value="Campeonato">Campeonato</option>
                 <option value="Amistoso">Amistoso</option>
                 <option value="Torneio">Torneio</option>
-              </select>
+                <option value="Copa">Copa</option>
+                <option value="Festival">Festival</option>
+                <option value="Jogo-Treino">Jogo-Treino</option>
+              </datalist>
             </div>
           </div>
 

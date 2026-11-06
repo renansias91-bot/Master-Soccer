@@ -150,7 +150,13 @@ export interface AvaliacaoFirestoreDoc {
   minutos1Tempo?: number;
   minutos2Tempo?: number;
   resultado?: string;
-  titular: boolean;
+  titular?: boolean;
+  posicaoJogo?: string;
+  gols?: number;
+  assistencias?: number;
+  cartoesAmarelos?: number;
+  cartaoVermelho?: boolean;
+  jogoAgendaId?: string;
   notas: {
     tecnica: number;
     tatica: number;
@@ -279,6 +285,12 @@ export const firebaseService = {
       minutos2Tempo: avaliacao.minutos2Tempo || 0,
       resultado: avaliacao.resultado || '',
       titular: avaliacao.titular ?? true,
+      posicaoJogo: avaliacao.posicaoJogo || '',
+      gols: avaliacao.gols || 0,
+      assistencias: avaliacao.assistencias || 0,
+      cartoesAmarelos: avaliacao.cartoesAmarelos || 0,
+      cartaoVermelho: Boolean(avaliacao.cartaoVermelho),
+      jogoAgendaId: avaliacao.jogoAgendaId || '',
       notas: avaliacao.notas,
       pontosFortes: avaliacao.pontosFortes || [],
       pontosMelhoria: avaliacao.pontosMelhoria || [],
@@ -357,6 +369,12 @@ export const firebaseService = {
           minutos2Tempo: d.minutos2Tempo || 0,
           resultado: d.resultado || '',
           titular: d.titular ?? true,
+          posicaoJogo: d.posicaoJogo || undefined,
+          gols: d.gols ?? 0,
+          assistencias: d.assistencias ?? 0,
+          cartoesAmarelos: d.cartoesAmarelos ?? 0,
+          cartaoVermelho: Boolean(d.cartaoVermelho),
+          jogoAgendaId: d.jogoAgendaId || undefined,
           notas: d.notas || { tecnica: 7, tatica: 7, fisica: 7, mental: 7, disciplinar: 7 },
           notaGeral: d.notaGeral ?? d.nota ?? 7,
           observacoes: d.observacoes || '',
@@ -426,6 +444,12 @@ export const firebaseService = {
             minutos2Tempo: d.minutos2Tempo || 0,
             resultado: d.resultado || '',
             titular: d.titular ?? true,
+            posicaoJogo: d.posicaoJogo || undefined,
+            gols: d.gols ?? 0,
+            assistencias: d.assistencias ?? 0,
+            cartoesAmarelos: d.cartoesAmarelos ?? 0,
+            cartaoVermelho: Boolean(d.cartaoVermelho),
+            jogoAgendaId: d.jogoAgendaId || undefined,
             notas: d.notas || { tecnica: 7, tatica: 7, fisica: 7, mental: 7, disciplinar: 7 },
             notaGeral: d.notaGeral ?? d.nota ?? 7,
             observacoes: d.observacoes || '',
@@ -577,6 +601,7 @@ export const firebaseService = {
       placar: jogo.placar || '',
       realizado: Boolean(jogo.realizado),
       observacoesGerais: jogo.observacoesGerais || '',
+      escalacao: jogo.escalacao || {},
       criadoEm: jogo.criadoEm || new Date().toISOString(),
       atualizadoEm: new Date().toISOString(),
     });
@@ -615,6 +640,7 @@ export const firebaseService = {
             placar: d.placar || '',
             realizado: Boolean(d.realizado),
             observacoesGerais: d.observacoesGerais || '',
+            escalacao: d.escalacao || {},
             criadoEm: d.criadoEm || '',
           });
         });

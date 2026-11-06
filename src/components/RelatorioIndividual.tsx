@@ -327,7 +327,44 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                           <span className="font-mono">{formatarDataExibicao(avaliacaoSelecionada.dataJogo)}</span>
                           <span>·</span>
                           <span className="font-mono">{avaliacaoSelecionada.minutosJogados}' em campo</span>
+                          {avaliacaoSelecionada.posicaoJogo && (
+                            <>
+                              <span>·</span>
+                              <span className="font-semibold text-blue-600 dark:text-blue-400">
+                                Atuou de: {avaliacaoSelecionada.posicaoJogo}
+                              </span>
+                            </>
+                          )}
                         </div>
+
+                        {/* Estatísticas da partida no relatório */}
+                        {(Boolean(avaliacaoSelecionada.gols) ||
+                          Boolean(avaliacaoSelecionada.assistencias) ||
+                          Boolean(avaliacaoSelecionada.cartoesAmarelos) ||
+                          Boolean(avaliacaoSelecionada.cartaoVermelho)) && (
+                          <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
+                            {Boolean(avaliacaoSelecionada.gols) && (
+                              <span className="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-200">
+                                ⚽ {avaliacaoSelecionada.gols} {avaliacaoSelecionada.gols === 1 ? 'gol' : 'gols'}
+                              </span>
+                            )}
+                            {Boolean(avaliacaoSelecionada.assistencias) && (
+                              <span className="px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 font-bold border border-blue-200">
+                                🎯 {avaliacaoSelecionada.assistencias} {avaliacaoSelecionada.assistencias === 1 ? 'assistência' : 'assistências'}
+                              </span>
+                            )}
+                            {Boolean(avaliacaoSelecionada.cartoesAmarelos) && (
+                              <span className="px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 font-bold border border-amber-200">
+                                🟨 {avaliacaoSelecionada.cartoesAmarelos} {avaliacaoSelecionada.cartoesAmarelos === 1 ? 'amarelo' : 'amarelos'}
+                              </span>
+                            )}
+                            {Boolean(avaliacaoSelecionada.cartaoVermelho) && (
+                              <span className="px-2 py-0.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 font-bold border border-rose-200">
+                                🟥 Cartão Vermelho
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2">

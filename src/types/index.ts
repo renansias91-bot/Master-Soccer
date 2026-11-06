@@ -47,6 +47,27 @@ export interface ObservacoesPilares {
   disciplinar?: string;
 }
 
+export const POSICOES_JOGO = [
+  'Goleiro',
+  'Zagueiro',
+  'Lateral Direita',
+  'Lateral Esquerdo',
+  'Volante (5)',
+  'Linha de 2',
+  'Lado de Losango',
+  'Linha de 3',
+  'Meia (10)',
+  'Atacante',
+] as const;
+
+export type PosicaoJogo = (typeof POSICOES_JOGO)[number] | string;
+
+export interface AtletaEscalado {
+  atletaId: string;
+  titular: boolean; // true = Titular, false = Reserva
+  posicaoJogo: string; // Ex: 'Goleiro', 'Volante (5)', etc.
+}
+
 export interface AvaliacaoJogo {
   id: string;
   atletaId: string;
@@ -59,6 +80,11 @@ export interface AvaliacaoJogo {
   minutos2Tempo?: number; // minutos jogados no 2º tempo
   resultado?: string; // ex: "3 x 1" ou "V 2x0"
   titular: boolean;
+  posicaoJogo?: string; // Posição que atuou na partida
+  gols?: number;
+  assistencias?: number;
+  cartoesAmarelos?: number;
+  cartaoVermelho?: boolean;
   notas: NotasPilares;
   notaGeral: number; // média calculada (1 a 10)
   observacoes: string; // detalhes adicionais de progresso e desenvolvimento
@@ -69,7 +95,7 @@ export interface AvaliacaoJogo {
   avaliador?: string;
 }
 
-export type TipoJogo = 'Amistoso' | 'Campeonato' | 'Torneio';
+export type TipoJogo = 'Amistoso' | 'Campeonato' | 'Torneio' | string;
 
 export interface JogoAgenda {
   id: string;
@@ -78,11 +104,12 @@ export interface JogoAgenda {
   hora?: string; // ex: "09:00"
   categoria: CategoriaBase;
   local?: string; // ex: "CT Ninho do Galo", "Campo 1"
-  tipo: TipoJogo; // Amistoso, Campeonato, Torneio
+  tipo: TipoJogo; // Amistoso, Campeonato, Torneio, Copa, etc. (livre para digitar)
   placar?: string; // ex: "2 x 1"
   realizado?: boolean; // true se o jogo já aconteceu
   observacoesGerais?: string;
   criadoEm?: string;
+  escalacao?: Record<string, AtletaEscalado>; // atletaId -> escalação do atleta para este jogo
 }
 
 export interface TesteFisicoAtleta {
