@@ -19,7 +19,7 @@ import {
 
 import { getAuth } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { Atleta, AvaliacaoJogo } from '../types';
+import { Atleta, AvaliacaoJogo, ItemCompeticaoTaxa, RegistroFinanceiroAtleta, JogoAgenda, TesteFisicoAtleta } from '../types';
 
 export enum OperationType {
   CREATE = 'create',
@@ -135,6 +135,13 @@ export interface AvaliacaoFirestoreDoc {
   nota: number;
   notaGeral: number;
   observacoes: string;
+  observacoesPorPilar?: {
+    tecnica?: string;
+    tatica?: string;
+    fisica?: string;
+    mental?: string;
+    disciplinar?: string;
+  };
   nomeProfessor: string;
   avaliador: string;
   adversario: string;
@@ -239,6 +246,13 @@ export const firebaseService = {
     } catch (err) {
       console.warn('Aviso ao excluir avaliações vinculadas do atleta:', err);
     }
+
+    // 3. Apaga registro financeiro do atleta no Firestore
+    try {
+      await deleteDoc(doc(db, 'financeiro_atletas', id));
+    } catch (err) {
+      console.warn('Aviso ao excluir financeiro do atleta:', err);
+    }
   },
 
 
@@ -255,6 +269,7 @@ export const firebaseService = {
       nota: avaliacao.notaGeral,
       notaGeral: avaliacao.notaGeral,
       observacoes: avaliacao.observacoes || '',
+      ...(avaliacao.observacoesPorPilar ? { observacoesPorPilar: avaliacao.observacoesPorPilar } : {}),
       nomeProfessor: avaliacao.avaliador || 'Comissão Técnica',
       avaliador: avaliacao.avaliador || 'Comissão Técnica',
       adversario: avaliacao.adversario || '',
@@ -345,6 +360,7 @@ export const firebaseService = {
           notas: d.notas || { tecnica: 7, tatica: 7, fisica: 7, mental: 7, disciplinar: 7 },
           notaGeral: d.notaGeral ?? d.nota ?? 7,
           observacoes: d.observacoes || '',
+          observacoesPorPilar: d.observacoesPorPilar || undefined,
           pontosFortes: d.pontosFortes || [],
           pontosMelhoria: d.pontosMelhoria || [],
           avaliador: d.avaliador || d.nomeProfessor || 'Comissão Técnica',
@@ -413,6 +429,7 @@ export const firebaseService = {
             notas: d.notas || { tecnica: 7, tatica: 7, fisica: 7, mental: 7, disciplinar: 7 },
             notaGeral: d.notaGeral ?? d.nota ?? 7,
             observacoes: d.observacoes || '',
+            observacoesPorPilar: d.observacoesPorPilar || undefined,
             pontosFortes: d.pontosFortes || [],
             pontosMelhoria: d.pontosMelhoria || [],
             avaliador: d.avaliador || d.nomeProfessor || 'Comissão Técnica',
@@ -429,5 +446,258 @@ export const firebaseService = {
       unsubAtletas();
       unsubAvaliacoes();
     };
+  },
+
+  // ==========================================
+  // SINCRONIZAÇÃO FINANCEIRA NA NUVEM
+  // ==========================================
+
+  // Salvar ou atualizar competição / taxa no Firestore
+  async salvarCompeticao(comp: ItemCompeticaoTaxa): Promise<void> {
+    const path = `financeiro_competicoes/${comp.id}`;
+    const payload = cleanFirestoreData({
+      id: comp.id,
+      nome: comp.nome,
+      valor: Number(comp.valor) || 0,
+      tipo: comp.tipo || 'competicao',
+      categoria: comp.categoria || 'TODAS',
+      descricao: comp.descricao || '',
+      criadoEm: comp.criadoEm || new Date().toISOString(),
+      atualizadoEm: new Date().toISOString(),
+    });
+
+    try {
+      await setDoc(doc(db, 'financeiro_competicoes', comp.id), payload, { merge: true });
+    } catch (error) {
+      console.error('Erro ao salvar competicao no Firestore:', error);
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  },
+
+  // Excluir competição / taxa no Firestore
+  async excluirCompeticao(id: string): Promise<void> {
+    const path = `financeiro_competicoes/${id}`;
+    try {
+      await deleteDoc(doc(db, 'financeiro_competicoes', id));
+    } catch (error) {
+      console.error('Erro ao excluir competicao no Firestore:', error);
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  },
+
+  // Salvar registro financeiro do atleta (mensalidades pagas e competições pagas)
+  async salvarRegistroFinanceiroAtleta(registro: RegistroFinanceiroAtleta): Promise<void> {
+    const path = `financeiro_atletas/${registro.atletaId}`;
+    const payload = cleanFirestoreData({
+      atletaId: registro.atletaId,
+      valorMensalidadePadrao: registro.valorMensalidadePadrao || 150,
+      mensalidadesPagas: registro.mensalidadesPagas || [],
+      competicoesPagas: registro.competicoesPagas || {},
+      atualizadoEm: new Date().toISOString(),
+    });
+
+    try {
+      await setDoc(doc(db, 'financeiro_atletas', registro.atletaId), payload, { merge: true });
+    } catch (error) {
+      console.error('Erro ao salvar financeiro do atleta no Firestore:', error);
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  },
+
+  // Observador em tempo real para dados financeiros
+  observarFinanceiro(
+    onCompeticoes: (comps: ItemCompeticaoTaxa[]) => void,
+    onRegistros: (registros: Record<string, RegistroFinanceiroAtleta>) => void
+  ): () => void {
+    const unsubCompeticoes = onSnapshot(
+      collection(db, 'financeiro_competicoes'),
+      (snapshot) => {
+        const comps: ItemCompeticaoTaxa[] = [];
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          comps.push({
+            id: docSnap.id,
+            nome: d.nome || '',
+            valor: Number(d.valor) || 0,
+            tipo: d.tipo || 'competicao',
+            categoria: d.categoria || 'TODAS',
+            descricao: d.descricao || '',
+            criadoEm: d.criadoEm || '',
+          });
+        });
+        if (comps.length > 0) {
+          onCompeticoes(comps);
+        }
+      },
+      (error) => {
+        console.warn('Snapshot financeiro_competicoes offline ou pausado:', error.message);
+      }
+    );
+
+    const unsubRegistros = onSnapshot(
+      collection(db, 'financeiro_atletas'),
+      (snapshot) => {
+        const registros: Record<string, RegistroFinanceiroAtleta> = {};
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          registros[docSnap.id] = {
+            atletaId: docSnap.id,
+            valorMensalidadePadrao: Number(d.valorMensalidadePadrao) || 150,
+            mensalidadesPagas: Array.isArray(d.mensalidadesPagas) ? d.mensalidadesPagas : [],
+            competicoesPagas: d.competicoesPagas && typeof d.competicoesPagas === 'object' ? d.competicoesPagas : {},
+            atualizadoEm: d.atualizadoEm || '',
+          };
+        });
+        onRegistros(registros);
+      },
+      (error) => {
+        console.warn('Snapshot financeiro_atletas offline ou pausado:', error.message);
+      }
+    );
+
+    return () => {
+      unsubCompeticoes();
+      unsubRegistros();
+    };
+  },
+
+  // ==========================================
+  // JOGOS DA AGENDA
+  // ==========================================
+  async salvarJogo(jogo: JogoAgenda): Promise<void> {
+    const path = `jogos/${jogo.id}`;
+    const payload = cleanFirestoreData({
+      id: jogo.id,
+      adversario: (jogo.adversario || '').trim(),
+      dataJogo: jogo.dataJogo || '',
+      hora: jogo.hora || '',
+      categoria: jogo.categoria || 'SUB-15',
+      local: jogo.local || '',
+      tipo: jogo.tipo || 'Campeonato',
+      placar: jogo.placar || '',
+      realizado: Boolean(jogo.realizado),
+      observacoesGerais: jogo.observacoesGerais || '',
+      criadoEm: jogo.criadoEm || new Date().toISOString(),
+      atualizadoEm: new Date().toISOString(),
+    });
+
+    try {
+      await setDoc(doc(db, 'jogos', jogo.id), payload);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  },
+
+  async excluirJogo(id: string): Promise<void> {
+    const path = `jogos/${id}`;
+    try {
+      await deleteDoc(doc(db, 'jogos', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  },
+
+  observarJogos(onJogos: (jogos: JogoAgenda[]) => void): () => void {
+    const unsub = onSnapshot(
+      collection(db, 'jogos'),
+      (snapshot) => {
+        const jogos: JogoAgenda[] = [];
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          jogos.push({
+            id: d.id || docSnap.id,
+            adversario: d.adversario || '',
+            dataJogo: d.dataJogo || '',
+            hora: d.hora || '',
+            categoria: d.categoria || 'SUB-15',
+            local: d.local || '',
+            tipo: d.tipo || 'Campeonato',
+            placar: d.placar || '',
+            realizado: Boolean(d.realizado),
+            observacoesGerais: d.observacoesGerais || '',
+            criadoEm: d.criadoEm || '',
+          });
+        });
+        if (jogos.length > 0) {
+          onJogos(jogos);
+        }
+      },
+      (error) => {
+        console.warn('Snapshot jogos offline ou pausado:', error.message);
+      }
+    );
+    return unsub;
+  },
+
+  // ==========================================
+  // TESTES FÍSICOS
+  // ==========================================
+  async salvarTesteFisico(teste: TesteFisicoAtleta): Promise<void> {
+    const path = `testes_fisicos/${teste.id}`;
+    const payload = cleanFirestoreData({
+      id: teste.id,
+      atletaId: teste.atletaId,
+      data: teste.data,
+      categoria: teste.categoria,
+      ...(teste.velocidade30m !== undefined ? { velocidade30m: Number(teste.velocidade30m) } : {}),
+      ...(teste.saltoVertical !== undefined ? { saltoVertical: Number(teste.saltoVertical) } : {}),
+      ...(teste.resistenciaYoYo !== undefined ? { resistenciaYoYo: Number(teste.resistenciaYoYo) } : {}),
+      ...(teste.agilidadeShuttle !== undefined ? { agilidadeShuttle: Number(teste.agilidadeShuttle) } : {}),
+      ...(teste.flexibilidadeBanco !== undefined ? { flexibilidadeBanco: Number(teste.flexibilidadeBanco) } : {}),
+      ...(teste.estatura !== undefined ? { estatura: Number(teste.estatura) } : {}),
+      ...(teste.massaCorporal !== undefined ? { massaCorporal: Number(teste.massaCorporal) } : {}),
+      observacoes: teste.observacoes || '',
+      avaliador: teste.avaliador || 'Preparação Física',
+      atualizadoEm: new Date().toISOString(),
+    });
+
+    try {
+      await setDoc(doc(db, 'testes_fisicos', teste.id), payload);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  },
+
+  async excluirTesteFisico(id: string): Promise<void> {
+    const path = `testes_fisicos/${id}`;
+    try {
+      await deleteDoc(doc(db, 'testes_fisicos', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  },
+
+  observarTestesFisicos(onTestes: (testes: TesteFisicoAtleta[]) => void): () => void {
+    const unsub = onSnapshot(
+      collection(db, 'testes_fisicos'),
+      (snapshot) => {
+        const testes: TesteFisicoAtleta[] = [];
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          testes.push({
+            id: d.id || docSnap.id,
+            atletaId: d.atletaId || '',
+            data: d.data || '',
+            categoria: d.categoria || 'SUB-15',
+            velocidade30m: d.velocidade30m !== undefined ? Number(d.velocidade30m) : undefined,
+            saltoVertical: d.saltoVertical !== undefined ? Number(d.saltoVertical) : undefined,
+            resistenciaYoYo: d.resistenciaYoYo !== undefined ? Number(d.resistenciaYoYo) : undefined,
+            agilidadeShuttle: d.agilidadeShuttle !== undefined ? Number(d.agilidadeShuttle) : undefined,
+            flexibilidadeBanco: d.flexibilidadeBanco !== undefined ? Number(d.flexibilidadeBanco) : undefined,
+            estatura: d.estatura !== undefined ? Number(d.estatura) : undefined,
+            massaCorporal: d.massaCorporal !== undefined ? Number(d.massaCorporal) : undefined,
+            observacoes: d.observacoes || '',
+            avaliador: d.avaliador || 'Preparação Física',
+          });
+        });
+        if (testes.length > 0) {
+          onTestes(testes);
+        }
+      },
+      (error) => {
+        console.warn('Snapshot testes_fisicos offline ou pausado:', error.message);
+      }
+    );
+    return unsub;
   },
 };

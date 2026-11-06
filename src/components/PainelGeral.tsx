@@ -87,7 +87,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-[120px]">
       {/* Banner de Boas-Vindas Master Soccer (Azul e Amarelo com Escudo Oficial) */}
       <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-blue-900/60 relative overflow-hidden">
         {/* Glow sutil de fundo dourado */}

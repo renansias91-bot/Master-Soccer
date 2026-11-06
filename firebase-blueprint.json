@@ -44,6 +44,39 @@
         "resultado": { "type": "string" }
       },
       "required": ["atletaId", "categoria", "notaGeral", "observacoes"]
+    },
+    "Jogo": {
+      "title": "Jogo",
+      "description": "Jogos e agenda de partidas do clube",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "adversario": { "type": "string" },
+        "dataJogo": { "type": "string" },
+        "hora": { "type": "string" },
+        "categoria": { "type": "string" },
+        "local": { "type": "string" },
+        "tipo": { "type": "string" },
+        "placar": { "type": "string" },
+        "realizado": { "type": "boolean" }
+      },
+      "required": ["adversario", "dataJogo", "categoria"]
+    },
+    "TesteFisico": {
+      "title": "TesteFisico",
+      "description": "Testes de velocidade, salto vertical, resistência e flexibilidade",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "atletaId": { "type": "string" },
+        "data": { "type": "string" },
+        "categoria": { "type": "string" },
+        "velocidade30m": { "type": "number" },
+        "saltoVertical": { "type": "number" },
+        "resistenciaYoYo": { "type": "number" },
+        "flexibilidadeBanco": { "type": "number" }
+      },
+      "required": ["atletaId", "data", "categoria"]
     }
   },
   "firestore": {
@@ -58,6 +91,14 @@
     "/avaliacoes/{avaliacaoId}": {
       "schema": "Avaliacao",
       "description": "Avaliações individuais pós-jogo registradas pelos professores"
+    },
+    "/jogos/{jogoId}": {
+      "schema": "Jogo",
+      "description": "Jogos da agenda do clube"
+    },
+    "/testes_fisicos/{testeId}": {
+      "schema": "TesteFisico",
+      "description": "Testes físicos periódicos dos atletas"
     }
   }
 }

@@ -55,7 +55,7 @@ export const HistoricoJogosView: React.FC<HistoricoJogosViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-[120px]">
       {/* Barra de Filtros e Ações */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">

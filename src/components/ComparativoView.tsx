@@ -24,7 +24,7 @@ export const ComparativoView: React.FC<ComparativoViewProps> = ({
   const statsB = atletaB ? storageService.getEstatisticasAtleta(atletaB.id) : null;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto pb-[120px]">
       {/* Cabeçalho */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
         <div className="flex items-center gap-3">

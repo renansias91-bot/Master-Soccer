@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Award, CheckCircle2, Info, Plus, Clock, Users, ArrowRight, Calendar } from 'lucide-react';
 import { Atleta, AvaliacaoJogo, NotasPilares } from '../types';
 import { getDataAtualBrasil, formatarDataExibicao } from '../utils/dateUtils';
+import { tituloNota } from '../utils/avaliacaoUtils';
 
 interface AvaliacaoModalProps {
   isOpen: boolean;
@@ -78,7 +79,14 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
   const [mental, setMental] = useState<number>(8.0);
   const [disciplinar, setDisciplinar] = useState<number>(9.0);
 
-  // Observações adicionais sobre o progresso e desenvolvimento
+  // Observações individuais para cada um dos 5 quesitos (sem misturar)
+  const [obsFisica, setObsFisica] = useState('');
+  const [obsTecnica, setObsTecnica] = useState('');
+  const [obsTatica, setObsTatica] = useState('');
+  const [obsMental, setObsMental] = useState('');
+  const [obsDisciplinar, setObsDisciplinar] = useState('');
+
+  // Observações consolidadas e tags
   const [observacoes, setObservacoes] = useState('');
   const [pontosFortes, setPontosFortes] = useState<string[]>([]);
   const [pontosMelhoria, setPontosMelhoria] = useState<string[]>([]);
@@ -134,7 +142,38 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
       setFisica(avaliacaoEditando.notas.fisica);
       setMental(avaliacaoEditando.notas.mental);
       setDisciplinar(avaliacaoEditando.notas.disciplinar);
-      setObservacoes(avaliacaoEditando.observacoes);
+      setObservacoes(avaliacaoEditando.observacoes || '');
+
+      // Carregar observações isoladas por pilar
+      if (avaliacaoEditando.observacoesPorPilar) {
+        setObsFisica(avaliacaoEditando.observacoesPorPilar.fisica || '');
+        setObsTecnica(avaliacaoEditando.observacoesPorPilar.tecnica || '');
+        setObsTatica(avaliacaoEditando.observacoesPorPilar.tatica || '');
+        setObsMental(avaliacaoEditando.observacoesPorPilar.mental || '');
+        setObsDisciplinar(avaliacaoEditando.observacoesPorPilar.disciplinar || '');
+      } else {
+        const obsTexto = avaliacaoEditando.observacoes || '';
+        const matchFis = obsTexto.match(/\[FÍSICO\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
+        const matchTec = obsTexto.match(/\[TÉCNICO\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
+        const matchTat = obsTexto.match(/\[TÁTICO\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
+        const matchMen = obsTexto.match(/\[MENTAL\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
+        const matchDis = obsTexto.match(/\[DISCIPLINAR\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
+
+        if (matchFis || matchTec || matchTat || matchMen || matchDis) {
+          setObsFisica(matchFis ? matchFis[1].trim() : '');
+          setObsTecnica(matchTec ? matchTec[1].trim() : '');
+          setObsTatica(matchTat ? matchTat[1].trim() : '');
+          setObsMental(matchMen ? matchMen[1].trim() : '');
+          setObsDisciplinar(matchDis ? matchDis[1].trim() : '');
+        } else {
+          setObsTecnica(obsTexto);
+          setObsFisica('');
+          setObsTatica('');
+          setObsMental('');
+          setObsDisciplinar('');
+        }
+      }
+
       setPontosFortes(avaliacaoEditando.pontosFortes || []);
       setPontosMelhoria(avaliacaoEditando.pontosMelhoria || []);
       setAvaliador(avaliacaoEditando.avaliador || 'Comissão Técnica');
@@ -172,6 +211,11 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
       setFisica(7.5);
       setMental(8.0);
       setDisciplinar(9.0);
+      setObsFisica('');
+      setObsTecnica('');
+      setObsTatica('');
+      setObsMental('');
+      setObsDisciplinar('');
       setObservacoes('');
       setPontosFortes([]);
       setPontosMelhoria([]);
@@ -220,10 +264,6 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
       setErro('Por favor, informe a equipe adversária.');
       return;
     }
-    if (!observacoes.trim()) {
-      setErro('Por favor, preencha o parecer de observações sobre o desenvolvimento do atleta.');
-      return;
-    }
 
     const atletaObj = atletas.find((a) => a.id === atletaId);
 
@@ -234,6 +274,18 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
       mental: Number(mental),
       disciplinar: Number(disciplinar),
     };
+
+    // Monta o parecer consolidado sem misturar os quesitos
+    const partesObs: string[] = [];
+    if (obsFisica.trim()) partesObs.push(`[FÍSICO]: ${obsFisica.trim()}`);
+    if (obsTecnica.trim()) partesObs.push(`[TÉCNICO]: ${obsTecnica.trim()}`);
+    if (obsTatica.trim()) partesObs.push(`[TÁTICO]: ${obsTatica.trim()}`);
+    if (obsMental.trim()) partesObs.push(`[MENTAL]: ${obsMental.trim()}`);
+    if (obsDisciplinar.trim()) partesObs.push(`[DISCIPLINAR]: ${obsDisciplinar.trim()}`);
+
+    const textoObservacoesFinal = partesObs.length > 0
+      ? partesObs.join('\n\n')
+      : (observacoes.trim() || 'Atuação avaliada pela comissão técnica.');
 
     // A data é criada NA HORA em que clica em SALVAR, com fuso horário America/Sao_Paulo no formato DD/MM/AAAA
     const dataJogoSalva = avaliacaoEditando?.dataJogo
@@ -254,7 +306,14 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
       titular,
       notas: notasObj,
       notaGeral,
-      observacoes: observacoes.trim(),
+      observacoes: textoObservacoesFinal,
+      observacoesPorPilar: {
+        fisica: obsFisica.trim(),
+        tecnica: obsTecnica.trim(),
+        tatica: obsTatica.trim(),
+        mental: obsMental.trim(),
+        disciplinar: obsDisciplinar.trim(),
+      },
       pontosFortes,
       pontosMelhoria,
       avaliador: avaliador.trim() || 'Comissão Técnica',
@@ -281,6 +340,11 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
       }
 
       // Limpa dados de desempenho individual para o próximo
+      setObsFisica('');
+      setObsTecnica('');
+      setObsTatica('');
+      setObsMental('');
+      setObsDisciplinar('');
       setObservacoes('');
       setPontosFortes([]);
       setPontosMelhoria([]);
@@ -329,14 +393,15 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
           </button>
         </div>
 
-        {/* Formulário com Scroll suave */}
+        {/* Formulário com Scroll suave e padding-bottom de 120px para não esconder nada */}
         <form
           ref={formRef}
           onSubmit={(e) => {
             e.preventDefault();
             handleSalvar(true);
           }}
-          className="p-6 space-y-5 max-h-[80vh] overflow-y-auto"
+          className="p-6 space-y-5 max-h-[85vh] overflow-y-auto pb-[120px]"
+          style={{ paddingBottom: '120px' }}
         >
           {/* Alerta de Sucesso Sequencial */}
           {mensagemSucesso && (
@@ -666,152 +731,298 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
               </div>
             </div>
 
+            {/* LISTA DOS 5 QUESITOS: TÍTULO + SLIDER AZUL + NOTA + LEGENDA + CAIXINHA FIXA 120px */}
             <div className="space-y-4">
-              {/* 1. TÉCNICA */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between mb-1">
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      1. Parte Técnica
-                    </span>
-                    <span className="text-[11px] text-slate-500 ml-2">
-                      (Passe, controle, drible, condução e finalização)
-                    </span>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">
-                    {tecnica.toFixed(1)}
+              {/* 1. FÍSICO */}
+              <div
+                style={{
+                  margin: '16px 0',
+                  padding: 16,
+                  borderRadius: 12,
+                  border: '1px solid #e5e7eb',
+                  background: '#f9fafb',
+                }}
+                className="dark:bg-slate-800/60 dark:border-slate-800"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>⚡</span> FÍSICO
+                  </span>
+                  <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
+                    Nota: {Math.round(fisica)}/10 - {tituloNota(fisica)}
                   </span>
                 </div>
                 <input
                   type="range"
-                  min="1"
-                  max="10"
-                  step="0.5"
-                  value={tecnica}
-                  onChange={(e) => setTecnica(parseFloat(e.target.value))}
-                  className="w-full accent-blue-600 cursor-pointer"
-                />
-              </div>
-
-              {/* 2. TÁTICA */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between mb-1">
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      2. Parte Tática
-                    </span>
-                    <span className="text-[11px] text-slate-500 ml-2">
-                      (Posicionamento, leitura de jogo, ocupação de espaço e recomposição)
-                    </span>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">
-                    {tatica.toFixed(1)}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="10"
-                  step="0.5"
-                  value={tatica}
-                  onChange={(e) => setTatica(parseFloat(e.target.value))}
-                  className="w-full accent-blue-600 cursor-pointer"
-                />
-              </div>
-
-              {/* 3. FÍSICA */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between mb-1">
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      3. Parte Física
-                    </span>
-                    <span className="text-[11px] text-slate-500 ml-2">
-                      (Velocidade, vigor nos duelos, resistência aeróbica e intensidade)
-                    </span>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">
-                    {fisica.toFixed(1)}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
+                  min="0"
                   max="10"
                   step="0.5"
                   value={fisica}
                   onChange={(e) => setFisica(parseFloat(e.target.value))}
-                  className="w-full accent-blue-600 cursor-pointer"
+                  className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                  style={{ accentColor: '#2563eb' }}
+                />
+
+                {/* LEGENDA EMBAIXO DE CADA ITEM - COPIAR ESSA PARTE */}
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: 10,
+                    background: '#fff',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: '#555',
+                    lineHeight: 1.6,
+                    textAlign: 'center',
+                  }}
+                >
+                  <b>Legenda:</b>
+                  <br />
+                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
+                  7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
+                </div>
+
+                <textarea
+                  value={obsFisica}
+                  onChange={(e) => setObsFisica(e.target.value)}
+                  placeholder="Observação do Físico..."
+                  style={{ height: '120px', resize: 'none' }}
+                  className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+
+              {/* 2. TÉCNICO */}
+              <div
+                style={{
+                  margin: '16px 0',
+                  padding: 16,
+                  borderRadius: 12,
+                  border: '1px solid #e5e7eb',
+                  background: '#f9fafb',
+                }}
+                className="dark:bg-slate-800/60 dark:border-slate-800"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>⚽</span> TÉCNICO
+                  </span>
+                  <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
+                    Nota: {Math.round(tecnica)}/10 - {tituloNota(tecnica)}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.5"
+                  value={tecnica}
+                  onChange={(e) => setTecnica(parseFloat(e.target.value))}
+                  className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                  style={{ accentColor: '#2563eb' }}
+                />
+
+                {/* LEGENDA EMBAIXO DE CADA ITEM - COPIAR ESSA PARTE */}
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: 10,
+                    background: '#fff',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: '#555',
+                    lineHeight: 1.6,
+                    textAlign: 'center',
+                  }}
+                >
+                  <b>Legenda:</b>
+                  <br />
+                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
+                  7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
+                </div>
+
+                <textarea
+                  value={obsTecnica}
+                  onChange={(e) => setObsTecnica(e.target.value)}
+                  placeholder="Observação do Técnico..."
+                  style={{ height: '120px', resize: 'none' }}
+                  className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+
+              {/* 3. TÁTICO */}
+              <div
+                style={{
+                  margin: '16px 0',
+                  padding: 16,
+                  borderRadius: 12,
+                  border: '1px solid #e5e7eb',
+                  background: '#f9fafb',
+                }}
+                className="dark:bg-slate-800/60 dark:border-slate-800"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>🧠</span> TÁTICO
+                  </span>
+                  <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
+                    Nota: {Math.round(tatica)}/10 - {tituloNota(tatica)}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.5"
+                  value={tatica}
+                  onChange={(e) => setTatica(parseFloat(e.target.value))}
+                  className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                  style={{ accentColor: '#2563eb' }}
+                />
+
+                {/* LEGENDA EMBAIXO DE CADA ITEM - COPIAR ESSA PARTE */}
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: 10,
+                    background: '#fff',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: '#555',
+                    lineHeight: 1.6,
+                    textAlign: 'center',
+                  }}
+                >
+                  <b>Legenda:</b>
+                  <br />
+                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
+                  7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
+                </div>
+
+                <textarea
+                  value={obsTatica}
+                  onChange={(e) => setObsTatica(e.target.value)}
+                  placeholder="Observação do Tático..."
+                  style={{ height: '120px', resize: 'none' }}
+                  className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
               </div>
 
               {/* 4. MENTAL */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between mb-1">
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      4. Parte Mental
-                    </span>
-                    <span className="text-[11px] text-slate-500 ml-2">
-                      (Concentração, atitude sob pressão, inteligência emocional e liderança)
-                    </span>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">
-                    {mental.toFixed(1)}
+              <div
+                style={{
+                  margin: '16px 0',
+                  padding: 16,
+                  borderRadius: 12,
+                  border: '1px solid #e5e7eb',
+                  background: '#f9fafb',
+                }}
+                className="dark:bg-slate-800/60 dark:border-slate-800"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>🎯</span> MENTAL
+                  </span>
+                  <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
+                    Nota: {Math.round(mental)}/10 - {tituloNota(mental)}
                   </span>
                 </div>
                 <input
                   type="range"
-                  min="1"
+                  min="0"
                   max="10"
                   step="0.5"
                   value={mental}
                   onChange={(e) => setMental(parseFloat(e.target.value))}
-                  className="w-full accent-blue-600 cursor-pointer"
+                  className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                  style={{ accentColor: '#2563eb' }}
+                />
+
+                {/* LEGENDA EMBAIXO DE CADA ITEM - COPIAR ESSA PARTE */}
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: 10,
+                    background: '#fff',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: '#555',
+                    lineHeight: 1.6,
+                    textAlign: 'center',
+                  }}
+                >
+                  <b>Legenda:</b>
+                  <br />
+                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
+                  7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
+                </div>
+
+                <textarea
+                  value={obsMental}
+                  onChange={(e) => setObsMental(e.target.value)}
+                  placeholder="Observação do Mental..."
+                  style={{ height: '120px', resize: 'none' }}
+                  className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
               </div>
 
               {/* 5. DISCIPLINAR */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center justify-between mb-1">
-                  <div>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      5. Parte Disciplinar
-                    </span>
-                    <span className="text-[11px] text-slate-500 ml-2">
-                      (Cumprimento de ordens da comissão, respeito ao árbitro e espírito de grupo)
-                    </span>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 tabular-nums">
-                    {disciplinar.toFixed(1)}
+              <div
+                style={{
+                  margin: '16px 0',
+                  padding: 16,
+                  borderRadius: 12,
+                  border: '1px solid #e5e7eb',
+                  background: '#f9fafb',
+                }}
+                className="dark:bg-slate-800/60 dark:border-slate-800"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span>🛡️</span> DISCIPLINAR
+                  </span>
+                  <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
+                    Nota: {Math.round(disciplinar)}/10 - {tituloNota(disciplinar)}
                   </span>
                 </div>
                 <input
                   type="range"
-                  min="1"
+                  min="0"
                   max="10"
                   step="0.5"
                   value={disciplinar}
                   onChange={(e) => setDisciplinar(parseFloat(e.target.value))}
-                  className="w-full accent-blue-600 cursor-pointer"
+                  className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                  style={{ accentColor: '#2563eb' }}
+                />
+
+                {/* LEGENDA EMBAIXO DE CADA ITEM - COPIAR ESSA PARTE */}
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: 10,
+                    background: '#fff',
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: '#555',
+                    lineHeight: 1.6,
+                    textAlign: 'center',
+                  }}
+                >
+                  <b>Legenda:</b>
+                  <br />
+                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
+                  7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
+                </div>
+
+                <textarea
+                  value={obsDisciplinar}
+                  onChange={(e) => setObsDisciplinar(e.target.value)}
+                  placeholder="Observação do Disciplinar..."
+                  style={{ height: '120px', resize: 'none' }}
+                  className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
               </div>
             </div>
-          </div>
-
-          {/* SEÇÃO 4: CAMPO DE OBSERVAÇÕES DE PROGRESSO & DESENVOLVIMENTO */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Observações sobre o Progresso e Desenvolvimento do Jogador *
-            </label>
-            <textarea
-              rows={4}
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              placeholder="Descreva detalhes específicos da atuação: tomadas de decisão, evolução tática em relação aos treinos, postura diante de adversidades e orientações para os próximos ciclos..."
-              className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
           </div>
 
           {/* Pontos Fortes e Pontos de Melhoria (Atalhos rápidos) */}

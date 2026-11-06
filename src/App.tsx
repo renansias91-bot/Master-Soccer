@@ -3,7 +3,6 @@ import {
   Shield,
   Users,
   Award,
-  ArrowRightLeft,
   Calendar,
   Plus,
   Download,
@@ -13,12 +12,22 @@ import {
   X,
   CheckCircle2,
   Settings,
-  Flame,
-  Wifi,
-  WifiOff,
   Smartphone,
+  DollarSign,
+  FileText,
+  Activity,
+  Trophy,
+  ChevronRight,
+  Flame,
 } from 'lucide-react';
-import { Atleta, AvaliacaoJogo } from './types';
+import {
+  Atleta,
+  AvaliacaoJogo,
+  ItemCompeticaoTaxa,
+  RegistroFinanceiroAtleta,
+  JogoAgenda,
+  TesteFisicoAtleta,
+} from './types';
 import { storageService, CATEGORIAS_PADRAO } from './services/storage';
 import { firebaseService } from './services/firebase';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
@@ -26,26 +35,50 @@ import { usePWAInstall } from './hooks/usePWAInstall';
 import { PainelGeral } from './components/PainelGeral';
 import { PlantelView } from './components/PlantelView';
 import { RelatorioIndividual } from './components/RelatorioIndividual';
-import { HistoricoJogosView } from './components/HistoricoJogosView';
 import { ComparativoView } from './components/ComparativoView';
+import { FinanceiroView } from './components/FinanceiroView';
+import { AgendaJogosView } from './components/AgendaJogosView';
+import { JogoModal } from './components/JogoModal';
+import { TesteFisicoView } from './components/TesteFisicoView';
 import { AtletaModal } from './components/AtletaModal';
 import { AvaliacaoModal } from './components/AvaliacaoModal';
 import { GerenciarCategoriasModal } from './components/GerenciarCategoriasModal';
 import { ConfirmacaoApagarModal } from './components/ConfirmacaoApagarModal';
-
 import { MasterSoccerEscudo } from './components/MasterSoccerEscudo';
 
-type AbaNavegacao = 'painel' | 'plantel' | 'avaliacoes' | 'comparativo' | 'relatorio';
+type AbaNavegacao =
+  | 'painel'
+  | 'jogo'
+  | 'escalacao'
+  | 'trofeus'
+  | 'financeiro'
+  | 'relatorio'
+  | 'testefisico';
 
 export default function App() {
   const isOnline = useOnlineStatus();
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
 
+  // Estados principais
   const [atletas, setAtletas] = useState<Atleta[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoJogo[]>([]);
+  const [jogos, setJogos] = useState<JogoAgenda[]>(() => storageService.getJogosAgenda());
+  const [testesFisicos, setTestesFisicos] = useState<TesteFisicoAtleta[]>(() =>
+    storageService.getTestesFisicos()
+  );
   const [categorias, setCategorias] = useState<string[]>(CATEGORIAS_PADRAO);
+
+  // Navegação: Menu de Baixo (PAINEL, JOGO, ESCALAÇÃO, TROFÉUS) + Telas do Menu ☰ (Financeiro, Relatório, Teste Físico)
   const [abaAtiva, setAbaAtiva] = useState<AbaNavegacao>('painel');
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>('TODAS');
+
+  // Módulo Financeiro
+  const [competicoes, setCompeticoes] = useState<ItemCompeticaoTaxa[]>(() =>
+    storageService.getCompeticoes()
+  );
+  const [registrosFinanceiros, setRegistrosFinanceiros] = useState<
+    Record<string, RegistroFinanceiroAtleta>
+  >(() => storageService.getRegistrosFinanceiros());
 
   // Modais e seleções
   const [atletaSelecionado, setAtletaSelecionado] = useState<Atleta | null>(null);
@@ -56,23 +89,26 @@ export default function App() {
   const [avaliacaoEditando, setAvaliacaoEditando] = useState<AvaliacaoJogo | null>(null);
   const [atletaPreSelecionadoId, setAtletaPreSelecionadoId] = useState<string | undefined>();
 
+  const [isJogoModalOpen, setIsJogoModalOpen] = useState(false);
+  const [jogoEditando, setJogoEditando] = useState<JogoAgenda | null>(null);
+
   const [isCategoriasModalOpen, setIsCategoriasModalOpen] = useState(false);
   const [isInstalarModalOpen, setIsInstalarModalOpen] = useState(false);
+  const [menuDrawerOpen, setMenuDrawerOpen] = useState(false);
   const [toastMensagem, setToastMensagem] = useState<string | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Estado do modal de confirmação de exclusão (SIM / NÃO, sem digitação)
+  // Modal de Confirmação de Apagar (SIM / NÃO, sem digitação)
   const [itemParaExcluir, setItemParaExcluir] = useState<{
-    tipo: 'atleta' | 'avaliacao';
+    tipo: 'atleta' | 'avaliacao' | 'jogo' | 'testefisico';
     id: string;
     nome?: string;
   } | null>(null);
   const [excluindoCarregando, setExcluindoCarregando] = useState(false);
 
-  // Carrega dados e sincroniza via onSnapshot do Firestore (fonte única da lista de atletas)
+  // Sincronização em tempo real via onSnapshot do Firestore
   useEffect(() => {
-    // 1. Escuta em tempo real a coleção 'athletes' do Firestore
-    const unsubscribe = firebaseService.observarDados(
+    // 1. Atletas e Avaliações
+    const unsubDados = firebaseService.observarDados(
       (novosAtletas) => {
         setAtletas(novosAtletas);
         storageService.salvarAtletas(novosAtletas);
@@ -83,27 +119,64 @@ export default function App() {
       }
     );
 
-    // 2. Se a coleção 'athletes' estiver vazia pela primeira vez, semeia os atletas iniciais no Firestore
-    async function inicializarAtletasNoFirestore() {
+    // 2. Financeiro
+    const unsubFinanceiro = firebaseService.observarFinanceiro(
+      (novasComps) => {
+        if (novasComps && novasComps.length > 0) {
+          setCompeticoes(novasComps);
+          storageService.salvarCompeticoes(novasComps);
+        }
+      },
+      (novosRegistros) => {
+        setRegistrosFinanceiros(novosRegistros);
+        storageService.salvarRegistrosFinanceiros(novosRegistros);
+      }
+    );
+
+    // 3. Jogos da Agenda
+    const unsubJogos = firebaseService.observarJogos((novosJogos) => {
+      if (novosJogos && novosJogos.length > 0) {
+        setJogos(novosJogos);
+        storageService.salvarJogosAgenda(novosJogos);
+      }
+    });
+
+    // 4. Testes Físicos
+    const unsubTestes = firebaseService.observarTestesFisicos((novosTestes) => {
+      if (novosTestes && novosTestes.length > 0) {
+        setTestesFisicos(novosTestes);
+        storageService.salvarTestesFisicos(novosTestes);
+      }
+    });
+
+    // Inicialização
+    async function inicializarDadosNoFirestore() {
       try {
         const dadosRemotos = await firebaseService.buscarDados();
         if (dadosRemotos.atletas.length === 0) {
           const atlsLocais = storageService.getAtletas();
-          if (atlsLocais.length > 0) {
-            for (const atl of atlsLocais) {
-              await firebaseService.cadastrarAtleta(atl).catch(() => {});
-            }
+          for (const atl of atlsLocais) {
+            await firebaseService.cadastrarAtleta(atl).catch(() => {});
           }
+        }
+
+        // Semeia jogos iniciais se necessário
+        const jogosLocais = storageService.getJogosAgenda();
+        for (const jg of jogosLocais) {
+          await firebaseService.salvarJogo(jg).catch(() => {});
         }
       } catch (err) {
         console.warn('Conexão inicial com Firestore offline ou em segundo plano:', err);
       }
     }
 
-    inicializarAtletasNoFirestore();
+    inicializarDadosNoFirestore();
 
     return () => {
-      unsubscribe();
+      unsubDados();
+      unsubFinanceiro();
+      unsubJogos();
+      unsubTestes();
     };
   }, []);
 
@@ -112,16 +185,14 @@ export default function App() {
     setTimeout(() => setToastMensagem(null), 3500);
   };
 
-  // Handlers para Atletas: Salva com await no Firestore SEM setState manual (o onSnapshot atualiza sozinho)
+  // Handlers para Atletas
   const handleSalvarAtleta = async (atleta: Atleta) => {
     try {
       if (atletaEditando && atleta.id) {
         await firebaseService.atualizarAtleta(atleta.id, atleta);
       } else {
-        // Cadastra com addDoc(collection(db, 'athletes'), ...)
         await firebaseService.cadastrarAtleta(atleta);
       }
-      // NÃO dá setState manual: o onSnapshot do Firestore atualiza sozinho a lista de atletas!
       if (atletaSelecionado && atletaSelecionado.id === atleta.id) {
         setAtletaSelecionado(atleta);
       }
@@ -129,11 +200,10 @@ export default function App() {
     } catch (e: any) {
       console.error('Erro ao salvar atleta no Firestore:', e);
       alert(e?.message || 'Erro ao salvar atleta no Firestore');
-      throw e; // Lança para que o AtletaModal capture e exiba sem fechar
+      throw e;
     }
   };
 
-  // Dispara modal de exclusão para Atleta (pergunta se tem certeza com botões SIM e NÃO)
   const handleExcluirAtleta = (id: string) => {
     const atleta = atletas.find((a) => a.id === id);
     setItemParaExcluir({
@@ -153,28 +223,29 @@ export default function App() {
     setIsAtletaModalOpen(true);
   };
 
-  // Handlers para Avaliações (Salva no Firestore com nome do atleta, categoria, data, nota, observações, nome do professor)
+  // Handlers para Avaliações
   const handleSalvarAvaliacao = async (avaliacao: AvaliacaoJogo) => {
     storageService.salvarAvaliacao(avaliacao);
     setAvaliacoes(storageService.getAvaliacoes());
 
-    const atleta = atletas.find((a) => a.id === avaliacao.atletaId);
+    const atleta = atletas.find((a) => a.id === atletaIdValido(avaliacao.atletaId));
     const nomeAtleta = atleta ? atleta.nome : '';
 
     try {
       await firebaseService.salvarAvaliacao(avaliacao, nomeAtleta);
-      if (isOnline) {
-        exibirToast('Avaliação salva e sincronizada com o Firebase!');
-      } else {
-        exibirToast('Avaliação salva offline no aparelho! Sincronizará quando online.');
-      }
+      exibirToast(
+        isOnline
+          ? 'Avaliação salva e sincronizada com o Firebase!'
+          : 'Avaliação salva offline no aparelho!'
+      );
     } catch (e) {
-      console.warn('Avaliação salva no cache offline:', e);
-      exibirToast('Avaliação salva no aparelho (modo offline ativo).');
+      console.warn('Avaliação salva localmente:', e);
+      exibirToast('Avaliação salva no aparelho.');
     }
   };
 
-  // Dispara modal de exclusão para Avaliação (pergunta se tem certeza com botões SIM e NÃO)
+  const atletaIdValido = (id: string) => id;
+
   const handleExcluirAvaliacao = (id: string) => {
     const av = avaliacoes.find((a) => a.id === id);
     setItemParaExcluir({
@@ -184,30 +255,89 @@ export default function App() {
     });
   };
 
-  // Executa a exclusão confirmada pelo usuário no botão SIM
+  // Handlers para Jogos da Agenda
+  const handleSalvarJogo = async (jogo: JogoAgenda) => {
+    storageService.salvarJogoAgenda(jogo);
+    setJogos(storageService.getJogosAgenda());
+
+    try {
+      await firebaseService.salvarJogo(jogo);
+      exibirToast('Jogo salvo na agenda com sucesso!');
+    } catch (e) {
+      console.warn('Jogo salvo offline:', e);
+      exibirToast('Jogo salvo na agenda (offline).');
+    }
+  };
+
+  const handleAbrirNovoJogo = () => {
+    setJogoEditando(null);
+    setIsJogoModalOpen(true);
+  };
+
+  const handleAbrirEditarJogo = (jogo: JogoAgenda) => {
+    setJogoEditando(jogo);
+    setIsJogoModalOpen(true);
+  };
+
+  const handleExcluirJogo = (id: string, nome?: string) => {
+    setItemParaExcluir({
+      tipo: 'jogo',
+      id,
+      nome: nome || 'Jogo da Agenda',
+    });
+  };
+
+  // Handlers para Testes Físicos
+  const handleSalvarTesteFisico = async (teste: TesteFisicoAtleta) => {
+    storageService.salvarTesteFisico(teste);
+    setTestesFisicos(storageService.getTestesFisicos());
+
+    try {
+      await firebaseService.salvarTesteFisico(teste);
+      exibirToast('Teste físico salvo com sucesso!');
+    } catch (e) {
+      console.warn('Teste salvo offline:', e);
+      exibirToast('Teste físico salvo no aparelho.');
+    }
+  };
+
+  const handleExcluirTesteFisico = (id: string) => {
+    setItemParaExcluir({
+      tipo: 'testefisico',
+      id,
+      nome: 'Teste Físico',
+    });
+  };
+
+  // Confirmação de Exclusão (SIM / NÃO)
   const handleConfirmarExclusao = async () => {
     if (!itemParaExcluir) return;
     setExcluindoCarregando(true);
 
     try {
       if (itemParaExcluir.tipo === 'atleta') {
-        // Exclui o atleta e TODAS as avaliações dele no Firestore em cascata
         await firebaseService.excluirAtleta(itemParaExcluir.id);
-        // Exclui o atleta e TODAS as avaliações dele no storage local
         storageService.excluirAtleta(itemParaExcluir.id);
         setAvaliacoes(storageService.getAvaliacoes());
-
         if (atletaSelecionado && atletaSelecionado.id === itemParaExcluir.id) {
           setAtletaSelecionado(null);
-          setAbaAtiva('plantel');
         }
-        exibirToast('Atleta e todas as suas avaliações foram apagados com sucesso.');
-      } else {
-        // Exclui apenas a avaliação específica no Firestore e local
+        exibirToast('Atleta e suas avaliações foram apagados com sucesso.');
+      } else if (itemParaExcluir.tipo === 'avaliacao') {
         await firebaseService.excluirAvaliacao(itemParaExcluir.id);
         storageService.excluirAvaliacao(itemParaExcluir.id);
         setAvaliacoes(storageService.getAvaliacoes());
         exibirToast('Avaliação apagada com sucesso.');
+      } else if (itemParaExcluir.tipo === 'jogo') {
+        await firebaseService.excluirJogo(itemParaExcluir.id);
+        storageService.excluirJogoAgenda(itemParaExcluir.id);
+        setJogos(storageService.getJogosAgenda());
+        exibirToast('Jogo apagado da agenda.');
+      } else if (itemParaExcluir.tipo === 'testefisico') {
+        await firebaseService.excluirTesteFisico(itemParaExcluir.id);
+        storageService.excluirTesteFisico(itemParaExcluir.id);
+        setTestesFisicos(storageService.getTestesFisicos());
+        exibirToast('Teste físico apagado.');
       }
     } catch (e: any) {
       console.error('Erro ao excluir:', e);
@@ -218,19 +348,7 @@ export default function App() {
     }
   };
 
-  const handleAbrirNovaAvaliacao = (atletaId?: string) => {
-    setAvaliacaoEditando(null);
-    setAtletaPreSelecionadoId(atletaId);
-    setIsAvaliacaoModalOpen(true);
-  };
-
-  const handleAbrirEditarAvaliacao = (avaliacao: AvaliacaoJogo) => {
-    setAvaliacaoEditando(avaliacao);
-    setAtletaPreSelecionadoId(avaliacao.atletaId);
-    setIsAvaliacaoModalOpen(true);
-  };
-
-  // Handler para instalação do PWA
+  // Instalação do PWA
   const handleInstalarApp = async () => {
     if (isInstallable) {
       const instalado = await install();
@@ -244,7 +362,6 @@ export default function App() {
     }
   };
 
-
   // Navegações
   const handleAbrirRelatorioAtleta = (atleta: Atleta) => {
     setAtletaSelecionado(atleta);
@@ -254,65 +371,40 @@ export default function App() {
 
   const handleNavegarPlantel = (categoria?: string) => {
     if (categoria) setCategoriaAtiva(categoria);
-    setAbaAtiva('plantel');
+    setAbaAtiva('escalacao');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Importar / Exportar / Reset
-  const handleImportarBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      if (storageService.importarBackupJson(content)) {
-        setAtletas(storageService.getAtletas());
-        setAvaliacoes(storageService.getAvaliacoes());
-        setCategorias(storageService.getCategorias());
-        exibirToast('Backup importado com sucesso!');
-      } else {
-        alert('Arquivo de backup inválido. Verifique o formato JSON.');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  const handleRestaurarFabrica = () => {
-    if (
-      window.confirm(
-        'Deseja restaurar os dados de demonstração originais? Isso redefinirá os atletas e avaliações de exemplo.'
-      )
-    ) {
-      storageService.restaurarDadosFabrica();
-      setAtletas(storageService.getAtletas());
-      setAvaliacoes(storageService.getAvaliacoes());
-      setCategorias(storageService.getCategorias());
-      setAtletaSelecionado(null);
-      setAbaAtiva('painel');
-      exibirToast('Dados de exemplo restaurados com sucesso!');
-    }
+  const handleNavegarMenuTopo = (aba: AbaNavegacao) => {
+    setAbaAtiva(aba);
+    setMenuDrawerOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <div className="min-h-screen bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans w-full max-w-[100vw] overflow-x-hidden box-border">
       {/* Toast Notification */}
       {toastMensagem && (
-        <div className="fixed bottom-20 sm:bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xl border border-slate-700 dark:border-slate-200 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <div className="fixed bottom-24 sm:bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xl border border-slate-700 dark:border-slate-200 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3 duration-200">
           <CheckCircle2 className="w-4 h-4 text-amber-400 dark:text-amber-500 shrink-0" />
           <span>{toastMensagem}</span>
         </div>
       )}
 
-      {/* Top Bar Contract (1 Row, 3 Zones: Brand - Nav - Action) */}
+      {/* ========================================================= */}
+      {/* MENU DE CIMA - SÓ OS 3 RISQUINHOS ☰ NO CANTO DIREITO */}
+      {/* ========================================================= */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 no-print w-full max-w-[100vw] overflow-x-hidden box-border">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 md:gap-8 w-full max-w-full box-border">
-          {/* Zone 1: Brand Wordmark & Escudo Oficial Master Soccer */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-3 w-full max-w-full box-border">
+          {/* Logo & Marca Master Soccer */}
           <div
             onClick={() => setAbaAtiva('painel')}
-            className="flex items-center gap-2 sm:gap-3 cursor-pointer whitespace-nowrap shrink-0 group select-none min-w-0"
+            className="flex items-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0 group select-none"
           >
-            <MasterSoccerEscudo size={40} className="group-hover:scale-105 transition-transform drop-shadow-xs shrink-0" />
+            <MasterSoccerEscudo
+              size={40}
+              className="group-hover:scale-105 transition-transform drop-shadow-xs shrink-0"
+            />
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
@@ -322,170 +414,227 @@ export default function App() {
                   RJ
                 </span>
               </div>
-              <span className="hidden sm:inline text-[10px] font-medium text-slate-400">
+              <span className="text-[10px] font-medium text-slate-400">
                 Base Sub-15 · Sub-16 · Sub-17
               </span>
             </div>
           </div>
 
-          {/* Zone 2: Navigation Links */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
-            <button
-              onClick={() => setAbaAtiva('painel')}
-              className={`hover:text-blue-600 transition-colors whitespace-nowrap shrink-0 py-1 ${
-                abaAtiva === 'painel'
-                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-amber-400 font-bold'
-                  : ''
-              }`}
-            >
-              Visão Geral
-            </button>
-            <button
-              onClick={() => setAbaAtiva('plantel')}
-              className={`hover:text-blue-600 transition-colors whitespace-nowrap shrink-0 py-1 ${
-                abaAtiva === 'plantel'
-                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-amber-400 font-bold'
-                  : ''
-              }`}
-            >
-              Plantel de Atletas
-            </button>
-            <button
-              onClick={() => setAbaAtiva('avaliacoes')}
-              className={`hover:text-blue-600 transition-colors whitespace-nowrap shrink-0 py-1 ${
-                abaAtiva === 'avaliacoes'
-                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-amber-400 font-bold'
-                  : ''
-              }`}
-            >
-              Partidas & Avaliações
-            </button>
-            <button
-              onClick={() => setAbaAtiva('comparativo')}
-              className={`hover:text-blue-600 transition-colors whitespace-nowrap shrink-0 py-1 ${
-                abaAtiva === 'comparativo'
-                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-amber-400 font-bold'
-                  : ''
-              }`}
-            >
-              Comparativo
-            </button>
-            {atletaSelecionado && (
-              <button
-                onClick={() => setAbaAtiva('relatorio')}
-                className={`hover:text-blue-600 transition-colors whitespace-nowrap shrink-0 py-1 ${
-                  abaAtiva === 'relatorio'
-                    ? 'text-blue-600 dark:text-blue-400 border-b-2 border-amber-400 font-bold'
-                    : ''
-                }`}
-              >
-                Ficha: {atletaSelecionado.nome.split(' ')[0]}
-              </button>
-            )}
-          </nav>
-
-          {/* Zone 3: Primary Action & Menu */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Zona Direita: Selo de Conexão + Botão Instalar + OS 3 RISQUINHOS ☰ NO CANTO DIREITO */}
+          <div className="flex items-center gap-2 shrink-0">
             {/* Selinho ONLINE / OFFLINE */}
             {isOnline ? (
               <span
-                title="Conectado à internet. Sincronização em tempo real com o Firebase ativa."
-                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0"
+                title="Conectado à internet. Sincronização em tempo real ativa."
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 shrink-0"
               >
-                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 ONLINE
               </span>
             ) : (
               <span
-                title="Sem conexão com a internet. Modo offline ativo com persistência IndexedDB."
-                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300 dark:border-orange-800 shrink-0 animate-pulse"
+                title="Sem conexão. Modo offline com persistência IndexedDB."
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300 shrink-0 animate-pulse"
               >
-                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
                 OFFLINE
               </span>
             )}
 
-            {/* Botão Instalar App: Só aparece se ainda NÃO estiver instalado e se o beforeinstallprompt estiver disponível */}
+            {/* Botão Instalar App */}
             {!isInstalled && isInstallable && (
               <button
                 onClick={handleInstalarApp}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 border border-emerald-300 dark:border-emerald-800 rounded-xl transition-all shadow-xs shrink-0"
-                title="Instalar Master Soccer RJ no seu celular ou computador"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 rounded-xl border border-emerald-300 transition-all shadow-xs shrink-0"
               >
-                <Download className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="hidden sm:inline">Instalar App</span>
-                <span className="sm:hidden">Instalar</span>
+                <Download className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Instalar App</span>
               </button>
             )}
 
-            {/* Botão de Nova Avaliação (Azul Master Soccer com detalhe Dourado) */}
+            {/* BOTÃO DOS 3 RISQUINHOS ☰ NO CANTO DIREITO */}
             <button
-              onClick={() => handleAbrirNovaAvaliacao()}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all whitespace-nowrap shrink-0 border border-blue-500/30"
+              onClick={() => setMenuDrawerOpen(!menuDrawerOpen)}
+              className="p-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200/80 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0"
+              aria-label="Abrir menu de opções"
+              title="Menu: Financeiro, Histórico / Relatório e Teste Físico"
             >
-              <Plus className="w-4 h-4 text-amber-300 shrink-0" />
-              <span className="hidden sm:inline">Avaliar Jogo</span>
-              <span className="sm:hidden">Avaliar</span>
+              <Menu className="w-5 h-5 text-slate-800 dark:text-white" />
             </button>
-
-
-
-            {/* Configurações / Backup Dropdown */}
-            <div className="relative group">
-              <button
-                title="Configurações e Backup de Dados"
-                className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-              <div className="absolute right-0 mt-2 w-56 p-2 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 hidden group-hover:block z-50 text-xs space-y-1">
-                <button
-                  onClick={() => setIsCategoriasModalOpen(true)}
-                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium"
-                >
-                  Gerenciar Categorias
-                </button>
-                <button
-                  onClick={() => storageService.exportarBackupJson()}
-                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-between"
-                >
-                  <span>Exportar Backup (JSON)</span>
-                  <Download className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-                <label className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-between cursor-pointer">
-                  <span>Importar Backup (JSON)</span>
-                  <Upload className="w-3.5 h-3.5 text-slate-400" />
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleImportarBackup}
-                    className="hidden"
-                  />
-                </label>
-                <button
-                  onClick={() => storageService.exportarAvaliacoesCsv()}
-                  className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-between"
-                >
-                  <span>Exportar Planilha (CSV)</span>
-                  <Download className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-                <div className="border-t border-slate-100 dark:border-slate-800 my-1 pt-1">
-                  <button
-                    onClick={handleRestaurarFabrica}
-                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600 flex items-center justify-between"
-                  >
-                    <span>Restaurar Dados Exemplo</span>
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </header>
 
-      {/* Conteúdo Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 max-w-[100vw] overflow-x-hidden box-border">
+      {/* ========================================================= */}
+      {/* DRAWER / MENU FLUTUANTE ABERTO PELOS 3 RISQUINHOS ☰ */}
+      {/* Contém: Financeiro, Histórico / Relatório, Teste Físico */}
+      {/* ========================================================= */}
+      {menuDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end no-print animate-in fade-in duration-150">
+          {/* Backdrop */}
+          <div
+            onClick={() => setMenuDrawerOpen(false)}
+            className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs transition-opacity"
+          />
+
+          {/* Painel Lateral */}
+          <div className="relative w-full max-w-xs bg-white dark:bg-slate-900 h-full shadow-2xl border-l border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between z-10 animate-in slide-in-from-right duration-200">
+            <div>
+              {/* Topo do Menu ☰ */}
+              <div className="flex items-center justify-between pb-5 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <MasterSoccerEscudo size={32} />
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                      Menu Master Soccer
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Opções & Gestão Integrada</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMenuDrawerOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Itens do Menu Solicitados: Financeiro, Histórico / Relatório, Teste Físico */}
+              <div className="py-4 space-y-2">
+                {/* 1. Financeiro */}
+                <button
+                  onClick={() => handleNavegarMenuTopo('financeiro')}
+                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-left transition-all ${
+                    abaAtiva === 'financeiro'
+                      ? 'bg-blue-600 text-white font-bold shadow-md'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold'
+                  }`}
+                  style={abaAtiva === 'financeiro' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-xl ${
+                        abaAtiva === 'financeiro'
+                          ? 'bg-blue-700 text-white'
+                          : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600'
+                      }`}
+                    >
+                      <DollarSign className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-sm">Financeiro</div>
+                      <div
+                        className={`text-[11px] ${
+                          abaAtiva === 'financeiro' ? 'text-blue-200' : 'text-slate-400'
+                        }`}
+                      >
+                        Mensalidades & Competições
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-70" />
+                </button>
+
+                {/* 2. Histórico / Relatório (que é a Ficha: João de agora) */}
+                <button
+                  onClick={() => handleNavegarMenuTopo('relatorio')}
+                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-left transition-all ${
+                    abaAtiva === 'relatorio'
+                      ? 'bg-blue-600 text-white font-bold shadow-md'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold'
+                  }`}
+                  style={abaAtiva === 'relatorio' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-xl ${
+                        abaAtiva === 'relatorio'
+                          ? 'bg-blue-700 text-white'
+                          : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600'
+                      }`}
+                    >
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-sm">Histórico / Relatório</div>
+                      <div
+                        className={`text-[11px] ${
+                          abaAtiva === 'relatorio' ? 'text-blue-200' : 'text-slate-400'
+                        }`}
+                      >
+                        Ficha do Atleta com abas de jogos
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-70" />
+                </button>
+
+                {/* 3. Teste Físico */}
+                <button
+                  onClick={() => handleNavegarMenuTopo('testefisico')}
+                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-left transition-all ${
+                    abaAtiva === 'testefisico'
+                      ? 'bg-blue-600 text-white font-bold shadow-md'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold'
+                  }`}
+                  style={abaAtiva === 'testefisico' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-xl ${
+                        abaAtiva === 'testefisico'
+                          ? 'bg-blue-700 text-white'
+                          : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600'
+                      }`}
+                    >
+                      <Activity className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-sm">Teste Físico</div>
+                      <div
+                        className={`text-[11px] ${
+                          abaAtiva === 'testefisico' ? 'text-blue-200' : 'text-slate-400'
+                        }`}
+                      >
+                        Velocidade, salto, Yo-Yo & flexibilidade
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-70" />
+                </button>
+              </div>
+            </div>
+
+            {/* Rodapé do Menu Drawer */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <button
+                onClick={() => {
+                  setIsCategoriasModalOpen(true);
+                  setMenuDrawerOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 flex items-center gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Gerenciar Categorias</span>
+              </button>
+
+              <button
+                onClick={handleInstalarApp}
+                className="w-full text-left px-3 py-2 text-xs font-semibold text-emerald-600 hover:underline flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                <span>Instalar Aplicativo (PWA)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* CONTEÚDO PRINCIPAL (COM PADDING-BOTTOM DE 120px) */}
+      {/* ========================================================= */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-[120px] max-w-[100vw] overflow-x-hidden box-border">
+        {/* ABA 1: PAINEL (Visão Geral de agora) */}
         {abaAtiva === 'painel' && (
           <PainelGeral
             atletas={atletas}
@@ -493,12 +642,31 @@ export default function App() {
             categorias={categorias}
             onNavegarPlantel={handleNavegarPlantel}
             onSelecionarAtleta={handleAbrirRelatorioAtleta}
-            onNovaAvaliacao={() => handleAbrirNovaAvaliacao()}
+            onNovaAvaliacao={() => {
+              setAbaAtiva('jogo');
+              handleAbrirNovoJogo();
+            }}
             onNovoAtleta={handleAbrirNovoAtleta}
           />
         )}
 
-        {abaAtiva === 'plantel' && (
+        {/* ABA 2: JOGO (Agenda de Jogos com avaliação dentro do jogo) */}
+        {abaAtiva === 'jogo' && (
+          <AgendaJogosView
+            jogos={jogos}
+            atletas={atletas}
+            avaliacoes={avaliacoes}
+            categorias={categorias}
+            onNovoJogo={handleAbrirNovoJogo}
+            onEditarJogo={handleAbrirEditarJogo}
+            onExcluirJogo={handleExcluirJogo}
+            onSalvarAvaliacao={handleSalvarAvaliacao}
+            onSelecionarAtleta={handleAbrirRelatorioAtleta}
+          />
+        )}
+
+        {/* ABA 3: ESCALAÇÃO (onde monta o time / PlantelView) */}
+        {abaAtiva === 'escalacao' && (
           <PlantelView
             atletas={atletas}
             avaliacoes={avaliacoes}
@@ -507,25 +675,16 @@ export default function App() {
             onSelecionarCategoria={setCategoriaAtiva}
             onNovoAtleta={handleAbrirNovoAtleta}
             onSelecionarAtleta={handleAbrirRelatorioAtleta}
-            onNovaAvaliacao={handleAbrirNovaAvaliacao}
+            onNovaAvaliacao={() => {
+              setAbaAtiva('jogo');
+            }}
             onEditarAtleta={handleAbrirEditarAtleta}
             onExcluirAtleta={handleExcluirAtleta}
           />
         )}
 
-        {abaAtiva === 'avaliacoes' && (
-          <HistoricoJogosView
-            avaliacoes={avaliacoes}
-            atletas={atletas}
-            categorias={categorias}
-            onNovaAvaliacao={() => handleAbrirNovaAvaliacao()}
-            onEditarAvaliacao={handleAbrirEditarAvaliacao}
-            onExcluirAvaliacao={handleExcluirAvaliacao}
-            onSelecionarAtleta={handleAbrirRelatorioAtleta}
-          />
-        )}
-
-        {abaAtiva === 'comparativo' && (
+        {/* ABA 4: TROFÉUS (Comparativo de agora) */}
+        {abaAtiva === 'trofeus' && (
           <ComparativoView
             atletas={atletas}
             avaliacoes={avaliacoes}
@@ -533,69 +692,125 @@ export default function App() {
           />
         )}
 
-        {abaAtiva === 'relatorio' && atletaSelecionado && (
+        {/* TELAS DO MENU ☰ */}
+        {abaAtiva === 'financeiro' && (
+          <FinanceiroView
+            atletas={atletas}
+            categorias={categorias}
+            competicoes={competicoes}
+            registrosFinanceiros={registrosFinanceiros}
+            onAtualizarCompeticoes={(novas) => setCompeticoes(novas)}
+            onAtualizarRegistro={(novoReg) =>
+              setRegistrosFinanceiros((prev) => ({
+                ...prev,
+                [novoReg.atletaId]: novoReg,
+              }))
+            }
+            onExibirToast={exibirToast}
+          />
+        )}
+
+        {abaAtiva === 'relatorio' && (
           <RelatorioIndividual
-            atleta={atletaSelecionado}
+            atletas={atletas}
+            atletaSelecionadoInicial={atletaSelecionado}
             avaliacoes={avaliacoes}
-            onVoltar={() => setAbaAtiva('plantel')}
-            onNovaAvaliacao={handleAbrirNovaAvaliacao}
+            onVoltar={() => setAbaAtiva('painel')}
+            onNovaAvaliacao={() => setAbaAtiva('jogo')}
             onEditarAtleta={handleAbrirEditarAtleta}
+          />
+        )}
+
+        {abaAtiva === 'testefisico' && (
+          <TesteFisicoView
+            atletas={atletas}
+            testesFisicos={testesFisicos}
+            categorias={categorias}
+            onSalvarTeste={handleSalvarTesteFisico}
+            onExcluirTeste={handleExcluirTesteFisico}
           />
         )}
       </main>
 
-      {/* Mobile Bottom Navigation Bar (Pattern from references/10_mobile_touch_apps.md) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 no-print w-full max-w-[100vw] overflow-x-hidden box-border">
-
-        <div className="grid grid-cols-4 items-center h-14">
+      {/* ========================================================= */}
+      {/* 1. MENU DE BAIXO: */}
+      {/* PAINEL (Visão Geral) - JOGO - ESCALAÇÃO - TROFÉUS */}
+      {/* Quando clicar, fica azul #2563eb */}
+      {/* ========================================================= */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 no-print w-full max-w-[100vw] overflow-x-hidden box-border">
+        <div className="max-w-md mx-auto grid grid-cols-4 items-center h-16">
+          {/* 1. PAINEL */}
           <button
             onClick={() => setAbaAtiva('painel')}
-            className={`flex flex-col items-center justify-center h-full transition-colors ${
+            className={`flex flex-col items-center justify-center h-full transition-all ${
               abaAtiva === 'painel'
-                ? 'text-blue-600 dark:text-blue-400 font-bold'
-                : 'text-slate-500 dark:text-slate-400'
+                ? 'font-bold'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
             }`}
+            style={abaAtiva === 'painel' ? { color: '#2563eb' } : {}}
           >
-            <Shield className="w-4 h-4" />
-            <span className="text-[10px] tracking-tight mt-1">Início</span>
+            <Shield className="w-5 h-5 mb-0.5" />
+            <span className="text-[11px] tracking-tight uppercase">PAINEL</span>
           </button>
+
+          {/* 2. JOGO */}
           <button
-            onClick={() => setAbaAtiva('plantel')}
-            className={`flex flex-col items-center justify-center h-full transition-colors ${
-              abaAtiva === 'plantel'
-                ? 'text-blue-600 dark:text-blue-400 font-bold'
-                : 'text-slate-500 dark:text-slate-400'
+            onClick={() => setAbaAtiva('jogo')}
+            className={`flex flex-col items-center justify-center h-full transition-all ${
+              abaAtiva === 'jogo'
+                ? 'font-bold'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
             }`}
+            style={abaAtiva === 'jogo' ? { color: '#2563eb' } : {}}
           >
-            <Users className="w-4 h-4" />
-            <span className="text-[10px] tracking-tight mt-1">Plantel</span>
+            <Calendar className="w-5 h-5 mb-0.5" />
+            <span className="text-[11px] tracking-tight uppercase">JOGO</span>
           </button>
+
+          {/* 3. ESCALAÇÃO */}
           <button
-            onClick={() => setAbaAtiva('avaliacoes')}
-            className={`flex flex-col items-center justify-center h-full transition-colors ${
-              abaAtiva === 'avaliacoes'
-                ? 'text-blue-600 dark:text-blue-400 font-bold'
-                : 'text-slate-500 dark:text-slate-400'
+            onClick={() => setAbaAtiva('escalacao')}
+            className={`flex flex-col items-center justify-center h-full transition-all ${
+              abaAtiva === 'escalacao'
+                ? 'font-bold'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
             }`}
+            style={abaAtiva === 'escalacao' ? { color: '#2563eb' } : {}}
           >
-            <Award className="w-4 h-4" />
-            <span className="text-[10px] tracking-tight mt-1">Jogos</span>
+            <Users className="w-5 h-5 mb-0.5" />
+            <span className="text-[11px] tracking-tight uppercase">ESCALAÇÃO</span>
           </button>
+
+          {/* 4. TROFÉUS */}
           <button
-            onClick={() => setAbaAtiva('comparativo')}
-            className={`flex flex-col items-center justify-center h-full transition-colors ${
-              abaAtiva === 'comparativo'
-                ? 'text-blue-600 dark:text-blue-400 font-bold'
-                : 'text-slate-500 dark:text-slate-400'
+            onClick={() => setAbaAtiva('trofeus')}
+            className={`flex flex-col items-center justify-center h-full transition-all ${
+              abaAtiva === 'trofeus'
+                ? 'font-bold'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
             }`}
+            style={abaAtiva === 'trofeus' ? { color: '#2563eb' } : {}}
           >
-            <ArrowRightLeft className="w-4 h-4" />
-            <span className="text-[10px] tracking-tight mt-1">Comparar</span>
+            <Trophy className="w-5 h-5 mb-0.5" />
+            <span className="text-[11px] tracking-tight uppercase">TROFÉUS</span>
           </button>
         </div>
-      </div>
+      </nav>
 
-      {/* Modais */}
+      {/* ========================================================= */}
+      {/* MODAIS DO SISTEMA */}
+      {/* ========================================================= */}
+      {/* Modal de Cadastro/Edição de Jogo da Agenda */}
+      <JogoModal
+        isOpen={isJogoModalOpen}
+        onClose={() => setIsJogoModalOpen(false)}
+        onSave={handleSalvarJogo}
+        jogoEditando={jogoEditando}
+        categoriasDisponiveis={categorias}
+        categoriaPadrao={categoriaAtiva === 'TODAS' ? 'SUB-15' : categoriaAtiva}
+      />
+
+      {/* Modal de Atleta */}
       <AtletaModal
         isOpen={isAtletaModalOpen}
         onClose={() => setIsAtletaModalOpen(false)}
@@ -605,6 +820,7 @@ export default function App() {
         categoriaPadrao={categoriaAtiva === 'TODAS' ? 'SUB-15' : categoriaAtiva}
       />
 
+      {/* Modal de Avaliação Tradicional */}
       <AvaliacaoModal
         isOpen={isAvaliacaoModalOpen}
         onClose={() => setIsAvaliacaoModalOpen(false)}
@@ -616,6 +832,7 @@ export default function App() {
         categoriasDisponiveis={categorias}
       />
 
+      {/* Modal de Categorias */}
       <GerenciarCategoriasModal
         isOpen={isCategoriasModalOpen}
         onClose={() => setIsCategoriasModalOpen(false)}
@@ -627,20 +844,24 @@ export default function App() {
         }}
       />
 
-      {/* Modal de Confirmação de Apagar (Sem digitação de palavra, apenas pergunta com botões SIM e NÃO) */}
+      {/* Modal de Confirmação de Apagar (SIM / NÃO) */}
       <ConfirmacaoApagarModal
         isOpen={!!itemParaExcluir}
         onClose={() => {
           if (!excluindoCarregando) setItemParaExcluir(null);
         }}
         onConfirm={handleConfirmarExclusao}
-        titulo={itemParaExcluir?.tipo === 'atleta' ? 'Apagar Atleta' : 'Apagar Avaliação'}
-        mensagem="Tem certeza que deseja apagar?"
-        detalhes={
+        titulo={
           itemParaExcluir?.tipo === 'atleta'
-            ? `${itemParaExcluir.nome || 'Atleta'} (todas as avaliações deste atleta também serão apagadas)`
-            : itemParaExcluir?.nome
+            ? 'Apagar Atleta'
+            : itemParaExcluir?.tipo === 'jogo'
+            ? 'Apagar Jogo'
+            : itemParaExcluir?.tipo === 'testefisico'
+            ? 'Apagar Teste Físico'
+            : 'Apagar Avaliação'
         }
+        mensagem="Tem certeza que deseja apagar?"
+        detalhes={itemParaExcluir?.nome}
         carregando={excluindoCarregando}
       />
 
@@ -650,7 +871,7 @@ export default function App() {
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
             <button
               onClick={() => setIsInstalarModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
             >
               <X className="w-5 h-5" />
             </button>
@@ -663,7 +884,7 @@ export default function App() {
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
                   Instalar Master Soccer RJ
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-slate-500">
                   Acesso rápido direto da tela inicial, funciona 100% offline
                 </p>
               </div>
@@ -698,13 +919,6 @@ export default function App() {
                   </ul>
                 </div>
               )}
-
-              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                <span className="text-emerald-800 dark:text-emerald-300 text-[11px] leading-relaxed">
-                  O aplicativo funcionará mesmo no campo sem sinal de internet, sincronizando as avaliações automaticamente com o Firebase assim que reconectar.
-                </span>
-              </div>
             </div>
 
             <button
@@ -719,4 +933,3 @@ export default function App() {
     </div>
   );
 }
-

@@ -39,11 +39,19 @@ export interface NotasPilares {
   disciplinar: number; // 1 a 10
 }
 
+export interface ObservacoesPilares {
+  tecnica?: string;
+  tatica?: string;
+  fisica?: string;
+  mental?: string;
+  disciplinar?: string;
+}
+
 export interface AvaliacaoJogo {
   id: string;
   atletaId: string;
   categoria: CategoriaBase;
-  dataJogo: string; // YYYY-MM-DD
+  dataJogo: string; // YYYY-MM-DD ou DD/MM/AAAA
   adversario: string;
   competicao: string;
   minutosJogados: number; // total somado (1º tempo + 2º tempo)
@@ -54,8 +62,42 @@ export interface AvaliacaoJogo {
   notas: NotasPilares;
   notaGeral: number; // média calculada (1 a 10)
   observacoes: string; // detalhes adicionais de progresso e desenvolvimento
+  observacoesPorPilar?: ObservacoesPilares; // observação isolada por quesito
+  jogoAgendaId?: string; // ID do jogo vinculado na Agenda de Jogos
   pontosFortes?: string[];
   pontosMelhoria?: string[];
+  avaliador?: string;
+}
+
+export type TipoJogo = 'Amistoso' | 'Campeonato' | 'Torneio';
+
+export interface JogoAgenda {
+  id: string;
+  adversario: string; // ex: "vs Brescia" ou "Brescia"
+  dataJogo: string; // YYYY-MM-DD ou DD/MM/AAAA
+  hora?: string; // ex: "09:00"
+  categoria: CategoriaBase;
+  local?: string; // ex: "CT Ninho do Galo", "Campo 1"
+  tipo: TipoJogo; // Amistoso, Campeonato, Torneio
+  placar?: string; // ex: "2 x 1"
+  realizado?: boolean; // true se o jogo já aconteceu
+  observacoesGerais?: string;
+  criadoEm?: string;
+}
+
+export interface TesteFisicoAtleta {
+  id: string;
+  atletaId: string;
+  data: string; // DD/MM/AAAA
+  categoria: CategoriaBase;
+  velocidade30m?: number; // seg (ex: 3.95)
+  saltoVertical?: number; // cm (ex: 46)
+  resistenciaYoYo?: number; // metros (ex: 1200)
+  agilidadeShuttle?: number; // seg (ex: 4.8)
+  flexibilidadeBanco?: number; // cm (ex: 28)
+  estatura?: number; // cm
+  massaCorporal?: number; // kg
+  observacoes?: string;
   avaliador?: string;
 }
 
@@ -66,4 +108,65 @@ export interface EstatisticasAtleta {
   mediasPilares: NotasPilares;
   melhorPilar: { nome: string; nota: number };
   pilarAtencao: { nome: string; nota: number };
+}
+
+// ==========================================
+// MÓDULO FINANCEIRO
+// ==========================================
+
+export type MesAno =
+  | 'JAN'
+  | 'FEV'
+  | 'MAR'
+  | 'ABR'
+  | 'MAI'
+  | 'JUN'
+  | 'JUL'
+  | 'AGO'
+  | 'SET'
+  | 'OUT'
+  | 'NOV'
+  | 'DEZ';
+
+export const MESES_DO_ANO: { id: MesAno; label: string; nomeCompleto: string }[] = [
+  { id: 'JAN', label: 'JAN', nomeCompleto: 'Janeiro' },
+  { id: 'FEV', label: 'FEV', nomeCompleto: 'Fevereiro' },
+  { id: 'MAR', label: 'MAR', nomeCompleto: 'Março' },
+  { id: 'ABR', label: 'ABR', nomeCompleto: 'Abril' },
+  { id: 'MAI', label: 'MAI', nomeCompleto: 'Maio' },
+  { id: 'JUN', label: 'JUN', nomeCompleto: 'Junho' },
+  { id: 'JUL', label: 'JUL', nomeCompleto: 'Julho' },
+  { id: 'AGO', label: 'AGO', nomeCompleto: 'Agosto' },
+  { id: 'SET', label: 'SET', nomeCompleto: 'Setembro' },
+  { id: 'OUT', label: 'OUT', nomeCompleto: 'Outubro' },
+  { id: 'NOV', label: 'NOV', nomeCompleto: 'Novembro' },
+  { id: 'DEZ', label: 'DEZ', nomeCompleto: 'Dezembro' },
+];
+
+export interface ItemCompeticaoTaxa {
+  id: string;
+  nome: string;
+  valor: number; // ex: 150.00
+  tipo: 'competicao' | 'taxa_jogo';
+  categoria?: string; // SUB-15, SUB-16, SUB-17 ou 'TODAS'
+  descricao?: string;
+  criadoEm?: string;
+}
+
+export interface RegistroFinanceiroAtleta {
+  atletaId: string;
+  valorMensalidadePadrao?: number; // padrão ex: 150
+  mensalidadesPagas: MesAno[]; // Meses pagos ex: ['JAN', 'FEV']
+  competicoesPagas: Record<string, boolean>; // idDaCompeticao -> true (pago) / false (não pago)
+  atualizadoEm?: string;
+}
+
+export interface ResumoFinanceiroAtleta {
+  atletaId: string;
+  mensalidadesPagasCount: number; // ex: 5
+  mensalidadesTotalCount: number; // 12
+  competicoesPagasCount: number; // ex: 2
+  competicoesTotalCount: number; // ex: 4
+  totalPago: number; // R$ soma
+  totalDevendo: number; // R$ pendente
 }

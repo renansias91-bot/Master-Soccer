@@ -10,7 +10,16 @@ service cloud.firestore {
     match /avaliacoes/{avaliacaoId} {
       allow read, write: if true;
     }
-    match /evaluations/{evaluationId} {
+    match /jogos/{jogoId} {
+      allow read, write: if true;
+    }
+    match /testes_fisicos/{testeId} {
+      allow read, write: if true;
+    }
+    match /financeiro_competicoes/{compId} {
+      allow read, write: if true;
+    }
+    match /financeiro_atletas/{atletaId} {
       allow read, write: if true;
     }
     match /{document=**} {

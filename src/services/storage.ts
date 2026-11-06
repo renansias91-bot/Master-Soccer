@@ -1,11 +1,139 @@
 import { ATLETAS_INICIAIS, AVALIACOES_INICIAIS } from '../data/initialData';
-import { Atleta, AvaliacaoJogo, EstatisticasAtleta, NotasPilares } from '../types';
+import {
+  Atleta,
+  AvaliacaoJogo,
+  EstatisticasAtleta,
+  NotasPilares,
+  ItemCompeticaoTaxa,
+  RegistroFinanceiroAtleta,
+  ResumoFinanceiroAtleta,
+  MesAno,
+  MESES_DO_ANO,
+  JogoAgenda,
+  TesteFisicoAtleta,
+} from '../types';
 
 const STORAGE_KEY_ATLETAS = 'mastersoccer_atletas_v2';
 const STORAGE_KEY_AVALIACOES = 'mastersoccer_avaliacoes_v2';
 const STORAGE_KEY_CATEGORIAS = 'mastersoccer_categorias_v2';
+const STORAGE_KEY_COMPETICOES = 'mastersoccer_competicoes_v2';
+const STORAGE_KEY_FINANCEIRO_ATLETAS = 'mastersoccer_financeiro_atletas_v2';
+const STORAGE_KEY_VALOR_MENSALIDADE = 'mastersoccer_valor_mensalidade_v2';
+const STORAGE_KEY_JOGOS_AGENDA = 'mastersoccer_jogos_agenda_v2';
+const STORAGE_KEY_TESTES_FISICOS = 'mastersoccer_testes_fisicos_v2';
 
 export const CATEGORIAS_PADRAO = ['SUB-15', 'SUB-16', 'SUB-17'];
+
+export const COMPETICOES_PADRAO: ItemCompeticaoTaxa[] = [
+  { id: 'comp-ferj', nome: 'FERJ', valor: 150, tipo: 'competicao', categoria: 'TODAS' },
+  { id: 'comp-liga-metro', nome: 'LIGA METROPOLITANA', valor: 120, tipo: 'competicao', categoria: 'TODAS' },
+  { id: 'comp-bs', nome: 'BS', valor: 100, tipo: 'competicao', categoria: 'TODAS' },
+  { id: 'comp-spat', nome: 'SPAT', valor: 100, tipo: 'competicao', categoria: 'TODAS' },
+  { id: 'taxa-jogo-padrao', nome: 'TAXA DE JOGO', valor: 50, tipo: 'taxa_jogo', categoria: 'TODAS' },
+];
+
+export const JOGOS_AGENDA_PADRAO: JogoAgenda[] = [
+  // Próximos Jogos
+  {
+    id: 'jogo-brescia-prox',
+    adversario: 'vs Brescia',
+    dataJogo: '14/11/2026',
+    hora: '09:00',
+    categoria: 'SUB-15',
+    local: 'CT Ninho do Galo',
+    tipo: 'Campeonato',
+    realizado: false,
+  },
+  {
+    id: 'jogo-tigres-prox',
+    adversario: 'vs Tigres',
+    dataJogo: '21/11/2026',
+    hora: '10:30',
+    categoria: 'SUB-16',
+    local: 'Estádio Municipal',
+    tipo: 'Torneio',
+    realizado: false,
+  },
+  {
+    id: 'jogo-vila-prox',
+    adversario: 'vs Atlético Vila',
+    dataJogo: '28/11/2026',
+    hora: '14:00',
+    categoria: 'SUB-17',
+    local: 'Arena Carioca',
+    tipo: 'Amistoso',
+    realizado: false,
+  },
+  // Jogos que já aconteceram
+  {
+    id: 'jogo-brescia-passado',
+    adversario: 'vs Brescia',
+    dataJogo: '04/11/2026',
+    hora: '09:00',
+    categoria: 'SUB-15',
+    local: 'Campo Master Soccer',
+    tipo: 'Campeonato',
+    placar: '2 x 1',
+    realizado: true,
+  },
+  {
+    id: 'jogo-tigres-passado',
+    adversario: 'vs Tigres',
+    dataJogo: '28/10/2026',
+    hora: '10:00',
+    categoria: 'SUB-15',
+    local: 'CT Tigres',
+    tipo: 'Torneio',
+    placar: '3 x 1',
+    realizado: true,
+  },
+  {
+    id: 'jogo-vila-passado',
+    adversario: 'vs Atlético Vila',
+    dataJogo: '21/10/2026',
+    hora: '15:00',
+    categoria: 'SUB-15',
+    local: 'Arena Vila',
+    tipo: 'Amistoso',
+    placar: '1 x 0',
+    realizado: true,
+  },
+];
+
+export const TESTES_FISICOS_PADRAO: TesteFisicoAtleta[] = [
+  {
+    id: 'tf-1',
+    atletaId: 'atl-1',
+    data: '01/11/2026',
+    categoria: 'SUB-15',
+    velocidade30m: 3.92,
+    saltoVertical: 47,
+    resistenciaYoYo: 1420,
+    agilidadeShuttle: 4.65,
+    flexibilidadeBanco: 32,
+    estatura: 174,
+    massaCorporal: 64,
+    observacoes: 'Excelente explosão muscular e tempo de reação.',
+    avaliador: 'Prof. Carlos (Prep. Físico)',
+  },
+  {
+    id: 'tf-2',
+    atletaId: 'atl-2',
+    data: '01/11/2026',
+    categoria: 'SUB-15',
+    velocidade30m: 4.1,
+    saltoVertical: 42,
+    resistenciaYoYo: 1680,
+    agilidadeShuttle: 4.82,
+    flexibilidadeBanco: 30,
+    estatura: 178,
+    massaCorporal: 68,
+    observacoes: 'Destaque no teste de resistência aeróbica.',
+    avaliador: 'Prof. Carlos (Prep. Físico)',
+  },
+];
+
+export const VALOR_MENSALIDADE_PADRAO = 150;
 
 export const storageService = {
   // Categorias
@@ -254,13 +382,262 @@ export const storageService = {
     URL.revokeObjectURL(url);
   },
 
+  // ==========================================
+  // GESTÃO FINANCEIRA (LOCALSTORAGE + FALLBACK)
+  // ==========================================
+
+  getValorMensalidadePadrao(): number {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY_VALOR_MENSALIDADE);
+      if (data) {
+        const val = Number(data);
+        if (!isNaN(val) && val > 0) return val;
+      }
+    } catch (e) {
+      console.warn('Erro ao ler valor da mensalidade do storage', e);
+    }
+    return VALOR_MENSALIDADE_PADRAO;
+  },
+
+  salvarValorMensalidadePadrao(valor: number): void {
+    localStorage.setItem(STORAGE_KEY_VALOR_MENSALIDADE, String(valor));
+  },
+
+  getCompeticoes(): ItemCompeticaoTaxa[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY_COMPETICOES);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.warn('Erro ao ler competições do storage', e);
+    }
+    this.salvarCompeticoes(COMPETICOES_PADRAO);
+    return COMPETICOES_PADRAO;
+  },
+
+  salvarCompeticoes(competicoes: ItemCompeticaoTaxa[]): void {
+    localStorage.setItem(STORAGE_KEY_COMPETICOES, JSON.stringify(competicoes));
+  },
+
+  salvarCompeticao(comp: ItemCompeticaoTaxa): void {
+    const lista = this.getCompeticoes();
+    const index = lista.findIndex((c) => c.id === comp.id);
+    if (index >= 0) {
+      lista[index] = comp;
+    } else {
+      lista.push(comp);
+    }
+    this.salvarCompeticoes(lista);
+  },
+
+  excluirCompeticao(id: string): void {
+    const lista = this.getCompeticoes().filter((c) => c.id !== id);
+    this.salvarCompeticoes(lista);
+  },
+
+  getRegistrosFinanceiros(): Record<string, RegistroFinanceiroAtleta> {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY_FINANCEIRO_ATLETAS);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.warn('Erro ao ler registros financeiros do storage', e);
+    }
+    return {};
+  },
+
+  salvarRegistrosFinanceiros(registros: Record<string, RegistroFinanceiroAtleta>): void {
+    localStorage.setItem(STORAGE_KEY_FINANCEIRO_ATLETAS, JSON.stringify(registros));
+  },
+
+  getRegistroFinanceiroAtleta(atletaId: string): RegistroFinanceiroAtleta {
+    const todos = this.getRegistrosFinanceiros();
+    if (todos[atletaId]) {
+      return todos[atletaId];
+    }
+    const novo: RegistroFinanceiroAtleta = {
+      atletaId,
+      valorMensalidadePadrao: this.getValorMensalidadePadrao(),
+      mensalidadesPagas: [],
+      competicoesPagas: {},
+      atualizadoEm: new Date().toISOString(),
+    };
+    return novo;
+  },
+
+  salvarRegistroFinanceiroAtleta(registro: RegistroFinanceiroAtleta): void {
+    const todos = this.getRegistrosFinanceiros();
+    todos[registro.atletaId] = {
+      ...registro,
+      atualizadoEm: new Date().toISOString(),
+    };
+    this.salvarRegistrosFinanceiros(todos);
+  },
+
+  toggleMensalidadeAtleta(atletaId: string, mes: MesAno): RegistroFinanceiroAtleta {
+    const registro = this.getRegistroFinanceiroAtleta(atletaId);
+    const pagas = new Set(registro.mensalidadesPagas || []);
+    if (pagas.has(mes)) {
+      pagas.delete(mes);
+    } else {
+      pagas.add(mes);
+    }
+    registro.mensalidadesPagas = Array.from(pagas);
+    this.salvarRegistroFinanceiroAtleta(registro);
+    return registro;
+  },
+
+  toggleCompeticaoAtleta(atletaId: string, competicaoId: string): RegistroFinanceiroAtleta {
+    const registro = this.getRegistroFinanceiroAtleta(atletaId);
+    const atual = Boolean(registro.competicoesPagas?.[competicaoId]);
+    registro.competicoesPagas = {
+      ...(registro.competicoesPagas || {}),
+      [competicaoId]: !atual,
+    };
+    this.salvarRegistroFinanceiroAtleta(registro);
+    return registro;
+  },
+
+  calcularResumoAtleta(
+    atleta: Atleta,
+    competicoes: ItemCompeticaoTaxa[],
+    registroParam?: RegistroFinanceiroAtleta
+  ): ResumoFinanceiroAtleta {
+    const registro = registroParam || this.getRegistroFinanceiroAtleta(atleta.id);
+    const valorMensalidade =
+      registro.valorMensalidadePadrao !== undefined && registro.valorMensalidadePadrao > 0
+        ? registro.valorMensalidadePadrao
+        : this.getValorMensalidadePadrao();
+
+    // Filtra competições aplicáveis para esta categoria
+    const compsAplicaveis = competicoes.filter(
+      (c) => !c.categoria || c.categoria === 'TODAS' || c.categoria === atleta.categoria
+    );
+
+    const mensalidadesPagasCount = (registro.mensalidadesPagas || []).length;
+    const mensalidadesTotalCount = 12;
+
+    const competicoesTotalCount = compsAplicaveis.length;
+    let competicoesPagasCount = 0;
+    let totalPagoCompeticoes = 0;
+    let totalDevendoCompeticoes = 0;
+
+    for (const comp of compsAplicaveis) {
+      const estaPago = Boolean(registro.competicoesPagas?.[comp.id]);
+      if (estaPago) {
+        competicoesPagasCount++;
+        totalPagoCompeticoes += comp.valor || 0;
+      } else {
+        totalDevendoCompeticoes += comp.valor || 0;
+      }
+    }
+
+    const totalPagoMensalidades = mensalidadesPagasCount * valorMensalidade;
+    const totalDevendoMensalidades = (mensalidadesTotalCount - mensalidadesPagasCount) * valorMensalidade;
+
+    const totalPago = totalPagoMensalidades + totalPagoCompeticoes;
+    const totalDevendo = totalDevendoMensalidades + totalDevendoCompeticoes;
+
+    return {
+      atletaId: atleta.id,
+      mensalidadesPagasCount,
+      mensalidadesTotalCount,
+      competicoesPagasCount,
+      competicoesTotalCount,
+      totalPago,
+      totalDevendo,
+    };
+  },
+
+  // ==========================================
+  // AGENDA DE JOGOS
+  // ==========================================
+  getJogosAgenda(): JogoAgenda[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY_JOGOS_AGENDA);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.error('Erro ao ler jogos da agenda do localStorage', e);
+    }
+    this.salvarJogosAgenda(JOGOS_AGENDA_PADRAO);
+    return JOGOS_AGENDA_PADRAO;
+  },
+
+  salvarJogosAgenda(jogos: JogoAgenda[]): void {
+    localStorage.setItem(STORAGE_KEY_JOGOS_AGENDA, JSON.stringify(jogos));
+  },
+
+  salvarJogoAgenda(jogo: JogoAgenda): void {
+    const jogos = this.getJogosAgenda();
+    const index = jogos.findIndex((j) => j.id === jogo.id);
+    if (index >= 0) {
+      jogos[index] = jogo;
+    } else {
+      jogos.unshift(jogo);
+    }
+    this.salvarJogosAgenda(jogos);
+  },
+
+  excluirJogoAgenda(id: string): void {
+    const jogos = this.getJogosAgenda().filter((j) => j.id !== id);
+    this.salvarJogosAgenda(jogos);
+  },
+
+  // ==========================================
+  // TESTES FÍSICOS
+  // ==========================================
+  getTestesFisicos(): TesteFisicoAtleta[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY_TESTES_FISICOS);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.error('Erro ao ler testes físicos do localStorage', e);
+    }
+    this.salvarTestesFisicos(TESTES_FISICOS_PADRAO);
+    return TESTES_FISICOS_PADRAO;
+  },
+
+  salvarTestesFisicos(testes: TesteFisicoAtleta[]): void {
+    localStorage.setItem(STORAGE_KEY_TESTES_FISICOS, JSON.stringify(testes));
+  },
+
+  salvarTesteFisico(teste: TesteFisicoAtleta): void {
+    const testes = this.getTestesFisicos();
+    const index = testes.findIndex((t) => t.id === teste.id);
+    if (index >= 0) {
+      testes[index] = teste;
+    } else {
+      testes.unshift(teste);
+    }
+    this.salvarTestesFisicos(testes);
+  },
+
+  excluirTesteFisico(id: string): void {
+    const testes = this.getTestesFisicos().filter((t) => t.id !== id);
+    this.salvarTestesFisicos(testes);
+  },
+
   // Reset para dados de fábrica
   restaurarDadosFabrica(): void {
     localStorage.removeItem(STORAGE_KEY_ATLETAS);
     localStorage.removeItem(STORAGE_KEY_AVALIACOES);
     localStorage.removeItem(STORAGE_KEY_CATEGORIAS);
+    localStorage.removeItem(STORAGE_KEY_COMPETICOES);
+    localStorage.removeItem(STORAGE_KEY_FINANCEIRO_ATLETAS);
+    localStorage.removeItem(STORAGE_KEY_VALOR_MENSALIDADE);
+    localStorage.removeItem(STORAGE_KEY_JOGOS_AGENDA);
+    localStorage.removeItem(STORAGE_KEY_TESTES_FISICOS);
     this.salvarAtletas(ATLETAS_INICIAIS);
     this.salvarAvaliacoes(AVALIACOES_INICIAIS);
     this.salvarCategorias(CATEGORIAS_PADRAO);
+    this.salvarCompeticoes(COMPETICOES_PADRAO);
+    this.salvarJogosAgenda(JOGOS_AGENDA_PADRAO);
+    this.salvarTestesFisicos(TESTES_FISICOS_PADRAO);
   },
 };
