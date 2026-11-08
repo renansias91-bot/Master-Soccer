@@ -43,6 +43,7 @@ import { TesteFisicoView } from './components/TesteFisicoView';
 import { AtletaModal } from './components/AtletaModal';
 import { AvaliacaoModal } from './components/AvaliacaoModal';
 import { GerenciarCategoriasModal } from './components/GerenciarCategoriasModal';
+import { AbaTrofeus } from './components/AbaTrofeus';
 import { ConfirmacaoApagarModal } from './components/ConfirmacaoApagarModal';
 import { MasterSoccerEscudo } from './components/MasterSoccerEscudo';
 
@@ -721,14 +722,8 @@ export default function App() {
           />
         )}
 
-        {/* ABA 4: TROFÉUS (Comparativo de agora) */}
-        {abaAtiva === 'trofeus' && (
-          <ComparativoView
-            atletas={atletas}
-            avaliacoes={avaliacoes}
-            onSelecionarAtleta={handleAbrirRelatorioAtleta}
-          />
-        )}
+        {/* ABA 4: TROFÉUS */}
+        {abaAtiva === 'trofeus' && <AbaTrofeus />}
 
         {/* TELAS DO MENU ☰ */}
         {abaAtiva === 'financeiro' && (

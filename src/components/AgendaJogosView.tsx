@@ -65,6 +65,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('TODAS');
   const [buscaAdversario, setBuscaAdversario] = useState<string>('');
   const [jogoSelecionadoParaAvaliar, setJogoSelecionadoParaAvaliar] = useState<JogoAgenda | null>(null);
+  const [modoLeitura, setModoLeitura] = useState<boolean>(false);
 
   // Estados para o formulário de avaliação do jogador selecionado
   const [atletaIndexAtivo, setAtletaIndexAtivo] = useState<number>(0);
@@ -228,8 +229,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     }
   };
 
-  const handleAbrirAvaliacaoJogo = (jogo: JogoAgenda) => {
+  const handleAbrirAvaliacaoJogo = (jogo: JogoAgenda, abrirEmModoLeitura = false) => {
     setJogoSelecionadoParaAvaliar(jogo);
+    setModoLeitura(abrirEmModoLeitura || Boolean(jogo.realizado));
     setAtletaIndexAtivo(0);
     setFeedbackSalvo(null);
 
@@ -260,18 +262,21 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
   // Toggle de tags sem limite máximo (selecionar quantos quiser)
   const togglePontoDestaque = (tag: string) => {
+    if (modoLeitura) return;
     setPontosFortes((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
 
   const togglePontoAtencao = (tag: string) => {
+    if (modoLeitura) return;
     setPontosMelhoria((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
 
   const handleSalvarAvaliacaoJogador = (avancarProximo = true) => {
+    if (modoLeitura) return;
     if (!jogoSelecionadoParaAvaliar || !atletaAtual) return;
 
     const notasObj: NotasPilares = {
@@ -342,12 +347,16 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     };
 
     onSalvarAvaliacao(novaAvaliacao);
-    const nomePrimeiro = atletaAtual.nome.split(' ')[0];
-    setFeedbackSalvo(`✓ Avaliação de ${nomePrimeiro} salva com sucesso!`);
+    const apelidoOuPrimeiro = atletaAtual.apelido || atletaAtual.nome.split(' ')[0];
+    setFeedbackSalvo(`✓ Avaliação de ${apelidoOuPrimeiro} salva com sucesso!`);
+
+    // Subir a página automaticamente para o início ao salvar
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (avancarProximo && atletaIndexAtivo + 1 < atletasDoJogo.length) {
       setTimeout(() => {
         handleMudarAtletaNaAvaliacao(atletaIndexAtivo + 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 500);
     }
   };
@@ -392,15 +401,44 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
         {/* Barra Superior de Retorno */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-          <button
-            onClick={() => setJogoSelecionadoParaAvaliar(null)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-all"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Voltar para Agenda de Jogos</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setJogoSelecionadoParaAvaliar(null);
+                setModoLeitura(false);
+              }}
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Voltar para Agenda de Jogos</span>
+            </button>
+
+            {modoLeitura ? (
+              <button
+                type="button"
+                onClick={() => setModoLeitura(false)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all"
+                title="Habilitar edição desta avaliação"
+              >
+                <Edit className="w-4 h-4 text-amber-300" />
+                <span>Editar avaliação</span>
+              </button>
+            ) : (
+              jogoSelecionadoParaAvaliar.realizado && (
+                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/70 px-2.5 py-1.5 rounded-xl border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Modo de edição ativo</span>
+                </span>
+              )
+            )}
+          </div>
 
           <div className="flex items-center gap-2">
+            {modoLeitura && (
+              <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 flex items-center gap-1">
+                <span>🔒 Modo Leitura (Bloqueado)</span>
+              </span>
+            )}
             <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
               {jogoSelecionadoParaAvaliar.categoria}
             </span>
@@ -488,7 +526,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
-                  <span>{atl.nome.split(' ')[0]}</span>
+                  <span>{atl.apelido || atl.nome.split(' ')[0]}</span>
                   {escalado?.titular ? (
                     <span className="text-[10px] opacity-80">(Tit)</span>
                   ) : (
@@ -526,13 +564,16 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
                       {atletaAtual.categoria}
                     </span>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      {atletaAtual.nome}
+                    <h3 className="text-xl sm:text-2xl font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight">
+                      {atletaAtual.apelido || atletaAtual.nome.split(' ')[0]}
                     </h3>
                   </div>
-                  <p className="text-xs text-slate-500">
-                    Posição Original: <strong>{atletaAtual.posicao}</strong> · Pé:{' '}
-                    <strong>{atletaAtual.pernaDominante}</strong>
+                  <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 mt-0.5">
+                    {atletaAtual.nome}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Posição Original: <strong className="text-slate-700 dark:text-slate-300">{atletaAtual.posicao}</strong> · Pé:{' '}
+                    <strong className="text-slate-700 dark:text-slate-300">{atletaAtual.pernaDominante}</strong>
                   </p>
                 </div>
               </div>
@@ -573,8 +614,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
+                      disabled={modoLeitura}
                       onClick={() => setMinutos1Tempo((prev) => Math.max(0, prev - 5))}
-                      className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-base text-slate-700 dark:text-slate-200 flex items-center justify-center transition"
+                      className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-base text-slate-700 dark:text-slate-200 flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       -
                     </button>
@@ -582,14 +624,16 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                       type="number"
                       min="0"
                       max="60"
+                      disabled={modoLeitura}
                       value={minutos1Tempo}
                       onChange={(e) => setMinutos1Tempo(Math.max(0, Number(e.target.value)))}
-                      className="w-12 h-8 text-center font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none"
+                      className="w-12 h-8 text-center font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none disabled:bg-slate-100 dark:disabled:bg-slate-800/80 disabled:text-slate-500 disabled:cursor-not-allowed"
                     />
                     <button
                       type="button"
+                      disabled={modoLeitura}
                       onClick={() => setMinutos1Tempo((prev) => Math.min(60, prev + 5))}
-                      className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-base flex items-center justify-center transition"
+                      className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-base flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       +
                     </button>
@@ -605,8 +649,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
+                      disabled={modoLeitura}
                       onClick={() => setMinutos2Tempo((prev) => Math.max(0, prev - 5))}
-                      className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-base text-slate-700 dark:text-slate-200 flex items-center justify-center transition"
+                      className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-base text-slate-700 dark:text-slate-200 flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       -
                     </button>
@@ -614,14 +659,16 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                       type="number"
                       min="0"
                       max="60"
+                      disabled={modoLeitura}
                       value={minutos2Tempo}
                       onChange={(e) => setMinutos2Tempo(Math.max(0, Number(e.target.value)))}
-                      className="w-12 h-8 text-center font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none"
+                      className="w-12 h-8 text-center font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none disabled:bg-slate-100 dark:disabled:bg-slate-800/80 disabled:text-slate-500 disabled:cursor-not-allowed"
                     />
                     <button
                       type="button"
+                      disabled={modoLeitura}
                       onClick={() => setMinutos2Tempo((prev) => Math.min(60, prev + 5))}
-                      className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-base flex items-center justify-center transition"
+                      className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-base flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       +
                     </button>
@@ -650,8 +697,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                 </label>
                 <select
                   value={posicaoJogo}
+                  disabled={modoLeitura}
                   onChange={(e) => setPosicaoJogo(e.target.value)}
-                  className="w-full h-10 px-3 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full h-10 px-3 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed"
                 >
                   {POSICOES_JOGO.map((pos) => (
                     <option key={pos} value={pos}>
@@ -671,8 +719,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <div className="flex items-center justify-center gap-1.5">
                     <button
                       type="button"
+                      disabled={modoLeitura}
                       onClick={() => setGols((prev) => Math.max(0, prev - 1))}
-                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm"
+                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       -
                     </button>
@@ -681,8 +730,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     </span>
                     <button
                       type="button"
+                      disabled={modoLeitura}
                       onClick={() => setGols((prev) => prev + 1)}
-                      className="w-7 h-7 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-sm"
+                      className="w-7 h-7 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       +
                     </button>
@@ -697,8 +747,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <div className="flex items-center justify-center gap-1.5">
                     <button
                       type="button"
+                      disabled={modoLeitura}
                       onClick={() => setAssistencias((prev) => Math.max(0, prev - 1))}
-                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm"
+                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       -
                     </button>
@@ -707,8 +758,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     </span>
                     <button
                       type="button"
+                      disabled={modoLeitura}
                       onClick={() => setAssistencias((prev) => prev + 1)}
-                      className="w-7 h-7 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-sm"
+                      className="w-7 h-7 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       +
                     </button>
@@ -723,8 +775,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <div className="flex items-center justify-center gap-1.5">
                     <button
                       type="button"
+                      disabled={modoLeitura}
                       onClick={() => setCartoesAmarelos((prev) => Math.max(0, prev - 1))}
-                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm"
+                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       -
                     </button>
@@ -733,8 +786,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     </span>
                     <button
                       type="button"
+                      disabled={modoLeitura}
                       onClick={() => setCartoesAmarelos((prev) => Math.min(2, prev + 1))}
-                      className="w-7 h-7 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-sm"
+                      className="w-7 h-7 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       +
                     </button>
@@ -749,9 +803,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold select-none">
                     <input
                       type="checkbox"
+                      disabled={modoLeitura}
                       checked={cartaoVermelho}
                       onChange={(e) => setCartaoVermelho(e.target.checked)}
-                      className="w-4 h-4 rounded text-rose-600 accent-rose-600 focus:ring-rose-500 cursor-pointer"
+                      className="w-4 h-4 rounded text-rose-600 accent-rose-600 focus:ring-rose-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     />
                     <span className={cartaoVermelho ? 'text-rose-600' : 'text-slate-400'}>
                       {cartaoVermelho ? 'Expulso' : 'Não'}
@@ -772,7 +827,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   padding: 16,
                   borderRadius: 12,
                   border: '1px solid #e5e7eb',
-                  background: '#f9fafb',
+                  background: modoLeitura ? '#f1f5f9' : '#f9fafb',
                 }}
                 className="dark:bg-slate-800/60 dark:border-slate-800"
               >
@@ -780,7 +835,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                     <span>⚡</span> FÍSICO
                   </span>
-                  <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
+                  <span style={{ color: modoLeitura ? '#64748b' : '#2563eb' }} className="text-sm sm:text-base font-bold">
                     Nota: {Math.round(fisica)}/10 - {tituloNota(fisica)}
                   </span>
                 </div>
@@ -790,16 +845,30 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   max="10"
                   step="0.5"
                   value={fisica}
+                  disabled={modoLeitura}
                   onChange={(e) => setFisica(parseFloat(e.target.value))}
-                  className="w-full cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
-                  style={{ accentColor: '#2563eb' }}
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                  style={{
+                    accentColor: modoLeitura ? '#94a3b8' : '#2563eb',
+                    opacity: modoLeitura ? 0.45 : 1,
+                    cursor: modoLeitura ? 'not-allowed' : 'pointer',
+                  }}
                 />
                 <textarea
+                  readOnly={modoLeitura}
+                  disabled={modoLeitura}
                   value={obsFisica}
                   onChange={(e) => setObsFisica(e.target.value)}
                   placeholder="Observação do Físico..."
-                  style={{ height: '140px', resize: 'none', fontSize: '18px' }}
-                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+                  style={{
+                    height: '140px',
+                    resize: 'none',
+                    fontSize: '18px',
+                    background: modoLeitura ? '#e2e8f0' : undefined,
+                    color: modoLeitura ? '#475569' : undefined,
+                    cursor: modoLeitura ? 'not-allowed' : undefined,
+                  }}
+                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs disabled:bg-slate-200/80 dark:disabled:bg-slate-800/80 disabled:text-slate-600 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -810,7 +879,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   padding: 16,
                   borderRadius: 12,
                   border: '1px solid #e5e7eb',
-                  background: '#f9fafb',
+                  background: modoLeitura ? '#f1f5f9' : '#f9fafb',
                 }}
                 className="dark:bg-slate-800/60 dark:border-slate-800"
               >
@@ -818,7 +887,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                     <span>⚽</span> TÉCNICO
                   </span>
-                  <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
+                  <span style={{ color: modoLeitura ? '#64748b' : '#2563eb' }} className="text-sm sm:text-base font-bold">
                     Nota: {Math.round(tecnica)}/10 - {tituloNota(tecnica)}
                   </span>
                 </div>
@@ -828,16 +897,30 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   max="10"
                   step="0.5"
                   value={tecnica}
+                  disabled={modoLeitura}
                   onChange={(e) => setTecnica(parseFloat(e.target.value))}
-                  className="w-full cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
-                  style={{ accentColor: '#2563eb' }}
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                  style={{
+                    accentColor: modoLeitura ? '#94a3b8' : '#2563eb',
+                    opacity: modoLeitura ? 0.45 : 1,
+                    cursor: modoLeitura ? 'not-allowed' : 'pointer',
+                  }}
                 />
                 <textarea
+                  readOnly={modoLeitura}
+                  disabled={modoLeitura}
                   value={obsTecnica}
                   onChange={(e) => setObsTecnica(e.target.value)}
                   placeholder="Observação do Técnico..."
-                  style={{ height: '140px', resize: 'none', fontSize: '18px' }}
-                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+                  style={{
+                    height: '140px',
+                    resize: 'none',
+                    fontSize: '18px',
+                    background: modoLeitura ? '#e2e8f0' : undefined,
+                    color: modoLeitura ? '#475569' : undefined,
+                    cursor: modoLeitura ? 'not-allowed' : undefined,
+                  }}
+                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs disabled:bg-slate-200/80 dark:disabled:bg-slate-800/80 disabled:text-slate-600 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -848,7 +931,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   padding: 16,
                   borderRadius: 12,
                   border: '1px solid #e5e7eb',
-                  background: '#f9fafb',
+                  background: modoLeitura ? '#f1f5f9' : '#f9fafb',
                 }}
                 className="dark:bg-slate-800/60 dark:border-slate-800"
               >
@@ -856,7 +939,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                     <span>🧠</span> TÁTICO
                   </span>
-                  <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
+                  <span style={{ color: modoLeitura ? '#64748b' : '#2563eb' }} className="text-sm sm:text-base font-bold">
                     Nota: {Math.round(tatica)}/10 - {tituloNota(tatica)}
                   </span>
                 </div>
@@ -866,16 +949,30 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   max="10"
                   step="0.5"
                   value={tatica}
+                  disabled={modoLeitura}
                   onChange={(e) => setTatica(parseFloat(e.target.value))}
-                  className="w-full cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
-                  style={{ accentColor: '#2563eb' }}
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                  style={{
+                    accentColor: modoLeitura ? '#94a3b8' : '#2563eb',
+                    opacity: modoLeitura ? 0.45 : 1,
+                    cursor: modoLeitura ? 'not-allowed' : 'pointer',
+                  }}
                 />
                 <textarea
+                  readOnly={modoLeitura}
+                  disabled={modoLeitura}
                   value={obsTatica}
                   onChange={(e) => setObsTatica(e.target.value)}
                   placeholder="Observação do Tático..."
-                  style={{ height: '140px', resize: 'none', fontSize: '18px' }}
-                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+                  style={{
+                    height: '140px',
+                    resize: 'none',
+                    fontSize: '18px',
+                    background: modoLeitura ? '#e2e8f0' : undefined,
+                    color: modoLeitura ? '#475569' : undefined,
+                    cursor: modoLeitura ? 'not-allowed' : undefined,
+                  }}
+                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs disabled:bg-slate-200/80 dark:disabled:bg-slate-800/80 disabled:text-slate-600 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -886,7 +983,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   padding: 16,
                   borderRadius: 12,
                   border: '1px solid #e5e7eb',
-                  background: '#f9fafb',
+                  background: modoLeitura ? '#f1f5f9' : '#f9fafb',
                 }}
                 className="dark:bg-slate-800/60 dark:border-slate-800"
               >
@@ -894,7 +991,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                     <span>🎯</span> MENTAL
                   </span>
-                  <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
+                  <span style={{ color: modoLeitura ? '#64748b' : '#2563eb' }} className="text-sm sm:text-base font-bold">
                     Nota: {Math.round(mental)}/10 - {tituloNota(mental)}
                   </span>
                 </div>
@@ -904,16 +1001,30 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   max="10"
                   step="0.5"
                   value={mental}
+                  disabled={modoLeitura}
                   onChange={(e) => setMental(parseFloat(e.target.value))}
-                  className="w-full cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
-                  style={{ accentColor: '#2563eb' }}
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                  style={{
+                    accentColor: modoLeitura ? '#94a3b8' : '#2563eb',
+                    opacity: modoLeitura ? 0.45 : 1,
+                    cursor: modoLeitura ? 'not-allowed' : 'pointer',
+                  }}
                 />
                 <textarea
+                  readOnly={modoLeitura}
+                  disabled={modoLeitura}
                   value={obsMental}
                   onChange={(e) => setObsMental(e.target.value)}
                   placeholder="Observação do Mental..."
-                  style={{ height: '140px', resize: 'none', fontSize: '18px' }}
-                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+                  style={{
+                    height: '140px',
+                    resize: 'none',
+                    fontSize: '18px',
+                    background: modoLeitura ? '#e2e8f0' : undefined,
+                    color: modoLeitura ? '#475569' : undefined,
+                    cursor: modoLeitura ? 'not-allowed' : undefined,
+                  }}
+                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs disabled:bg-slate-200/80 dark:disabled:bg-slate-800/80 disabled:text-slate-600 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -924,7 +1035,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   padding: 16,
                   borderRadius: 12,
                   border: '1px solid #e5e7eb',
-                  background: '#f9fafb',
+                  background: modoLeitura ? '#f1f5f9' : '#f9fafb',
                 }}
                 className="dark:bg-slate-800/60 dark:border-slate-800"
               >
@@ -932,7 +1043,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                     <span>🛡️</span> DISCIPLINAR
                   </span>
-                  <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
+                  <span style={{ color: modoLeitura ? '#64748b' : '#2563eb' }} className="text-sm sm:text-base font-bold">
                     Nota: {Math.round(disciplinar)}/10 - {tituloNota(disciplinar)}
                   </span>
                 </div>
@@ -942,16 +1053,30 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   max="10"
                   step="0.5"
                   value={disciplinar}
+                  disabled={modoLeitura}
                   onChange={(e) => setDisciplinar(parseFloat(e.target.value))}
-                  className="w-full cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
-                  style={{ accentColor: '#2563eb' }}
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                  style={{
+                    accentColor: modoLeitura ? '#94a3b8' : '#2563eb',
+                    opacity: modoLeitura ? 0.45 : 1,
+                    cursor: modoLeitura ? 'not-allowed' : 'pointer',
+                  }}
                 />
                 <textarea
+                  readOnly={modoLeitura}
+                  disabled={modoLeitura}
                   value={obsDisciplinar}
                   onChange={(e) => setObsDisciplinar(e.target.value)}
                   placeholder="Observação do Disciplinar..."
-                  style={{ height: '140px', resize: 'none', fontSize: '18px' }}
-                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+                  style={{
+                    height: '140px',
+                    resize: 'none',
+                    fontSize: '18px',
+                    background: modoLeitura ? '#e2e8f0' : undefined,
+                    color: modoLeitura ? '#475569' : undefined,
+                    cursor: modoLeitura ? 'not-allowed' : undefined,
+                  }}
+                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs disabled:bg-slate-200/80 dark:disabled:bg-slate-800/80 disabled:text-slate-600 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -980,13 +1105,20 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                       <button
                         key={tag}
                         type="button"
+                        disabled={modoLeitura}
                         onClick={() => togglePontoAtencao(tag)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                           ativo
-                            ? 'bg-blue-600 text-white shadow-xs'
+                            ? modoLeitura
+                              ? 'bg-slate-400 text-white shadow-xs'
+                              : 'bg-blue-600 text-white shadow-xs'
                             : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
-                        }`}
-                        style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                        } ${modoLeitura ? 'cursor-not-allowed opacity-60' : ''}`}
+                        style={
+                          ativo
+                            ? { backgroundColor: modoLeitura ? '#94a3b8' : '#2563eb', color: '#ffffff' }
+                            : {}
+                        }
                       >
                         {tag}
                       </button>
@@ -994,7 +1126,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   })}
                 </div>
                 <p className="text-[11px] text-slate-500 font-medium pt-0.5">
-                  Toque para selecionar quantos quiser
+                  {modoLeitura ? 'Modo de leitura (desbloqueie no topo para editar)' : 'Toque para selecionar quantos quiser'}
                 </p>
               </div>
 
@@ -1017,13 +1149,20 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                       <button
                         key={tag}
                         type="button"
+                        disabled={modoLeitura}
                         onClick={() => togglePontoDestaque(tag)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                           ativo
-                            ? 'bg-blue-600 text-white shadow-xs'
+                            ? modoLeitura
+                              ? 'bg-slate-400 text-white shadow-xs'
+                              : 'bg-blue-600 text-white shadow-xs'
                             : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
-                        }`}
-                        style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                        } ${modoLeitura ? 'cursor-not-allowed opacity-60' : ''}`}
+                        style={
+                          ativo
+                            ? { backgroundColor: modoLeitura ? '#94a3b8' : '#2563eb', color: '#ffffff' }
+                            : {}
+                        }
                       >
                         {tag}
                       </button>
@@ -1031,7 +1170,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   })}
                 </div>
                 <p className="text-[11px] text-slate-500 font-medium pt-0.5">
-                  Toque para selecionar quantos quiser
+                  {modoLeitura ? 'Modo de leitura (desbloqueie no topo para editar)' : 'Toque para selecionar quantos quiser'}
                 </p>
               </div>
             </div>
@@ -1040,7 +1179,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => setJogoSelecionadoParaAvaliar(null)}
+                onClick={() => {
+                  setJogoSelecionadoParaAvaliar(null);
+                  setModoLeitura(false);
+                }}
                 className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
               >
                 Concluir & Fechar
@@ -1049,16 +1191,18 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  disabled={modoLeitura}
                   onClick={() => handleSalvarAvaliacaoJogador(false)}
-                  className="px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition"
+                  className="px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-slate-200"
                 >
                   Salvar Jogador
                 </button>
                 <button
                   type="button"
+                  disabled={modoLeitura}
                   onClick={() => handleSalvarAvaliacaoJogador(true)}
-                  style={{ backgroundColor: '#2563eb' }}
-                  className="px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition flex items-center gap-2"
+                  style={{ backgroundColor: modoLeitura ? '#94a3b8' : '#2563eb' }}
+                  className="px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition flex items-center gap-2 disabled:cursor-not-allowed disabled:shadow-none"
                 >
                   <CheckCircle2 className="w-4 h-4 text-amber-300" />
                   <span>Salvar & Próximo Jogador</span>
@@ -1263,7 +1407,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => handleAbrirAvaliacaoJogo(jogo)}
+                      onClick={() => handleAbrirAvaliacaoJogo(jogo, false)}
                       style={{ backgroundColor: '#2563eb' }}
                       className="px-4 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1 shadow-xs"
                       title="Avaliar os jogadores desta partida"
@@ -1367,7 +1511,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => handleAbrirAvaliacaoJogo(jogo)}
+                      onClick={() => handleAbrirAvaliacaoJogo(jogo, true)}
                       style={{ backgroundColor: '#2563eb' }}
                       className="px-4 py-2 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs"
                     >

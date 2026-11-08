@@ -11,6 +11,7 @@ import {
   MESES_DO_ANO,
   JogoAgenda,
   TesteFisicoAtleta,
+  Trofeu,
 } from '../types';
 
 const STORAGE_KEY_ATLETAS = 'mastersoccer_atletas_v2';
@@ -21,6 +22,12 @@ const STORAGE_KEY_FINANCEIRO_ATLETAS = 'mastersoccer_financeiro_atletas_v2';
 const STORAGE_KEY_VALOR_MENSALIDADE = 'mastersoccer_valor_mensalidade_v2';
 const STORAGE_KEY_JOGOS_AGENDA = 'mastersoccer_jogos_agenda_v2';
 const STORAGE_KEY_TESTES_FISICOS = 'mastersoccer_testes_fisicos_v2';
+const STORAGE_KEY_TROFEUS = 'mastersoccer_trofeus_v2';
+
+export const TROFEUS_PADRAO: Trofeu[] = [
+  { id: 1, campeonato: 'Liga Nacional 2024', categoria: 'Sub-20', resultado: 'campeao' },
+  { id: 2, campeonato: 'Copa Regional 2024', categoria: 'Profissional', resultado: 'vice' },
+];
 
 export const CATEGORIAS_PADRAO = ['SUB-15', 'SUB-16', 'SUB-17'];
 
@@ -628,6 +635,42 @@ export const storageService = {
     this.salvarTestesFisicos(testes);
   },
 
+  // ==========================================
+  // TROFÉUS DO CLUBE / TREINADOR
+  // ==========================================
+  getTrofeus(): Trofeu[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY_TROFEUS);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.error('Erro ao ler troféus do localStorage', e);
+    }
+    this.salvarTrofeus(TROFEUS_PADRAO);
+    return TROFEUS_PADRAO;
+  },
+
+  salvarTrofeus(trofeus: Trofeu[]): void {
+    localStorage.setItem(STORAGE_KEY_TROFEUS, JSON.stringify(trofeus));
+  },
+
+  salvarTrofeu(trofeu: Trofeu): void {
+    const lista = this.getTrofeus();
+    const idx = lista.findIndex((t) => String(t.id) === String(trofeu.id));
+    if (idx >= 0) {
+      lista[idx] = trofeu;
+    } else {
+      lista.unshift(trofeu);
+    }
+    this.salvarTrofeus(lista);
+  },
+
+  excluirTrofeu(id: string | number): void {
+    const lista = this.getTrofeus().filter((t) => String(t.id) !== String(id));
+    this.salvarTrofeus(lista);
+  },
+
   // Reset para dados de fábrica
   restaurarDadosFabrica(): void {
     localStorage.removeItem(STORAGE_KEY_ATLETAS);
@@ -638,11 +681,13 @@ export const storageService = {
     localStorage.removeItem(STORAGE_KEY_VALOR_MENSALIDADE);
     localStorage.removeItem(STORAGE_KEY_JOGOS_AGENDA);
     localStorage.removeItem(STORAGE_KEY_TESTES_FISICOS);
+    localStorage.removeItem(STORAGE_KEY_TROFEUS);
     this.salvarAtletas(ATLETAS_INICIAIS);
     this.salvarAvaliacoes(AVALIACOES_INICIAIS);
     this.salvarCategorias(CATEGORIAS_PADRAO);
     this.salvarCompeticoes(COMPETICOES_PADRAO);
     this.salvarJogosAgenda(JOGOS_AGENDA_PADRAO);
     this.salvarTestesFisicos(TESTES_FISICOS_PADRAO);
+    this.salvarTrofeus(TROFEUS_PADRAO);
   },
 };

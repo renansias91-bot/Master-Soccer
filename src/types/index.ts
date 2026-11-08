@@ -230,3 +230,13 @@ export interface ResumoFinanceiroAtleta {
   totalPago: number; // R$ soma
   totalDevendo: number; // R$ pendente
 }
+
+export interface Trofeu {
+  id: string | number;
+  campeonato: string;
+  categoria: string;
+  resultado: 'campeao' | 'vice';
+  ano?: string;
+  dataConquista?: string;
+}
+

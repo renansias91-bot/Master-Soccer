@@ -275,11 +275,14 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                       <span className="text-xs font-black text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-lg border border-blue-200/70">
                         {atleta.categoria}
                       </span>
-                      <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
-                        {atleta.nome}
-                      </span>
+                      <h4 className="text-base font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight">
+                        {atleta.apelido || atleta.nome.split(' ')[0]}
+                      </h4>
                     </div>
-                    <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      {atleta.nome}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
                       <span>{atleta.posicao}</span>
                       <span aria-hidden="true">·</span>
                       <span>{stats.totalJogos} {stats.totalJogos === 1 ? 'partida' : 'partidas'}</span>

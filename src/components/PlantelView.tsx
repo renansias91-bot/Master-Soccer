@@ -41,7 +41,7 @@ interface PlantelViewProps {
 
 export interface SlotPosicaoCampinho {
   id: string;
-  label: 'GOL' | 'LE' | 'ZAG' | 'LD' | 'VOL' | 'MEI' | 'ATA';
+  label: 'GOL' | 'LE' | 'ZAG' | 'LD' | 'VOL' | 'MEI' | 'ATA' | 'PE' | 'PD' | string;
   nomeCompleto: string;
   linha: 'ata' | 'mei' | 'def' | 'gol';
   left: number; // % (0 a 100)
@@ -49,88 +49,84 @@ export interface SlotPosicaoCampinho {
 }
 
 export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
-  // FORMAÇÃO 4-4-2 LOSANGO - 11 posições exatas solicitadas
-  '4-4-2': [
-    // GOL left 50% top 93%
-    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 93 },
-    // LE left 10% top 78%
-    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 10, top: 78 },
-    // ZAG left 35% top 78% - mais perto do LE
-    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 35, top: 78 },
-    // ZAG left 65% top 78% - mais perto do LD
-    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 65, top: 78 },
-    // LD left 90% top 78%
-    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 90, top: 78 },
-    // VOL left 50% top 62% - sozinho na frente da defesa
-    { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 62 },
-    // MEI left 18% top 48% - lado esquerdo
-    { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 18, top: 48 },
-    // MEI left 82% top 48% - lado direito
-    { id: 'meid', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 82, top: 48 },
-    // MEI left 50% top 37% - central, um pouco à frente, só "MEI"
-    { id: 'meic', label: 'MEI', nomeCompleto: 'Meio-Campo Central', linha: 'mei', left: 50, top: 37 },
-    // ATA left 40% top 24% - mais afastado, antes da grande área
-    { id: 'ata1', label: 'ATA', nomeCompleto: 'Atacante 1', linha: 'ata', left: 40, top: 24 },
-    // ATA left 60% top 24% - mais afastado, antes da grande área
-    { id: 'ata2', label: 'ATA', nomeCompleto: 'Atacante 2', linha: 'ata', left: 60, top: 24 },
-  ],
-
-  // FORMAÇÃO 4-2-3-1 - 11 posições exatas solicitadas
-  '4-2-3-1': [
-    // GOL left 50% top 93%
-    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 93 },
-    // LE left 10% top 78%
-    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 10, top: 78 },
-    // ZAG left 35% top 78% - mais perto do LE
-    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 35, top: 78 },
-    // ZAG left 65% top 78% - mais perto do LD
-    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 65, top: 78 },
-    // LD left 90% top 78%
-    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 90, top: 78 },
-    // VOL left 40% top 62% - mais afastado
-    { id: 'vol1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei', left: 40, top: 62 },
-    // VOL left 60% top 62% - mais afastado
-    { id: 'vol2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei', left: 60, top: 62 },
-    // MEI left 22% top 44% - subiu, bem acima da linha do meio-campo
-    { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 22, top: 44 },
-    // MEI left 50% top 44% - subiu, bem acima da linha do meio-campo
-    { id: 'meic', label: 'MEI', nomeCompleto: 'Meio-Campo Central', linha: 'mei', left: 50, top: 44 },
-    // MEI left 78% top 44% - subiu, bem acima da linha do meio-campo
-    { id: 'meid', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 78, top: 44 },
-    // ATA left 50% top 24% - sozinho, antes da grande área
-    { id: 'ata', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 24 },
+  // FORMAÇÃO 4-4-2 LOSANGO
+  '4-4-2 Losango': [
+    { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 15, top: 72 },
+    { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 85, top: 72 },
+    { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 58 },
+    { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 22, top: 42 },
+    { id: 'MEI_D', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 78, top: 42 },
+    { id: 'MEI_C', label: 'MEI', nomeCompleto: 'Meio-Campo Central', linha: 'mei', left: 50, top: 32 },
+    { id: 'ATA_E', label: 'ATA', nomeCompleto: 'Atacante Esquerdo', linha: 'ata', left: 35, top: 14 },
+    { id: 'ATA_D', label: 'ATA', nomeCompleto: 'Atacante Direito', linha: 'ata', left: 65, top: 14 },
   ],
 
   // FORMAÇÃO 4-3-3
   '4-3-3': [
-    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 93 },
-    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 10, top: 78 },
-    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 35, top: 78 },
-    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 65, top: 78 },
-    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 90, top: 78 },
-    { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 62 },
-    { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campista E', linha: 'mei', left: 28, top: 48 },
-    { id: 'meid', label: 'MEI', nomeCompleto: 'Meio-Campista D', linha: 'mei', left: 72, top: 48 },
-    { id: 'pe', label: 'ATA', nomeCompleto: 'Ponta Esquerda', linha: 'ata', left: 20, top: 24 },
-    { id: 'ca', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 24 },
-    { id: 'pd', label: 'ATA', nomeCompleto: 'Ponta Direita', linha: 'ata', left: 80, top: 24 },
+    { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 15, top: 72 },
+    { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 85, top: 72 },
+    { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 58 },
+    { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 30, top: 42 },
+    { id: 'MEI_D', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 70, top: 42 },
+    { id: 'ATA_E', label: 'ATA', nomeCompleto: 'Ponta Esquerda', linha: 'ata', left: 20, top: 16 },
+    { id: 'ATA_C', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 12 },
+    { id: 'ATA_D', label: 'ATA', nomeCompleto: 'Ponta Direita', linha: 'ata', left: 80, top: 16 },
   ],
 
-  // FORMAÇÃO 3-5-2
-  '3-5-2': [
-    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 93 },
-    { id: 'zag1', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 25, top: 78 },
-    { id: 'zag2', label: 'ZAG', nomeCompleto: 'Zagueiro Central', linha: 'def', left: 50, top: 78 },
-    { id: 'zag3', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 75, top: 78 },
-    { id: 'le', label: 'LE', nomeCompleto: 'Ala Esquerda', linha: 'mei', left: 10, top: 50 },
-    { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 62 },
-    { id: 'mei1', label: 'MEI', nomeCompleto: 'Meia 1', linha: 'mei', left: 32, top: 44 },
-    { id: 'mei2', label: 'MEI', nomeCompleto: 'Meia 2', linha: 'mei', left: 68, top: 44 },
-    { id: 'ld', label: 'LD', nomeCompleto: 'Ala Direita', linha: 'mei', left: 90, top: 50 },
-    { id: 'ata1', label: 'ATA', nomeCompleto: 'Atacante 1', linha: 'ata', left: 42, top: 24 },
-    { id: 'ata2', label: 'ATA', nomeCompleto: 'Atacante 2', linha: 'ata', left: 58, top: 24 },
+  // FORMAÇÃO 4-2-4 - 4 DA FRENTE BAIXOS, PROXIMOS DO MEIO
+  '4-2-4': [
+    { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 15, top: 72 },
+    { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 85, top: 72 },
+    { id: 'VOL1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei', left: 35, top: 56 },
+    { id: 'VOL2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei', left: 65, top: 56 },
+    { id: 'PE_E', label: 'PE', nomeCompleto: 'Ponta Esquerda', linha: 'ata', left: 14, top: 36 },
+    { id: 'ATA_E', label: 'ATA', nomeCompleto: 'Atacante Esquerdo', linha: 'ata', left: 38, top: 30 },
+    { id: 'ATA_D', label: 'ATA', nomeCompleto: 'Atacante Direito', linha: 'ata', left: 62, top: 30 },
+    { id: 'PE_D', label: 'PD', nomeCompleto: 'Ponta Direita', linha: 'ata', left: 86, top: 36 },
+  ],
+
+  // FORMAÇÃO 4-2-3-1
+  '4-2-3-1': [
+    { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 15, top: 72 },
+    { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 85, top: 72 },
+    { id: 'VOL1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei', left: 38, top: 58 },
+    { id: 'VOL2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei', left: 62, top: 58 },
+    { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 20, top: 38 },
+    { id: 'MEI_C', label: 'MEI', nomeCompleto: 'Meio-Campo Central', linha: 'mei', left: 50, top: 34 },
+    { id: 'MEI_D', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 80, top: 38 },
+    { id: 'ATA', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 12 },
+  ],
+
+  // FORMAÇÃO 4-1-4-1
+  '4-1-4-1': [
+    { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 15, top: 72 },
+    { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 85, top: 72 },
+    { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 60 },
+    { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campista Esquerdo', linha: 'mei', left: 16, top: 40 },
+    { id: 'MEI_C1', label: 'MEI', nomeCompleto: 'Meio-Campista Central 1', linha: 'mei', left: 38, top: 42 },
+    { id: 'MEI_C2', label: 'MEI', nomeCompleto: 'Meio-Campista Central 2', linha: 'mei', left: 62, top: 42 },
+    { id: 'MEI_D', label: 'MEI', nomeCompleto: 'Meio-Campista Direito', linha: 'mei', left: 84, top: 40 },
+    { id: 'ATA', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 14 },
   ],
 };
+
+// Aliases para compatibilidade
+FORMACOES_CAMPINHO['4-4-2'] = FORMACOES_CAMPINHO['4-4-2 Losango'];
 
 // Mapeia posição original do atleta para uma das 10 posições oficiais do jogo
 function inferirPosicaoJogoPadrao(posicaoOriginal?: string): string {
@@ -162,7 +158,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 }) => {
   const [busca, setBusca] = useState('');
   const [abaSubEscalacao, setAbaSubEscalacao] = useState<'lista' | 'campinho'>('lista');
-  const [formacao, setFormacao] = useState<string>('4-4-2');
+  const [formacao, setFormacao] = useState<string>('4-4-2 Losango');
   const [modalTrocaAberto, setModalTrocaAberto] = useState<boolean>(false);
   const [atletaParaTroca, setAtletaParaTroca] = useState<{
     atletaId: string;
@@ -646,15 +642,13 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                           </div>
 
                           <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                                {atleta.nome}
-                              </h4>
-                              {atleta.apelido && (
-                                <span className="text-xs text-slate-400">"{atleta.apelido}"</span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-slate-500">
+                            <h4 className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight leading-tight">
+                              {atleta.apelido || atleta.nome.split(' ')[0]}
+                            </h4>
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                              {atleta.nome}
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
                               Posição: <strong className="text-slate-700 dark:text-slate-300">{atleta.posicao}</strong> · Pé: {atleta.pernaDominante}
                             </p>
                           </div>
@@ -779,15 +773,18 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                           </div>
 
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300">
                                 {atleta.categoria}
                               </span>
-                              <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                                {atleta.nome}
+                              <h4 className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight leading-tight">
+                                {atleta.apelido || atleta.nome.split(' ')[0]}
                               </h4>
                             </div>
-                            <p className="text-[11px] text-slate-500">
+                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                              {atleta.nome}
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
                               Posição: <strong className="text-slate-700 dark:text-slate-300">{atleta.posicao}</strong> · Pé: {atleta.pernaDominante}
                             </p>
                           </div>
@@ -869,10 +866,11 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                   onChange={(e) => setFormacao(e.target.value)}
                   className="appearance-none pl-4 pr-9 py-2 text-sm font-black bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-2 border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer shadow-xs"
                 >
-                  <option value="4-4-2">4-4-2 (Losango)</option>
-                  <option value="4-2-3-1">4-2-3-1</option>
+                  <option value="4-4-2 Losango">4-4-2 Losango</option>
                   <option value="4-3-3">4-3-3</option>
-                  <option value="3-5-2">3-5-2</option>
+                  <option value="4-2-4">4-2-4</option>
+                  <option value="4-2-3-1">4-2-3-1</option>
+                  <option value="4-1-4-1">4-1-4-1</option>
                 </select>
                 <ChevronDown className="w-4 h-4 text-blue-600 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
               </div>
@@ -901,7 +899,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
           {(() => {
             const titularesList = atletas.filter((a) => escalacaoMap[a.id]?.titular);
             const reservas = atletas.filter((a) => escalacaoMap[a.id] && !escalacaoMap[a.id].titular);
-            const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2'];
+            const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
             const slotsAtribuidos = atribuirTitularesAosSlots(titularesList, slots);
 
             const renderPlayerPin = (
