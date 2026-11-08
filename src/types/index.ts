@@ -66,6 +66,7 @@ export interface AtletaEscalado {
   atletaId: string;
   titular: boolean; // true = Titular, false = Reserva
   posicaoJogo: string; // Ex: 'Goleiro', 'Volante (5)', etc.
+  posicaoSlot?: string; // Slot exato no campinho (ex: 'GOL', 'ZAG1', 'ATA_E', etc.)
 }
 
 export interface AvaliacaoJogo {

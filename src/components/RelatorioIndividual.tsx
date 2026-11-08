@@ -13,6 +13,7 @@ import {
 import { Atleta, AvaliacaoJogo } from '../types';
 import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
+import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
 
 interface RelatorioIndividualProps {
@@ -183,7 +184,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                 {atletaAtivo.fotoUrl ? (
                   <img src={atletaAtivo.fotoUrl} alt={atletaAtivo.nome} className="w-full h-full object-cover" />
                 ) : (
-                  atletaAtivo.nome.substring(0, 2).toUpperCase()
+                  obterIniciaisApelido(atletaAtivo)
                 )}
               </div>
 
@@ -602,17 +603,17 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                         {((avaliacaoSelecionada.pontosFortes && avaliacaoSelecionada.pontosFortes.length > 0) ||
                           (avaliacaoSelecionada.pontosMelhoria && avaliacaoSelecionada.pontosMelhoria.length > 0)) && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Destaques (Azul) */}
+                            {/* Destaques (Verde) */}
                             {avaliacaoSelecionada.pontosFortes && avaliacaoSelecionada.pontosFortes.length > 0 && (
-                              <div className="p-4 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 space-y-2">
-                                <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                              <div className="p-4 rounded-xl bg-[#F0FDF4] dark:bg-emerald-950/30 border border-[#BBF7D0] dark:border-emerald-800 space-y-2">
+                                <span className="text-xs font-bold uppercase tracking-wider text-[#15803D] dark:text-emerald-300 flex items-center gap-1.5">
                                   <span>⭐</span> Pontos de Destaque
                                 </span>
                                 <div className="flex flex-wrap gap-1.5 pt-1">
                                   {avaliacaoSelecionada.pontosFortes.map((tag) => (
                                     <span
                                       key={tag}
-                                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-xs"
+                                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#16A34A] text-white shadow-xs"
                                     >
                                       {tag}
                                     </span>
@@ -621,17 +622,17 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                               </div>
                             )}
 
-                            {/* Atenção (Vermelho/Rosa) */}
+                            {/* Atenção (Amarelo claro #FEFCE8 com badge #FACC15 e texto marrom #713F12, nunca vermelho) */}
                             {avaliacaoSelecionada.pontosMelhoria && avaliacaoSelecionada.pontosMelhoria.length > 0 && (
-                              <div className="p-4 rounded-xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 space-y-2">
-                                <span className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                              <div className="p-4 rounded-xl bg-[#FEFCE8] dark:bg-amber-950/30 border border-[#FEF08A] dark:border-amber-800 space-y-2">
+                                <span className="text-xs font-bold uppercase tracking-wider text-[#713F12] dark:text-amber-200 flex items-center gap-1.5">
                                   <span>⚠️</span> Pontos de Atenção / Aprimoramento
                                 </span>
                                 <div className="flex flex-wrap gap-1.5 pt-1">
                                   {avaliacaoSelecionada.pontosMelhoria.map((tag) => (
                                     <span
                                       key={tag}
-                                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-700 text-white shadow-xs"
+                                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#FACC15] text-[#713F12] border border-[#EAB308] shadow-xs"
                                     >
                                       {tag}
                                     </span>
@@ -657,8 +658,8 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                             )}
 
                             {avaliacaoSelecionada.pontosMelhorarTexto && (
-                              <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 space-y-2">
-                                <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                              <div className="p-4 rounded-xl bg-[#FEFCE8] dark:bg-amber-950/30 border border-[#FEF08A] dark:border-amber-800 space-y-2">
+                                <span className="text-xs font-bold uppercase tracking-wider text-[#713F12] dark:text-amber-200 flex items-center gap-1.5">
                                   <span>⚠️</span> A Melhorar:
                                 </span>
                                 <p className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line leading-relaxed">

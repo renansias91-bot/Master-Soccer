@@ -261,6 +261,20 @@ export default function App() {
     });
   };
 
+  const handleExcluirAvaliacaoDireto = async (id: string) => {
+    try {
+      await firebaseService.excluirAvaliacao(id);
+      storageService.excluirAvaliacao(id);
+      setAvaliacoes(storageService.getAvaliacoes());
+      exibirToast('Avaliação apagada com sucesso.');
+    } catch (e: any) {
+      console.error('Erro ao excluir avaliação:', e);
+      storageService.excluirAvaliacao(id);
+      setAvaliacoes(storageService.getAvaliacoes());
+      exibirToast('Avaliação apagada localmente.');
+    }
+  };
+
   // Handlers para Jogos da Agenda
   const handleSalvarJogo = async (jogo: JogoAgenda) => {
     storageService.salvarJogoAgenda(jogo);
@@ -695,6 +709,7 @@ export default function App() {
             onNovoJogo={handleAbrirNovoJogo}
             onEditarJogo={handleAbrirEditarJogo}
             onExcluirJogo={handleExcluirJogo}
+            onExcluirAvaliacao={handleExcluirAvaliacaoDireto}
             onSalvarAvaliacao={handleSalvarAvaliacao}
             onSelecionarAtleta={handleAbrirRelatorioAtleta}
             onNavegarEscalacao={(jogoId) => {

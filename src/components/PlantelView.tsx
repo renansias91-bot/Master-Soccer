@@ -23,6 +23,7 @@ import {
 import { Atleta, AvaliacaoJogo, JogoAgenda, POSICOES_JOGO, AtletaEscalado } from '../types';
 import { storageService } from '../services/storage';
 import { formatarDataExibicao } from '../utils/dateUtils';
+import { obterIniciaisApelido } from '../utils/apelidoUtils';
 
 interface PlantelViewProps {
   atletas: Atleta[];
@@ -157,9 +158,11 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   onSelecionarJogoId,
 }) => {
   const [busca, setBusca] = useState('');
+  const [filtroCategoriaLista, setFiltroCategoriaLista] = useState<string>('TODAS');
   const [abaSubEscalacao, setAbaSubEscalacao] = useState<'lista' | 'campinho'>('lista');
   const [formacao, setFormacao] = useState<string>('4-4-2 Losango');
   const [modalTrocaAberto, setModalTrocaAberto] = useState<boolean>(false);
+  const [slotSelecionado, setSlotSelecionado] = useState<string | null>(null);
   const [atletaParaTroca, setAtletaParaTroca] = useState<{
     atletaId: string;
     tipo: 'titular' | 'reserva';
@@ -253,17 +256,33 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
     });
   };
 
-  // Atribuição automática inteligente dos titulares aos slots da formação tática
+  // Atribuição dos titulares aos slots da formação tática, respeitando slotId gravado
   const atribuirTitularesAosSlots = (
     titularesList: Atleta[],
     slots: SlotPosicaoCampinho[]
   ): Array<{ slot: SlotPosicaoCampinho; atleta: Atleta | null }> => {
     const resultado: Array<{ slot: SlotPosicaoCampinho; atleta: Atleta | null }> = [];
-    const atletasRestantes = [...titularesList];
     const usados = new Set<string>();
 
+    // 1ª Passagem: Atletas com slotId exato travado
+    const slotsMap: Record<string, Atleta | null> = {};
     for (const slot of slots) {
-      const match = atletasRestantes.find((a) => {
+      const matchExato = titularesList.find(
+        (a) => !usados.has(a.id) && escalacaoMap[a.id]?.posicaoSlot === slot.id
+      );
+      if (matchExato) {
+        usados.add(matchExato.id);
+        slotsMap[slot.id] = matchExato;
+      } else {
+        slotsMap[slot.id] = null;
+      }
+    }
+
+    // 2ª Passagem: Titulares restantes sem slotId vinculados por posição tática
+    const titularesLivres = titularesList.filter((a) => !usados.has(a.id));
+    for (const slot of slots) {
+      if (slotsMap[slot.id]) continue;
+      const match = titularesLivres.find((a) => {
         if (usados.has(a.id)) return false;
         const pos = (escalacaoMap[a.id]?.posicaoJogo || a.posicao || '').toLowerCase();
         if (slot.linha === 'gol') return pos.includes('gol');
@@ -275,23 +294,61 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
       if (match) {
         usados.add(match.id);
-        resultado.push({ slot, atleta: match });
-      } else {
-        resultado.push({ slot, atleta: null });
+        slotsMap[slot.id] = match;
       }
     }
 
-    // Preenche slots vazios com titulares restantes que não encaixaram na posição padrão
-    const unassigned = atletasRestantes.filter((a) => !usados.has(a.id));
-    for (let i = 0; i < resultado.length && unassigned.length > 0; i++) {
-      if (!resultado[i].atleta) {
-        const proximo = unassigned.shift()!;
-        resultado[i].atleta = proximo;
+    // 3ª Passagem: Preenche vagas ainda vazias com os titulares que sobraram
+    const restantesFinais = titularesList.filter((a) => !usados.has(a.id));
+    for (const slot of slots) {
+      if (!slotsMap[slot.id] && restantesFinais.length > 0) {
+        const proximo = restantesFinais.shift()!;
+        slotsMap[slot.id] = proximo;
         usados.add(proximo.id);
       }
     }
 
+    for (const slot of slots) {
+      resultado.push({ slot, atleta: slotsMap[slot.id] || null });
+    }
+
     return resultado;
+  };
+
+  // Colocar jogador exatamente no slot selecionado do campinho
+  const handleColocarJogadorNoSlot = (atletaId: string, slotId: string) => {
+    const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
+    const slotObj = slots.find((s) => s.id === slotId);
+    const nomePosicao = slotObj?.nomeCompleto || slotObj?.label || 'Titular';
+
+    setEscalacaoMap((prev) => {
+      const copy = { ...prev };
+
+      // Se outro jogador já estava nesse slotId, remove ele desse slot e coloca no banco
+      for (const id in copy) {
+        if (copy[id].posicaoSlot === slotId && id !== atletaId) {
+          copy[id] = {
+            ...copy[id],
+            titular: false,
+            posicaoSlot: undefined,
+          };
+        }
+      }
+
+      // Coloca o atleta selecionado exatamente nesse slotId
+      copy[atletaId] = {
+        atletaId,
+        titular: true,
+        posicaoJogo: nomePosicao,
+        posicaoSlot: slotId,
+      };
+
+      return copy;
+    });
+
+    setSlotSelecionado(null);
+    setAtletaParaTroca(null);
+    setModalTrocaAberto(false);
   };
 
   // Troca titular e reserva
@@ -305,18 +362,21 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         copy[titularId] = {
           ...titAtual,
           titular: false,
+          posicaoSlot: undefined,
         };
         copy[reservaId] = {
           ...resAtual,
           titular: true,
+          posicaoSlot: titAtual.posicaoSlot,
           posicaoJogo: titAtual.posicaoJogo || resAtual.posicaoJogo,
         };
       } else if (titAtual && !resAtual) {
         const atletaRes = atletas.find((a) => a.id === reservaId);
-        copy[titularId] = { ...titAtual, titular: false };
+        copy[titularId] = { ...titAtual, titular: false, posicaoSlot: undefined };
         copy[reservaId] = {
           atletaId: reservaId,
           titular: true,
+          posicaoSlot: titAtual.posicaoSlot,
           posicaoJogo: atletaRes ? inferirPosicaoJogoPadrao(atletaRes.posicao) : titAtual.posicaoJogo,
         };
       } else if (!titAtual && resAtual) {
@@ -329,6 +389,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
     });
     setModalTrocaAberto(false);
     setAtletaParaTroca(null);
+    setSlotSelecionado(null);
   };
 
   // Mover titular para o banco
@@ -341,11 +402,13 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         [atletaId]: {
           ...atual,
           titular: false,
+          posicaoSlot: undefined,
         },
       };
     });
     setModalTrocaAberto(false);
     setAtletaParaTroca(null);
+    setSlotSelecionado(null);
   };
 
   // Promover atleta para titular
@@ -912,46 +975,70 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                     key={slot.id}
                     type="button"
                     onClick={() => {
-                      setAtletaParaTroca({ atletaId: '', tipo: 'titular', posicaoSlot: slot.label });
+                      setSlotSelecionado(slot.id);
+                      setAtletaParaTroca({ atletaId: '', tipo: 'titular', posicaoSlot: slot.id });
                       setModalTrocaAberto(true);
                     }}
                     className="flex flex-col items-center group cursor-pointer transition-transform hover:scale-105 active:scale-95"
+                    title={`Vaga vazia (${slot.label}) - Toque para escolher jogador`}
                   >
-                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-blue-400 bg-white/95 backdrop-blur-xs flex flex-col items-center justify-center text-blue-600 group-hover:bg-white group-hover:border-blue-600 transition-all shadow-md relative">
-                      <span className="text-base font-black leading-none text-blue-600">+</span>
+                    <div
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        color: '#000000',
+                        borderColor: '#D1D5DB',
+                        borderWidth: '2px',
+                        borderStyle: 'solid',
+                      }}
+                      className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex flex-col items-center justify-center transition-all shadow-md relative"
+                    >
+                      <span style={{ color: '#000000', fontSize: '20px', fontWeight: 900, lineHeight: 1 }}>
+                        +
+                      </span>
                       {/* Selo da sigla da posição */}
                       <span className="absolute -top-1.5 -right-1 text-[8.5px] font-black px-1.5 py-0.2 rounded-full shadow bg-blue-600 text-white border border-white leading-tight">
                         {slot.label}
                       </span>
                     </div>
-                    <div className="mt-1 px-1.5 py-0.5 rounded bg-black/75 text-[9px] font-bold text-white shadow backdrop-blur-xs leading-tight">
+                    <div
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        color: '#000000',
+                        borderColor: '#D1D5DB',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                      }}
+                      className="mt-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold shadow-xs leading-tight"
+                    >
                       Vazio
                     </div>
                   </button>
                 );
               }
 
-              const iniciais = atleta.nome
-                .split(' ')
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((p) => p[0])
-                .join('')
-                .toUpperCase();
-
               return (
                 <button
                   key={slot.id}
                   type="button"
                   onClick={() => {
-                    setAtletaParaTroca({ atletaId: atleta.id, tipo: 'titular' });
+                    setSlotSelecionado(slot.id);
+                    setAtletaParaTroca({ atletaId: atleta.id, tipo: 'titular', posicaoSlot: slot.id });
                     setModalTrocaAberto(true);
                   }}
                   className="flex flex-col items-center group cursor-pointer transition-transform hover:scale-110 active:scale-95 relative"
-                  title={`${atleta.nome} (${slot.label}) - Clique para trocar`}
+                  title={`${atleta.apelido || atleta.nome} (${slot.label}) - Toque para trocar`}
                 >
-                  {/* Bolinha branca com borda azul (#2563eb) */}
-                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white border-2 border-blue-600 shadow-xl relative flex items-center justify-center p-0.5 overflow-visible">
+                  {/* Bolinha preenchida verde #16A34A com borda #14532D */}
+                  <div
+                    style={{
+                      backgroundColor: '#16A34A',
+                      color: '#FFFFFF',
+                      borderColor: '#14532D',
+                      borderWidth: '2px',
+                      borderStyle: 'solid',
+                    }}
+                    className="w-11 h-11 sm:w-12 sm:h-12 rounded-full shadow-xl relative flex items-center justify-center p-0.5 overflow-visible"
+                  >
                     {atleta.fotoUrl ? (
                       <img
                         src={atleta.fotoUrl}
@@ -959,8 +1046,11 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full rounded-full bg-white flex items-center justify-center font-black text-xs sm:text-sm text-blue-700 tracking-tight">
-                        {atleta.numeroCamisa ? `#${atleta.numeroCamisa}` : iniciais}
+                      <div
+                        style={{ color: '#FFFFFF' }}
+                        className="w-full h-full rounded-full flex items-center justify-center font-black text-xs sm:text-sm tracking-tight"
+                      >
+                        {atleta.numeroCamisa ? `#${atleta.numeroCamisa}` : obterIniciaisApelido(atleta)}
                       </div>
                     )}
 
@@ -970,8 +1060,17 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                     </span>
                   </div>
 
-                  {/* Nome do jogador legível embaixo */}
-                  <div className="mt-1 px-1.5 py-0.5 rounded-md bg-black/85 text-[10px] sm:text-[11px] font-black text-white shadow border border-white/20 max-w-[85px] sm:max-w-[100px] truncate text-center leading-tight">
+                  {/* Nome do jogador legível embaixo em verde #16A34A */}
+                  <div
+                    style={{
+                      backgroundColor: '#16A34A',
+                      color: '#FFFFFF',
+                      borderColor: '#14532D',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                    }}
+                    className="mt-1 px-1.5 py-0.5 rounded-md text-[10px] sm:text-[11px] font-black shadow-md max-w-[85px] sm:max-w-[100px] truncate text-center leading-tight"
+                  >
                     {atleta.apelido || atleta.nome.split(' ')[0]}
                   </div>
                 </button>
@@ -1194,10 +1293,14 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                               key={r.id}
                               type="button"
                               onClick={() => {
-                                if (atletaParaTroca.atletaId) {
+                                if (slotSelecionado) {
+                                  handleColocarJogadorNoSlot(r.id, slotSelecionado);
+                                } else if (atletaParaTroca.atletaId) {
                                   handleTrocarTitularReserva(atletaParaTroca.atletaId, r.id);
+                                } else if (atletaParaTroca.posicaoSlot) {
+                                  handleColocarJogadorNoSlot(r.id, atletaParaTroca.posicaoSlot);
                                 } else {
-                                  handlePromoverParaTitular(r.id, atletaParaTroca.posicaoSlot);
+                                  handlePromoverParaTitular(r.id);
                                 }
                               }}
                               className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 border border-slate-200 dark:border-slate-700 hover:border-blue-500 transition-all group text-left"
@@ -1211,12 +1314,12 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                                   />
                                 ) : (
                                   <div className="w-9 h-9 rounded-full bg-amber-500 text-white font-black text-xs flex items-center justify-center">
-                                    {r.nome.charAt(0)}
+                                    {obterIniciaisApelido(r)}
                                   </div>
                                 )}
                                 <div>
                                   <div className="text-xs font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                                    {r.nome}
+                                    {r.apelido || r.nome}
                                   </div>
                                   <div className="text-[10px] text-slate-500">
                                     {escalacaoMap[r.id]?.posicaoJogo || r.posicao} · {r.categoria}
@@ -1224,7 +1327,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                                 </div>
                               </div>
                               <span className="px-2.5 py-1 text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900/60 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                Colocar no lugar
+                                {slotSelecionado ? 'Colocar nesta vaga' : 'Colocar no lugar'}
                               </span>
                             </button>
                           ))}
@@ -1241,25 +1344,29 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                     <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
                       {atletas
                         .filter((a) => !escalacaoMap[a.id])
-                        .slice(0, 10)
+                        .slice(0, 15)
                         .map((outro) => (
                           <button
                             key={outro.id}
                             type="button"
                             onClick={() => {
-                              if (atletaParaTroca.atletaId) {
+                              if (slotSelecionado) {
+                                handleColocarJogadorNoSlot(outro.id, slotSelecionado);
+                              } else if (atletaParaTroca.atletaId) {
                                 handleTrocarTitularReserva(atletaParaTroca.atletaId, outro.id);
+                              } else if (atletaParaTroca.posicaoSlot) {
+                                handleColocarJogadorNoSlot(outro.id, atletaParaTroca.posicaoSlot);
                               } else {
-                                handlePromoverParaTitular(outro.id, atletaParaTroca.posicaoSlot);
+                                handlePromoverParaTitular(outro.id);
                               }
                             }}
                             className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200 dark:border-slate-700/60 text-left transition-all group"
                           >
                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-600">
-                              {outro.nome} ({outro.posicao})
+                              {outro.apelido ? `${outro.apelido} (${outro.nome})` : outro.nome} - {outro.posicao}
                             </span>
                             <span className="text-[11px] font-bold text-blue-600 group-hover:underline">
-                              Convocar e Escalar
+                              {slotSelecionado ? 'Escalar nesta vaga' : 'Convocar e Escalar'}
                             </span>
                           </button>
                         ))}

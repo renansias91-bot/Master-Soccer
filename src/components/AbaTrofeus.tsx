@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Plus, Trash2, X, Award, CheckCircle2 } from 'lucide-react';
 import { Trofeu } from '../types';
 import { storageService } from '../services/storage';
+import { ConfirmacaoApagarModal } from './ConfirmacaoApagarModal';
 
 interface AbaTrofeusProps {
   trofeus?: Trofeu[];
@@ -24,6 +25,7 @@ export const AbaTrofeus: React.FC<AbaTrofeusProps> = ({
   const [categoria, setCategoria] = useState('');
   const [resultado, setResultado] = useState<'campeao' | 'vice'>('campeao');
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [trofeuParaExcluir, setTrofeuParaExcluir] = useState<Trofeu | null>(null);
 
   // Sincroniza se os props mudarem
   useEffect(() => {
@@ -66,10 +68,9 @@ export const AbaTrofeus: React.FC<AbaTrofeusProps> = ({
     setTimeout(() => setFeedback(null), 3500);
   };
 
-  const excluirTrofeu = (id: string | number) => {
-    const confirmou = window.confirm('Tem certeza que deseja excluir este troféu da galeria?');
-    if (!confirmou) return;
-
+  const handleConfirmarExcluirTrofeu = () => {
+    if (!trofeuParaExcluir) return;
+    const id = trofeuParaExcluir.id;
     const novaLista = trofeus.filter((t) => String(t.id) !== String(id));
     setTrofeus(novaLista);
     storageService.salvarTrofeus(novaLista);
@@ -77,6 +78,9 @@ export const AbaTrofeus: React.FC<AbaTrofeusProps> = ({
     if (onExcluirTrofeu) {
       onExcluirTrofeu(id);
     }
+    setTrofeuParaExcluir(null);
+    setFeedback('✓ Troféu removido da galeria.');
+    setTimeout(() => setFeedback(null), 3000);
   };
 
   return (
@@ -385,14 +389,14 @@ export const AbaTrofeus: React.FC<AbaTrofeusProps> = ({
                     </p>
                   </div>
 
-                  {/* Botão de Excluir [ X ] */}
+                  {/* Botão de Excluir */}
                   <button
                     type="button"
-                    onClick={() => excluirTrofeu(t.id)}
+                    onClick={() => setTrofeuParaExcluir(t)}
                     className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 border border-transparent hover:border-rose-200 transition-all shrink-0 cursor-pointer"
                     title="Excluir este troféu"
                   >
-                    <X className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               );
@@ -400,6 +404,19 @@ export const AbaTrofeus: React.FC<AbaTrofeusProps> = ({
           </div>
         )}
       </div>
+
+      {/* Modal Customizado de Confirmação para Excluir Troféu */}
+      <ConfirmacaoApagarModal
+        isOpen={!!trofeuParaExcluir}
+        onClose={() => setTrofeuParaExcluir(null)}
+        onConfirm={handleConfirmarExcluirTrofeu}
+        titulo="Excluir troféu?"
+        mensagem={`Tem certeza que deseja excluir o troféu ${
+          trofeuParaExcluir?.resultado === 'campeao' ? 'CAMPEÃO' : 'VICE-CAMPEÃO'
+        } - ${trofeuParaExcluir?.campeonato} (${trofeuParaExcluir?.categoria})? Essa ação não pode ser desfeita.`}
+        textoCancelar="Cancelar"
+        textoConfirmar="Excluir troféu"
+      />
     </div>
   );
 };

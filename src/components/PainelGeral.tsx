@@ -14,6 +14,7 @@ import { Atleta, AvaliacaoJogo, NotasPilares } from '../types';
 import { RadarChart } from './RadarChart';
 import { storageService } from '../services/storage';
 import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
+import { obterIniciaisApelido } from '../utils/apelidoUtils';
 
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
 
@@ -262,12 +263,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                     {atleta.fotoUrl ? (
                       <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
                     ) : (
-                      atleta.nome
-                        .split(' ')
-                        .slice(0, 2)
-                        .map((n) => n[0])
-                        .join('')
-                        .toUpperCase()
+                      obterIniciaisApelido(atleta)
                     )}
                   </div>
                   <div>

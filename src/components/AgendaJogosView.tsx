@@ -35,6 +35,7 @@ import {
   formatarDataAmigavelJogo,
 } from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
+import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
 
 interface AgendaJogosViewProps {
@@ -45,6 +46,7 @@ interface AgendaJogosViewProps {
   onNovoJogo: () => void;
   onEditarJogo: (jogo: JogoAgenda) => void;
   onExcluirJogo: (id: string, nome?: string) => void;
+  onExcluirAvaliacao?: (id: string) => void;
   onSalvarAvaliacao: (avaliacao: AvaliacaoJogo) => void;
   onSelecionarAtleta: (atleta: Atleta) => void;
   onNavegarEscalacao?: (jogoId: string) => void;
@@ -58,6 +60,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   onNovoJogo,
   onEditarJogo,
   onExcluirJogo,
+  onExcluirAvaliacao,
   onSalvarAvaliacao,
   onSelecionarAtleta,
   onNavegarEscalacao,
@@ -97,6 +100,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   const [pontosMelhoria, setPontosMelhoria] = useState<string[]>([]);
 
   const [feedbackSalvo, setFeedbackSalvo] = useState<string | null>(null);
+  const [modalApagarAvaliacaoEtapa, setModalApagarAvaliacaoEtapa] = useState<0 | 1 | 2>(0);
 
   // Filtra jogos por categoria e busca por adversário
   const jogosFiltrados = jogos.filter((j) => {
@@ -361,6 +365,45 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     }
   };
 
+  const handleConfirmarApagarAvaliacaoDefinitivo = () => {
+    if (!jogoSelecionadoParaAvaliar || !atletaAtual) return;
+
+    const avExistente = avaliacoes.find(
+      (av) =>
+        av.atletaId === atletaAtual.id &&
+        (av.jogoAgendaId === jogoSelecionadoParaAvaliar.id ||
+          (av.adversario.toLowerCase().includes(jogoSelecionadoParaAvaliar.adversario.toLowerCase()) &&
+            av.categoria === jogoSelecionadoParaAvaliar.categoria))
+    );
+
+    if (avExistente && onExcluirAvaliacao) {
+      onExcluirAvaliacao(avExistente.id);
+    }
+
+    // Resetar campos para valores padrão
+    setTecnica(8.0);
+    setTatica(8.0);
+    setFisica(7.5);
+    setMental(8.0);
+    setDisciplinar(9.0);
+    setObsFisica('');
+    setObsTecnica('');
+    setObsTatica('');
+    setObsMental('');
+    setObsDisciplinar('');
+    setMinutos1Tempo(40);
+    setMinutos2Tempo(40);
+    setOpcaoTempoRapido('jogo_todo');
+    setPontosFortes([]);
+    setPontosMelhoria([]);
+    setModalApagarAvaliacaoEtapa(0);
+
+    const apelidoOuPrimeiro = atletaAtual.apelido || atletaAtual.nome.split(' ')[0];
+    setFeedbackSalvo(`✓ Avaliação de ${apelidoOuPrimeiro} apagada com sucesso!`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => setFeedbackSalvo(null), 3500);
+  };
+
   // Selo de status de escalação no card do jogo
   const renderStatusEscalacao = (jogo: JogoAgenda) => {
     const escalacao = jogo.escalacao || {};
@@ -556,7 +599,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   {atletaAtual.fotoUrl ? (
                     <img src={atletaAtual.fotoUrl} alt={atletaAtual.nome} className="w-full h-full object-cover" />
                   ) : (
-                    atletaAtual.nome.substring(0, 2).toUpperCase()
+                    obterIniciaisApelido(atletaAtual)
                   )}
                 </div>
                 <div>
@@ -1086,14 +1129,14 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             {/* (SEM CAIXAS DE TEXTO LIVRE - SÓ TOQUE PARA SELECIONAR QUANTOS QUISER) */}
             {/* ========================================================= */}
             <div className="space-y-5 pt-4 border-t border-slate-200 dark:border-slate-800">
-              {/* Seção 1: ⚠️ PONTOS DE ATENÇÃO / APRIMORAMENTO */}
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2.5">
+              {/* Seção 1: ⚠️ PONTOS DE ATENÇÃO / APRIMORAMENTO (Amarelo claro #FEFCE8, badge #FACC15 com texto marrom #713F12, nunca vermelho) */}
+              <div className="p-4 rounded-xl bg-[#FEFCE8] dark:bg-amber-950/30 border border-[#FEF08A] dark:border-amber-800 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#713F12] dark:text-amber-200 flex items-center gap-1.5">
                     <span>⚠️</span> PONTOS DE ATENÇÃO / APRIMORAMENTO
                   </label>
                   {pontosMelhoria.length > 0 && (
-                    <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
+                    <span className="text-[11px] font-bold text-[#713F12] dark:text-amber-300">
                       {pontosMelhoria.length} selecionados
                     </span>
                   )}
@@ -1110,13 +1153,18 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                           ativo
                             ? modoLeitura
-                              ? 'bg-slate-400 text-white shadow-xs'
-                              : 'bg-blue-600 text-white shadow-xs'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                              ? 'bg-amber-200 text-[#713F12] shadow-xs'
+                              : 'shadow-xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-amber-50'
                         } ${modoLeitura ? 'cursor-not-allowed opacity-60' : ''}`}
                         style={
                           ativo
-                            ? { backgroundColor: modoLeitura ? '#94a3b8' : '#2563eb', color: '#ffffff' }
+                            ? {
+                                backgroundColor: '#FACC15',
+                                color: '#713F12',
+                                border: '1px solid #EAB308',
+                                fontWeight: 700,
+                              }
                             : {}
                         }
                       >
@@ -1125,19 +1173,19 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-slate-500 font-medium pt-0.5">
+                <p className="text-[11px] text-[#78350F] dark:text-amber-300 font-medium pt-0.5">
                   {modoLeitura ? 'Modo de leitura (desbloqueie no topo para editar)' : 'Toque para selecionar quantos quiser'}
                 </p>
               </div>
 
-              {/* Seção 2: ✅ PONTOS POSITIVOS */}
-              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2.5">
+              {/* Seção 2: ✅ PONTOS POSITIVOS / DESTAQUE (Verde claro #F0FDF4, badge verde #16A34A) */}
+              <div className="p-4 rounded-xl bg-[#F0FDF4] dark:bg-emerald-950/30 border border-[#BBF7D0] dark:border-emerald-800 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#15803D] dark:text-emerald-300 flex items-center gap-1.5">
                     <span>✅</span> PONTOS POSITIVOS
                   </label>
                   {pontosFortes.length > 0 && (
-                    <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
+                    <span className="text-[11px] font-bold text-[#15803D] dark:text-emerald-400">
                       {pontosFortes.length} selecionados
                     </span>
                   )}
@@ -1154,13 +1202,18 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                           ativo
                             ? modoLeitura
-                              ? 'bg-slate-400 text-white shadow-xs'
-                              : 'bg-blue-600 text-white shadow-xs'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                              ? 'bg-emerald-200 text-[#15803D] shadow-xs'
+                              : 'shadow-xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-emerald-50'
                         } ${modoLeitura ? 'cursor-not-allowed opacity-60' : ''}`}
                         style={
                           ativo
-                            ? { backgroundColor: modoLeitura ? '#94a3b8' : '#2563eb', color: '#ffffff' }
+                            ? {
+                                backgroundColor: '#16A34A',
+                                color: '#ffffff',
+                                border: '1px solid #15803D',
+                                fontWeight: 700,
+                              }
                             : {}
                         }
                       >
@@ -1169,7 +1222,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     );
                   })}
                 </div>
-                <p className="text-[11px] text-slate-500 font-medium pt-0.5">
+                <p className="text-[11px] text-[#166534] dark:text-emerald-300 font-medium pt-0.5">
                   {modoLeitura ? 'Modo de leitura (desbloqueie no topo para editar)' : 'Toque para selecionar quantos quiser'}
                 </p>
               </div>
@@ -1177,16 +1230,29 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
             {/* Ações de Salvar do Jogador */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setJogoSelecionadoParaAvaliar(null);
-                  setModoLeitura(false);
-                }}
-                className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
-              >
-                Concluir & Fechar
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJogoSelecionadoParaAvaliar(null);
+                    setModoLeitura(false);
+                  }}
+                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+                >
+                  Concluir & Fechar
+                </button>
+
+                {/* Botão [ 🗑️ Apagar esta avaliação ] com DUAS confirmações em modal */}
+                <button
+                  type="button"
+                  onClick={() => setModalApagarAvaliacaoEtapa(1)}
+                  className="px-3.5 py-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 rounded-xl transition flex items-center gap-1.5 active:scale-98"
+                  title="Apagar a avaliação deste atleta nesta partida"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Apagar esta avaliação</span>
+                </button>
+              </div>
 
               <div className="flex items-center gap-2">
                 <button
@@ -1209,6 +1275,114 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* ========================================================= */}
+            {/* MODAL 1: PRIMEIRA CONFIRMAÇÃO DE APAGAR AVALIAÇÃO */}
+            {/* ========================================================= */}
+            {modalApagarAvaliacaoEtapa === 1 && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150 no-print">
+                <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+                      <Trash2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                        Apagar avaliação?
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        Confirmação (Etapa 1 de 2)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="my-4 space-y-2">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+                      Tem certeza que deseja apagar a avaliação de{' '}
+                      <span className="text-blue-600 dark:text-blue-400 font-bold">
+                        {atletaAtual.apelido || atletaAtual.nome}
+                      </span>{' '}
+                      nesta partida contra{' '}
+                      <span className="font-bold text-slate-900 dark:text-white">
+                        {jogoSelecionadoParaAvaliar.adversario}
+                      </span>
+                      ?
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Esta ação iniciará o processo de exclusão dos dados avaliados para este atleta.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setModalApagarAvaliacaoEtapa(0)}
+                      className="py-2.5 px-4 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalApagarAvaliacaoEtapa(2)}
+                      className="py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-98 transition shadow-xs flex items-center justify-center gap-1.5"
+                    >
+                      <span>Sim, continuar &gt;</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ========================================================= */}
+            {/* MODAL 2: SEGUNDA E DEFINITIVA CONFIRMAÇÃO */}
+            {/* ========================================================= */}
+            {modalApagarAvaliacaoEtapa === 2 && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-150 no-print">
+                <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border-2 border-rose-500 p-6 relative">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                      <Trash2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-rose-600 dark:text-rose-400">
+                        Confirmação final
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        Aviso crítico de irreversibilidade
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="my-4 space-y-2.5">
+                    <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs font-semibold text-rose-800 dark:text-rose-300">
+                      ⚠️ Esta ação é irreversível e apagará todas as notas, minutos e observações de{' '}
+                      <strong>{atletaAtual.apelido || atletaAtual.nome}</strong> desta partida.
+                    </div>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+                      Deseja realmente excluir definitivamente esta avaliação?
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setModalApagarAvaliacaoEtapa(1)}
+                      className="py-2.5 px-4 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition"
+                    >
+                      Voltar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmarApagarAvaliacaoDefinitivo}
+                      className="py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-98 transition shadow-xs flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Excluir definitivamente</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-500 text-xs space-y-2">
