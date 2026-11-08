@@ -404,49 +404,49 @@ export default function App() {
       {/* ========================================================= */}
       {/* MENU DE CIMA - SÓ OS 3 RISQUINHOS ☰ NO CANTO DIREITO */}
       {/* ========================================================= */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 no-print w-full max-w-[100vw] overflow-x-hidden box-border">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-3 w-full max-w-full box-border">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b-2 border-slate-200/90 dark:border-slate-800 shadow-xs no-print w-full max-w-[100vw] overflow-x-hidden box-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-3 w-full max-w-full box-border">
           {/* Logo & Marca Master Soccer */}
           <div
             onClick={() => setAbaAtiva('painel')}
-            className="flex items-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0 group select-none"
+            className="flex items-center gap-3 cursor-pointer whitespace-nowrap shrink-0 group select-none"
           >
             <MasterSoccerEscudo
-              size={40}
-              className="group-hover:scale-105 transition-transform drop-shadow-xs shrink-0"
+              size={46}
+              className="group-hover:scale-105 transition-transform drop-shadow-sm shrink-0"
             />
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
+              <div className="flex items-center gap-2">
+                <span className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white">
                   Master <span className="text-blue-600 dark:text-blue-400">Soccer</span>
                 </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/60">
                   RJ
                 </span>
               </div>
-              <span className="text-[10px] font-medium text-slate-400">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Base Sub-15 · Sub-16 · Sub-17
               </span>
             </div>
           </div>
 
           {/* Zona Direita: Selo de Conexão + Botão Instalar + OS 3 RISQUINHOS ☰ NO CANTO DIREITO */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0">
             {/* Selinho ONLINE / OFFLINE */}
             {isOnline ? (
               <span
                 title="Conectado à internet. Sincronização em tempo real ativa."
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 shrink-0"
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 shrink-0 shadow-2xs"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 ONLINE
               </span>
             ) : (
               <span
                 title="Sem conexão. Modo offline com persistência IndexedDB."
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300 shrink-0 animate-pulse"
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300 shrink-0 animate-pulse shadow-2xs"
               >
-                <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" />
                 OFFLINE
               </span>
             )}
@@ -455,9 +455,9 @@ export default function App() {
             {!isInstalled && isInstallable && (
               <button
                 onClick={handleInstalarApp}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 rounded-xl border border-emerald-300 transition-all shadow-xs shrink-0"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 rounded-xl border border-emerald-300 transition-all shadow-xs shrink-0"
               >
-                <Download className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <Download className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span>Instalar App</span>
               </button>
             )}
@@ -465,11 +465,11 @@ export default function App() {
             {/* BOTÃO DOS 3 RISQUINHOS ☰ NO CANTO DIREITO */}
             <button
               onClick={() => setMenuDrawerOpen(!menuDrawerOpen)}
-              className="p-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200/80 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0"
+              className="h-11 w-11 flex items-center justify-center rounded-2xl text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border-2 border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 shrink-0 active:scale-95"
               aria-label="Abrir menu de opções"
               title="Menu: Financeiro, Histórico / Relatório e Teste Físico"
             >
-              <Menu className="w-5 h-5 text-slate-800 dark:text-white" />
+              <Menu className="w-6 h-6 text-slate-800 dark:text-white" />
             </button>
           </div>
         </div>
@@ -488,66 +488,66 @@ export default function App() {
           />
 
           {/* Painel Lateral */}
-          <div className="relative w-full max-w-xs bg-white dark:bg-slate-900 h-full shadow-2xl border-l border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between z-10 animate-in slide-in-from-right duration-200">
+          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 h-full shadow-2xl border-l-2 border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between z-10 animate-in slide-in-from-right duration-200">
             <div>
               {/* Topo do Menu ☰ */}
-              <div className="flex items-center justify-between pb-5 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <MasterSoccerEscudo size={32} />
+              <div className="flex items-center justify-between pb-5 border-b-2 border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <MasterSoccerEscudo size={38} />
                   <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    <h3 className="text-base font-black text-slate-900 dark:text-white">
                       Menu Master Soccer
                     </h3>
-                    <p className="text-[11px] text-slate-400">Opções & Gestão Integrada</p>
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Opções & Gestão Integrada</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setMenuDrawerOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Itens do Menu Solicitados: Cadastrar Atleta, Financeiro, Histórico / Relatório, Teste Físico */}
-              <div className="py-4 space-y-2">
-                {/* 0. Cadastrar Atleta (conforme solicitado: só nos 3 risquinhos ☰ lá em cima) */}
+              <div className="py-5 space-y-2.5">
+                {/* 0. Cadastrar Atleta */}
                 <button
                   onClick={() => {
                     setMenuDrawerOpen(false);
                     handleAbrirNovoAtleta();
                   }}
-                  className="w-full flex items-center justify-between p-3.5 rounded-2xl text-left transition-all hover:bg-amber-100/70 dark:hover:bg-amber-950/40 text-slate-800 dark:text-slate-200 font-semibold border border-amber-300 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/20"
+                  className="w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all hover:bg-amber-100/80 dark:hover:bg-amber-950/50 text-slate-900 dark:text-slate-100 font-bold border-2 border-amber-300 dark:border-amber-700 bg-amber-50/90 dark:bg-amber-950/30 shadow-xs active:scale-98"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-amber-400 text-slate-950 font-bold shadow-xs">
+                  <div className="flex items-center gap-3.5">
+                    <div className="p-2.5 rounded-xl bg-amber-400 text-slate-950 font-black shadow-xs">
                       <Plus className="w-5 h-5 text-slate-950" />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-slate-900 dark:text-white">
+                      <div className="text-base font-extrabold text-slate-950 dark:text-white">
                         + Cadastrar Atleta
                       </div>
-                      <div className="text-[11px] text-slate-500">
+                      <div className="text-xs font-medium text-slate-600 dark:text-slate-400">
                         Adicionar novo atleta à base
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 opacity-70" />
+                  <ChevronRight className="w-5 h-5 text-amber-600" />
                 </button>
 
                 {/* 1. Financeiro */}
                 <button
                   onClick={() => handleNavegarMenuTopo('financeiro')}
-                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-left transition-all ${
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all border-2 active:scale-98 ${
                     abaAtiva === 'financeiro'
-                      ? 'bg-blue-600 text-white font-bold shadow-md'
-                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold'
+                      ? 'bg-blue-600 text-white font-extrabold border-blue-600 shadow-md'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold border-slate-200/80 dark:border-slate-800'
                   }`}
                   style={abaAtiva === 'financeiro' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3.5">
                     <div
-                      className={`p-2 rounded-xl ${
+                      className={`p-2.5 rounded-xl ${
                         abaAtiva === 'financeiro'
                           ? 'bg-blue-700 text-white'
                           : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600'
@@ -556,32 +556,32 @@ export default function App() {
                       <DollarSign className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-sm">Financeiro</div>
+                      <div className="text-base font-extrabold">Financeiro</div>
                       <div
-                        className={`text-[11px] ${
-                          abaAtiva === 'financeiro' ? 'text-blue-200' : 'text-slate-400'
+                        className={`text-xs font-medium ${
+                          abaAtiva === 'financeiro' ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
                         }`}
                       >
                         Mensalidades & Competições
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 opacity-70" />
+                  <ChevronRight className="w-5 h-5 opacity-70" />
                 </button>
 
-                {/* 2. Histórico / Relatório (que é a Ficha: João de agora) */}
+                {/* 2. Histórico / Relatório */}
                 <button
                   onClick={() => handleNavegarMenuTopo('relatorio')}
-                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-left transition-all ${
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all border-2 active:scale-98 ${
                     abaAtiva === 'relatorio'
-                      ? 'bg-blue-600 text-white font-bold shadow-md'
-                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold'
+                      ? 'bg-blue-600 text-white font-extrabold border-blue-600 shadow-md'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold border-slate-200/80 dark:border-slate-800'
                   }`}
                   style={abaAtiva === 'relatorio' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3.5">
                     <div
-                      className={`p-2 rounded-xl ${
+                      className={`p-2.5 rounded-xl ${
                         abaAtiva === 'relatorio'
                           ? 'bg-blue-700 text-white'
                           : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600'
@@ -590,32 +590,32 @@ export default function App() {
                       <FileText className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-sm">Histórico / Relatório</div>
+                      <div className="text-base font-extrabold">Histórico / Relatório</div>
                       <div
-                        className={`text-[11px] ${
-                          abaAtiva === 'relatorio' ? 'text-blue-200' : 'text-slate-400'
+                        className={`text-xs font-medium ${
+                          abaAtiva === 'relatorio' ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
                         }`}
                       >
                         Ficha do Atleta com abas de jogos
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 opacity-70" />
+                  <ChevronRight className="w-5 h-5 opacity-70" />
                 </button>
 
                 {/* 3. Teste Físico */}
                 <button
                   onClick={() => handleNavegarMenuTopo('testefisico')}
-                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-left transition-all ${
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all border-2 active:scale-98 ${
                     abaAtiva === 'testefisico'
-                      ? 'bg-blue-600 text-white font-bold shadow-md'
-                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold'
+                      ? 'bg-blue-600 text-white font-extrabold border-blue-600 shadow-md'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold border-slate-200/80 dark:border-slate-800'
                   }`}
                   style={abaAtiva === 'testefisico' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3.5">
                     <div
-                      className={`p-2 rounded-xl ${
+                      className={`p-2.5 rounded-xl ${
                         abaAtiva === 'testefisico'
                           ? 'bg-blue-700 text-white'
                           : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600'
@@ -624,37 +624,37 @@ export default function App() {
                       <Activity className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-sm">Teste Físico</div>
+                      <div className="text-base font-extrabold">Teste Físico</div>
                       <div
-                        className={`text-[11px] ${
-                          abaAtiva === 'testefisico' ? 'text-blue-200' : 'text-slate-400'
+                        className={`text-xs font-medium ${
+                          abaAtiva === 'testefisico' ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
                         }`}
                       >
                         Velocidade, salto, Yo-Yo & flexibilidade
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 opacity-70" />
+                  <ChevronRight className="w-5 h-5 opacity-70" />
                 </button>
               </div>
             </div>
 
             {/* Rodapé do Menu Drawer */}
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+            <div className="pt-4 border-t-2 border-slate-100 dark:border-slate-800 space-y-2">
               <button
                 onClick={() => {
                   setIsCategoriasModalOpen(true);
                   setMenuDrawerOpen(false);
                 }}
-                className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 flex items-center gap-2"
+                className="w-full text-left px-3.5 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-blue-600 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-xl flex items-center gap-2.5 transition"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-4 h-4 text-slate-500" />
                 <span>Gerenciar Categorias</span>
               </button>
 
               <button
                 onClick={handleInstalarApp}
-                className="w-full text-left px-3 py-2 text-xs font-semibold text-emerald-600 hover:underline flex items-center gap-2"
+                className="w-full text-left px-3.5 py-2.5 text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl flex items-center gap-2.5 transition"
               >
                 <Download className="w-4 h-4" />
                 <span>Instalar Aplicativo (PWA)</span>
@@ -775,62 +775,62 @@ export default function App() {
       {/* PAINEL (Visão Geral) - JOGO - ESCALAÇÃO - TROFÉUS */}
       {/* Quando clicar, fica azul #2563eb */}
       {/* ========================================================= */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 no-print w-full max-w-[100vw] overflow-x-hidden box-border">
-        <div className="max-w-md mx-auto grid grid-cols-4 items-center h-16">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t-2 border-slate-200/90 dark:border-slate-800 shadow-xl no-print w-full max-w-[100vw] overflow-x-hidden box-border">
+        <div className="max-w-md mx-auto grid grid-cols-4 items-center h-20 px-2">
           {/* 1. PAINEL */}
           <button
             onClick={() => setAbaAtiva('painel')}
-            className={`flex flex-col items-center justify-center h-full transition-all ${
+            className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all ${
               abaAtiva === 'painel'
-                ? 'font-bold'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+                ? 'font-black bg-blue-50/90 dark:bg-blue-950/50 shadow-2xs'
+                : 'text-slate-500 dark:text-slate-400 font-bold hover:text-slate-800 dark:hover:text-slate-200'
             }`}
             style={abaAtiva === 'painel' ? { color: '#2563eb' } : {}}
           >
-            <Shield className="w-5 h-5 mb-0.5" />
-            <span className="text-[11px] tracking-tight uppercase">PAINEL</span>
+            <Shield className="w-6 h-6 mb-1 drop-shadow-2xs" />
+            <span className="text-xs tracking-tight uppercase font-black">PAINEL</span>
           </button>
 
           {/* 2. JOGO */}
           <button
             onClick={() => setAbaAtiva('jogo')}
-            className={`flex flex-col items-center justify-center h-full transition-all ${
+            className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all ${
               abaAtiva === 'jogo'
-                ? 'font-bold'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+                ? 'font-black bg-blue-50/90 dark:bg-blue-950/50 shadow-2xs'
+                : 'text-slate-500 dark:text-slate-400 font-bold hover:text-slate-800 dark:hover:text-slate-200'
             }`}
             style={abaAtiva === 'jogo' ? { color: '#2563eb' } : {}}
           >
-            <Calendar className="w-5 h-5 mb-0.5" />
-            <span className="text-[11px] tracking-tight uppercase">JOGO</span>
+            <Calendar className="w-6 h-6 mb-1 drop-shadow-2xs" />
+            <span className="text-xs tracking-tight uppercase font-black">JOGO</span>
           </button>
 
           {/* 3. ESCALAÇÃO */}
           <button
             onClick={() => setAbaAtiva('escalacao')}
-            className={`flex flex-col items-center justify-center h-full transition-all ${
+            className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all ${
               abaAtiva === 'escalacao'
-                ? 'font-bold'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+                ? 'font-black bg-blue-50/90 dark:bg-blue-950/50 shadow-2xs'
+                : 'text-slate-500 dark:text-slate-400 font-bold hover:text-slate-800 dark:hover:text-slate-200'
             }`}
             style={abaAtiva === 'escalacao' ? { color: '#2563eb' } : {}}
           >
-            <Users className="w-5 h-5 mb-0.5" />
-            <span className="text-[11px] tracking-tight uppercase">ESCALAÇÃO</span>
+            <Users className="w-6 h-6 mb-1 drop-shadow-2xs" />
+            <span className="text-xs tracking-tight uppercase font-black">ESCALAÇÃO</span>
           </button>
 
           {/* 4. TROFÉUS */}
           <button
             onClick={() => setAbaAtiva('trofeus')}
-            className={`flex flex-col items-center justify-center h-full transition-all ${
+            className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all ${
               abaAtiva === 'trofeus'
-                ? 'font-bold'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+                ? 'font-black bg-blue-50/90 dark:bg-blue-950/50 shadow-2xs'
+                : 'text-slate-500 dark:text-slate-400 font-bold hover:text-slate-800 dark:hover:text-slate-200'
             }`}
             style={abaAtiva === 'trofeus' ? { color: '#2563eb' } : {}}
           >
-            <Trophy className="w-5 h-5 mb-0.5" />
-            <span className="text-[11px] tracking-tight uppercase">TROFÉUS</span>
+            <Trophy className="w-6 h-6 mb-1 drop-shadow-2xs" />
+            <span className="text-xs tracking-tight uppercase font-black">TROFÉUS</span>
           </button>
         </div>
       </nav>

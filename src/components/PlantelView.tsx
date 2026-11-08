@@ -53,10 +53,13 @@ export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
   '4-4-2': [
     // GOL left 50% top 93%
     { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 93 },
-    // Defesa: LE left 10% top 78%, ZAG left 40% top 78%, ZAG left 60% top 78%, LD left 90% top 78%
+    // LE left 10% top 78%
     { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 10, top: 78 },
-    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 40, top: 78 },
-    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 60, top: 78 },
+    // ZAG left 35% top 78% - mais perto do LE
+    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 35, top: 78 },
+    // ZAG left 65% top 78% - mais perto do LD
+    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 65, top: 78 },
+    // LD left 90% top 78%
     { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 90, top: 78 },
     // VOL left 50% top 62% - sozinho na frente da defesa
     { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 62 },
@@ -64,34 +67,37 @@ export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
     { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 18, top: 48 },
     // MEI left 82% top 48% - lado direito
     { id: 'meid', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 82, top: 48 },
-    // MEI left 50% top 37% - central, um pouco à frente, escrito APENAS "MEI"
+    // MEI left 50% top 37% - central, um pouco à frente, só "MEI"
     { id: 'meic', label: 'MEI', nomeCompleto: 'Meio-Campo Central', linha: 'mei', left: 50, top: 37 },
-    // ATA left 42% top 24% - antes da grande área
-    { id: 'ata1', label: 'ATA', nomeCompleto: 'Atacante 1', linha: 'ata', left: 42, top: 24 },
-    // ATA left 58% top 24% - antes da grande área
-    { id: 'ata2', label: 'ATA', nomeCompleto: 'Atacante 2', linha: 'ata', left: 58, top: 24 },
+    // ATA left 40% top 24% - mais afastado, antes da grande área
+    { id: 'ata1', label: 'ATA', nomeCompleto: 'Atacante 1', linha: 'ata', left: 40, top: 24 },
+    // ATA left 60% top 24% - mais afastado, antes da grande área
+    { id: 'ata2', label: 'ATA', nomeCompleto: 'Atacante 2', linha: 'ata', left: 60, top: 24 },
   ],
 
   // FORMAÇÃO 4-2-3-1 - 11 posições exatas solicitadas
   '4-2-3-1': [
     // GOL left 50% top 93%
     { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 93 },
-    // Defesa: LE left 10% top 78%, ZAG left 40% top 78%, ZAG left 60% top 78%, LD left 90% top 78%
+    // LE left 10% top 78%
     { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 10, top: 78 },
-    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 40, top: 78 },
-    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 60, top: 78 },
+    // ZAG left 35% top 78% - mais perto do LE
+    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 35, top: 78 },
+    // ZAG left 65% top 78% - mais perto do LD
+    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 65, top: 78 },
+    // LD left 90% top 78%
     { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 90, top: 78 },
-    // VOL left 42% top 62% - abaixo da linha do meio-campo, no nosso campo
-    { id: 'vol1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei', left: 42, top: 62 },
-    // VOL left 58% top 62% - abaixo da linha do meio-campo, no nosso campo
-    { id: 'vol2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei', left: 58, top: 62 },
-    // MEI left 22% top 50% - EM CIMA da linha central
-    { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 22, top: 50 },
-    // MEI left 50% top 50% - EM CIMA da linha central
-    { id: 'meic', label: 'MEI', nomeCompleto: 'Meio-Campo Central', linha: 'mei', left: 50, top: 50 },
-    // MEI left 78% top 50% - EM CIMA da linha central
-    { id: 'meid', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 78, top: 50 },
-    // ATA left 50% top 24% - sozinho, antes da grande área adversária
+    // VOL left 40% top 62% - mais afastado
+    { id: 'vol1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei', left: 40, top: 62 },
+    // VOL left 60% top 62% - mais afastado
+    { id: 'vol2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei', left: 60, top: 62 },
+    // MEI left 22% top 44% - subiu, bem acima da linha do meio-campo
+    { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 22, top: 44 },
+    // MEI left 50% top 44% - subiu, bem acima da linha do meio-campo
+    { id: 'meic', label: 'MEI', nomeCompleto: 'Meio-Campo Central', linha: 'mei', left: 50, top: 44 },
+    // MEI left 78% top 44% - subiu, bem acima da linha do meio-campo
+    { id: 'meid', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 78, top: 44 },
+    // ATA left 50% top 24% - sozinho, antes da grande área
     { id: 'ata', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 24 },
   ],
 
@@ -99,8 +105,8 @@ export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
   '4-3-3': [
     { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 93 },
     { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 10, top: 78 },
-    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 40, top: 78 },
-    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 60, top: 78 },
+    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 35, top: 78 },
+    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 65, top: 78 },
     { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 90, top: 78 },
     { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 62 },
     { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campista E', linha: 'mei', left: 28, top: 48 },
