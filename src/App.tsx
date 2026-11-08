@@ -103,6 +103,10 @@ export default function App() {
     tipo: 'atleta' | 'avaliacao' | 'jogo' | 'testefisico';
     id: string;
     nome?: string;
+    titulo?: string;
+    mensagem?: string;
+    textoConfirmar?: string;
+    textoCancelar?: string;
   } | null>(null);
   const [excluindoCarregando, setExcluindoCarregando] = useState(false);
 
@@ -285,6 +289,10 @@ export default function App() {
       tipo: 'jogo',
       id,
       nome: nome || 'Jogo da Agenda',
+      titulo: 'Excluir jogo?',
+      mensagem: `Tem certeza que deseja excluir ${nome || 'este jogo'}? Essa ação apaga a escalação e as avaliações desse jogo e não pode ser desfeita.`,
+      textoConfirmar: 'Excluir jogo',
+      textoCancelar: 'Cancelar',
     });
   };
 
@@ -333,7 +341,8 @@ export default function App() {
         await firebaseService.excluirJogo(itemParaExcluir.id);
         storageService.excluirJogoAgenda(itemParaExcluir.id);
         setJogos(storageService.getJogosAgenda());
-        exibirToast('Jogo apagado da agenda.');
+        setAvaliacoes(storageService.getAvaliacoes());
+        exibirToast('Jogo, escalação e avaliações foram excluídos com sucesso.');
       } else if (itemParaExcluir.tipo === 'testefisico') {
         await firebaseService.excluirTesteFisico(itemParaExcluir.id);
         storageService.excluirTesteFisico(itemParaExcluir.id);
@@ -881,16 +890,20 @@ export default function App() {
         }}
         onConfirm={handleConfirmarExclusao}
         titulo={
-          itemParaExcluir?.tipo === 'atleta'
+          itemParaExcluir?.titulo ||
+          (itemParaExcluir?.tipo === 'atleta'
             ? 'Apagar Atleta'
             : itemParaExcluir?.tipo === 'jogo'
-            ? 'Apagar Jogo'
+            ? 'Excluir jogo?'
             : itemParaExcluir?.tipo === 'testefisico'
             ? 'Apagar Teste Físico'
-            : 'Apagar Avaliação'
+            : 'Apagar Avaliação')
         }
-        mensagem="Tem certeza que deseja apagar?"
-        detalhes={itemParaExcluir?.nome}
+        mensagem={itemParaExcluir?.mensagem || 'Tem certeza que deseja apagar?'}
+        detalhes={itemParaExcluir?.tipo === 'jogo' ? undefined : itemParaExcluir?.nome}
+        subtexto={itemParaExcluir?.tipo === 'jogo' ? '' : 'Esta ação não poderá ser desfeita.'}
+        textoConfirmar={itemParaExcluir?.textoConfirmar || 'SIM'}
+        textoCancelar={itemParaExcluir?.textoCancelar || 'NÃO'}
         carregando={excluindoCarregando}
       />
 

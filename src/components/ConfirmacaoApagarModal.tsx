@@ -8,6 +8,9 @@ interface ConfirmacaoApagarModalProps {
   titulo?: string;
   mensagem?: string;
   detalhes?: string;
+  subtexto?: string;
+  textoConfirmar?: string;
+  textoCancelar?: string;
   carregando?: boolean;
 }
 
@@ -18,6 +21,9 @@ export const ConfirmacaoApagarModal: React.FC<ConfirmacaoApagarModalProps> = ({
   titulo = 'Excluir Registro',
   mensagem = 'Tem certeza que deseja apagar?',
   detalhes,
+  subtexto = 'Esta ação não poderá ser desfeita.',
+  textoConfirmar = 'SIM',
+  textoCancelar = 'NÃO',
   carregando = false,
 }) => {
   if (!isOpen) return null;
@@ -50,15 +56,17 @@ export const ConfirmacaoApagarModal: React.FC<ConfirmacaoApagarModalProps> = ({
         </div>
 
         <div className="my-4">
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
             {mensagem}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Esta ação não poderá ser desfeita.
-          </p>
+          {subtexto && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+              {subtexto}
+            </p>
+          )}
         </div>
 
-        {/* 2 Botões: SIM e NÃO */}
+        {/* 2 Botões com textos configuráveis (ex: Cancelar e Excluir jogo) */}
         <div className="grid grid-cols-2 gap-3 mt-6">
           <button
             type="button"
@@ -66,7 +74,7 @@ export const ConfirmacaoApagarModal: React.FC<ConfirmacaoApagarModalProps> = ({
             disabled={carregando}
             className="py-2.5 px-4 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition"
           >
-            NÃO
+            {textoCancelar}
           </button>
           <button
             type="button"
@@ -74,7 +82,7 @@ export const ConfirmacaoApagarModal: React.FC<ConfirmacaoApagarModalProps> = ({
             disabled={carregando}
             className="py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-98 transition shadow-xs disabled:opacity-50"
           >
-            {carregando ? 'Apagando...' : 'SIM'}
+            {carregando ? 'Excluindo...' : textoConfirmar}
           </button>
         </div>
       </div>

@@ -585,6 +585,11 @@ export const storageService = {
   excluirJogoAgenda(id: string): void {
     const jogos = this.getJogosAgenda().filter((j) => j.id !== id);
     this.salvarJogosAgenda(jogos);
+    // Exclui todas as avaliações vinculadas a esse jogo
+    const avaliacoes = this.getAvaliacoes().filter(
+      (av) => av.jogoAgendaId !== id && (av as any).jogoId !== id
+    );
+    this.salvarAvaliacoes(avaliacoes);
   },
 
   // ==========================================

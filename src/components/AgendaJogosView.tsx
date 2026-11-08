@@ -1353,16 +1353,25 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     <div className="pt-1">{renderStatusEscalacao(jogo)}</div>
                   </div>
 
-                  {/* Ação do Jogo Finalizado: APENAS botão [ Ver avaliação ] (sem botão Editar!) */}
-                  <div className="shrink-0 flex items-center justify-end">
+                  {/* Ação do Jogo Finalizado: Botão vermelho [ Excluir ] ao lado de [ Ver avaliação > ] */}
+                  <div className="shrink-0 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onExcluirJogo(jogo.id, placarExibicao)}
+                      className="px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 flex items-center gap-1.5 transition active:scale-98"
+                      title="Excluir este jogo, escalação e avaliações"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Excluir</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => handleAbrirAvaliacaoJogo(jogo)}
                       style={{ backgroundColor: '#2563eb' }}
                       className="px-4 py-2 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs"
                     >
-                      <span>Ver avaliação</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <span>Ver avaliação &gt;</span>
                     </button>
                   </div>
                 </div>

@@ -41,80 +41,88 @@ interface PlantelViewProps {
 
 export interface SlotPosicaoCampinho {
   id: string;
-  label: string; // 'GOL', 'LD', 'ZAG', 'LE', 'VOL', 'MEI', 'ATA'
+  label: 'GOL' | 'LE' | 'ZAG' | 'LD' | 'VOL' | 'MEI' | 'ATA';
   nomeCompleto: string;
   linha: 'ata' | 'mei' | 'def' | 'gol';
+  left: number; // % (0 a 100)
+  top: number;  // % (0 a 100)
 }
 
 export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
-  '4-3-3': [
-    // Ataque (3)
-    { id: 'pe', label: 'ATA', nomeCompleto: 'Ponta Esquerda', linha: 'ata' },
-    { id: 'ca', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata' },
-    { id: 'pd', label: 'ATA', nomeCompleto: 'Ponta Direita', linha: 'ata' },
-    // Meio (3)
-    { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campista E', linha: 'mei' },
-    { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei' },
-    { id: 'meid', label: 'MEI', nomeCompleto: 'Meio-Campista D', linha: 'mei' },
-    // Defesa (4)
-    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def' },
-    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def' },
-    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def' },
-    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def' },
-    // Goleiro (1)
-    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol' },
-  ],
+  // FORMAÇÃO 4-4-2 LOSANGO - 11 posições exatas solicitadas
   '4-4-2': [
-    // Ataque (2)
-    { id: 'ata1', label: 'ATA', nomeCompleto: 'Atacante 1', linha: 'ata' },
-    { id: 'ata2', label: 'ATA', nomeCompleto: 'Atacante 2', linha: 'ata' },
-    // Meio (4)
-    { id: 'meie', label: 'MEI', nomeCompleto: 'Meia Esquerda', linha: 'mei' },
-    { id: 'vol1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei' },
-    { id: 'vol2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei' },
-    { id: 'meid', label: 'MEI', nomeCompleto: 'Meia Direita', linha: 'mei' },
-    // Defesa (4)
-    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def' },
-    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def' },
-    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def' },
-    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def' },
-    // Goleiro (1)
-    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol' },
+    // GOL left 50% top 93%
+    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 93 },
+    // Defesa: LE left 10% top 78%, ZAG left 40% top 78%, ZAG left 60% top 78%, LD left 90% top 78%
+    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 10, top: 78 },
+    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 40, top: 78 },
+    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 60, top: 78 },
+    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 90, top: 78 },
+    // VOL left 50% top 62% - sozinho na frente da defesa
+    { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 62 },
+    // MEI left 18% top 48% - lado esquerdo
+    { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 18, top: 48 },
+    // MEI left 82% top 48% - lado direito
+    { id: 'meid', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 82, top: 48 },
+    // MEI left 50% top 37% - central, um pouco à frente, escrito APENAS "MEI"
+    { id: 'meic', label: 'MEI', nomeCompleto: 'Meio-Campo Central', linha: 'mei', left: 50, top: 37 },
+    // ATA left 42% top 24% - antes da grande área
+    { id: 'ata1', label: 'ATA', nomeCompleto: 'Atacante 1', linha: 'ata', left: 42, top: 24 },
+    // ATA left 58% top 24% - antes da grande área
+    { id: 'ata2', label: 'ATA', nomeCompleto: 'Atacante 2', linha: 'ata', left: 58, top: 24 },
   ],
-  '3-5-2': [
-    // Ataque (2)
-    { id: 'ata1', label: 'ATA', nomeCompleto: 'Atacante 1', linha: 'ata' },
-    { id: 'ata2', label: 'ATA', nomeCompleto: 'Atacante 2', linha: 'ata' },
-    // Meio (5)
-    { id: 'alae', label: 'LE', nomeCompleto: 'Ala Esquerda', linha: 'mei' },
-    { id: 'mei1', label: 'MEI', nomeCompleto: 'Meia 1', linha: 'mei' },
-    { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei' },
-    { id: 'mei2', label: 'MEI', nomeCompleto: 'Meia 2', linha: 'mei' },
-    { id: 'alad', label: 'LD', nomeCompleto: 'Ala Direita', linha: 'mei' },
-    // Defesa (3)
-    { id: 'zag1', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def' },
-    { id: 'zag2', label: 'ZAG', nomeCompleto: 'Zagueiro Central', linha: 'def' },
-    { id: 'zag3', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def' },
-    // Goleiro (1)
-    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol' },
-  ],
+
+  // FORMAÇÃO 4-2-3-1 - 11 posições exatas solicitadas
   '4-2-3-1': [
-    // Ataque (1)
-    { id: 'ata', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata' },
-    // Meio Ofensivo (3)
-    { id: 'meie', label: 'MEI', nomeCompleto: 'Ponta / Meia E', linha: 'ata' },
-    { id: 'meic', label: 'MEI', nomeCompleto: 'Meia Central (10)', linha: 'mei' },
-    { id: 'meid', label: 'MEI', nomeCompleto: 'Ponta / Meia D', linha: 'ata' },
-    // Volantes (2)
-    { id: 'vol1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei' },
-    { id: 'vol2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei' },
-    // Defesa (4)
-    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def' },
-    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def' },
-    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def' },
-    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def' },
-    // Goleiro (1)
-    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol' },
+    // GOL left 50% top 93%
+    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 93 },
+    // Defesa: LE left 10% top 78%, ZAG left 40% top 78%, ZAG left 60% top 78%, LD left 90% top 78%
+    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 10, top: 78 },
+    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 40, top: 78 },
+    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 60, top: 78 },
+    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 90, top: 78 },
+    // VOL left 42% top 62% - abaixo da linha do meio-campo, no nosso campo
+    { id: 'vol1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei', left: 42, top: 62 },
+    // VOL left 58% top 62% - abaixo da linha do meio-campo, no nosso campo
+    { id: 'vol2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei', left: 58, top: 62 },
+    // MEI left 22% top 50% - EM CIMA da linha central
+    { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 22, top: 50 },
+    // MEI left 50% top 50% - EM CIMA da linha central
+    { id: 'meic', label: 'MEI', nomeCompleto: 'Meio-Campo Central', linha: 'mei', left: 50, top: 50 },
+    // MEI left 78% top 50% - EM CIMA da linha central
+    { id: 'meid', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 78, top: 50 },
+    // ATA left 50% top 24% - sozinho, antes da grande área adversária
+    { id: 'ata', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 24 },
+  ],
+
+  // FORMAÇÃO 4-3-3
+  '4-3-3': [
+    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 93 },
+    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 10, top: 78 },
+    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 40, top: 78 },
+    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 60, top: 78 },
+    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 90, top: 78 },
+    { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 62 },
+    { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campista E', linha: 'mei', left: 28, top: 48 },
+    { id: 'meid', label: 'MEI', nomeCompleto: 'Meio-Campista D', linha: 'mei', left: 72, top: 48 },
+    { id: 'pe', label: 'ATA', nomeCompleto: 'Ponta Esquerda', linha: 'ata', left: 20, top: 24 },
+    { id: 'ca', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 24 },
+    { id: 'pd', label: 'ATA', nomeCompleto: 'Ponta Direita', linha: 'ata', left: 80, top: 24 },
+  ],
+
+  // FORMAÇÃO 3-5-2
+  '3-5-2': [
+    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 93 },
+    { id: 'zag1', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 25, top: 78 },
+    { id: 'zag2', label: 'ZAG', nomeCompleto: 'Zagueiro Central', linha: 'def', left: 50, top: 78 },
+    { id: 'zag3', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 75, top: 78 },
+    { id: 'le', label: 'LE', nomeCompleto: 'Ala Esquerda', linha: 'mei', left: 10, top: 50 },
+    { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 62 },
+    { id: 'mei1', label: 'MEI', nomeCompleto: 'Meia 1', linha: 'mei', left: 32, top: 44 },
+    { id: 'mei2', label: 'MEI', nomeCompleto: 'Meia 2', linha: 'mei', left: 68, top: 44 },
+    { id: 'ld', label: 'LD', nomeCompleto: 'Ala Direita', linha: 'mei', left: 90, top: 50 },
+    { id: 'ata1', label: 'ATA', nomeCompleto: 'Atacante 1', linha: 'ata', left: 42, top: 24 },
+    { id: 'ata2', label: 'ATA', nomeCompleto: 'Atacante 2', linha: 'ata', left: 58, top: 24 },
   ],
 };
 
@@ -148,7 +156,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 }) => {
   const [busca, setBusca] = useState('');
   const [abaSubEscalacao, setAbaSubEscalacao] = useState<'lista' | 'campinho'>('lista');
-  const [formacao, setFormacao] = useState<string>('4-3-3');
+  const [formacao, setFormacao] = useState<string>('4-4-2');
   const [modalTrocaAberto, setModalTrocaAberto] = useState<boolean>(false);
   const [atletaParaTroca, setAtletaParaTroca] = useState<{
     atletaId: string;
@@ -646,80 +654,44 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                           </div>
                         </div>
 
-                        {/* Ações: Editar, Excluir e Relatório */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={() => onEditarAtleta(atleta)}
-                            title="Editar dados do atleta"
-                            className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => onExcluirAtleta(atleta.id)}
-                            title="Excluir atleta"
-                            className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => onSelecionarAtleta(atleta)}
-                            className="px-2 py-1 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
-                          >
-                            Ficha
-                          </button>
-                        </div>
+                        {/* Botão Ficha */}
+                        <button
+                          type="button"
+                          onClick={() => onSelecionarAtleta(atleta)}
+                          className="px-2.5 py-1 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shrink-0"
+                        >
+                          Ficha
+                        </button>
                       </div>
 
-                      {/* Configurações de Convocação se marcado */}
+                      {/* Configurações de Convocação se marcado: APENAS Status: [ Titular ] [ Reserva ] */}
                       {estaConvocado && (
-                        <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex flex-wrap items-center justify-between gap-3 text-xs animate-in fade-in">
-                          {/* Titular vs Reserva */}
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-700 dark:text-slate-300 mr-1">
-                              Status:
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleSetTitular(atleta.id, true)}
-                              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                                titular
-                                  ? 'bg-blue-600 text-white shadow-xs'
-                                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
-                              }`}
-                            >
-                              Titular
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSetTitular(atleta.id, false)}
-                              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                                !titular
-                                  ? 'bg-amber-500 text-white shadow-xs'
-                                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
-                              }`}
-                            >
-                              Reserva
-                            </button>
-                          </div>
-
-                          {/* Seletor "Jogou de:" com as 10 posições exatas */}
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-700 dark:text-slate-300">
-                              Jogou de:
-                            </span>
-                            <select
-                              value={posicaoAtual}
-                              onChange={(e) => handleSetPosicaoJogo(atleta.id, e.target.value)}
-                              className="h-8 px-2.5 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              {POSICOES_JOGO.map((pos) => (
-                                <option key={pos} value={pos}>
-                                  {pos}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                        <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex items-center gap-2 text-xs animate-in fade-in">
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 mr-1">
+                            Status:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleSetTitular(atleta.id, true)}
+                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                              titular
+                                ? 'bg-blue-600 text-white shadow-xs'
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                            }`}
+                          >
+                            Titular
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSetTitular(atleta.id, false)}
+                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                              !titular
+                                ? 'bg-amber-500 text-white shadow-xs'
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                            }`}
+                          >
+                            Reserva
+                          </button>
                         </div>
                       )}
                     </div>
@@ -815,80 +787,44 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                           </div>
                         </div>
 
-                        {/* Ações: Editar, Excluir e Relatório */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            onClick={() => onEditarAtleta(atleta)}
-                            title="Editar dados do atleta"
-                            className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => onExcluirAtleta(atleta.id)}
-                            title="Excluir atleta"
-                            className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => onSelecionarAtleta(atleta)}
-                            className="px-2 py-1 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
-                          >
-                            Ficha
-                          </button>
-                        </div>
+                        {/* Botão Ficha */}
+                        <button
+                          type="button"
+                          onClick={() => onSelecionarAtleta(atleta)}
+                          className="px-2.5 py-1 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shrink-0"
+                        >
+                          Ficha
+                        </button>
                       </div>
 
-                      {/* Configurações de Convocação se marcado */}
+                      {/* Configurações de Convocação se marcado: APENAS Status: [ Titular ] [ Reserva ] */}
                       {estaConvocado && (
-                        <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex flex-wrap items-center justify-between gap-3 text-xs animate-in fade-in">
-                          {/* Titular vs Reserva */}
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-700 dark:text-slate-300 mr-1">
-                              Status:
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleSetTitular(atleta.id, true)}
-                              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                                titular
-                                  ? 'bg-blue-600 text-white shadow-xs'
-                                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
-                              }`}
-                            >
-                              Titular
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleSetTitular(atleta.id, false)}
-                              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                                !titular
-                                  ? 'bg-amber-500 text-white shadow-xs'
-                                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
-                              }`}
-                            >
-                              Reserva
-                            </button>
-                          </div>
-
-                          {/* Seletor "Jogou de:" com as 10 posições exatas */}
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-slate-700 dark:text-slate-300">
-                              Jogou de:
-                            </span>
-                            <select
-                              value={posicaoAtual}
-                              onChange={(e) => handleSetPosicaoJogo(atleta.id, e.target.value)}
-                              className="h-8 px-2.5 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              {POSICOES_JOGO.map((pos) => (
-                                <option key={pos} value={pos}>
-                                  {pos}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+                        <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex items-center gap-2 text-xs animate-in fade-in">
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 mr-1">
+                            Status:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleSetTitular(atleta.id, true)}
+                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                              titular
+                                ? 'bg-blue-600 text-white shadow-xs'
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                            }`}
+                          >
+                            Titular
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSetTitular(atleta.id, false)}
+                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                              !titular
+                                ? 'bg-amber-500 text-white shadow-xs'
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                            }`}
+                          >
+                            Reserva
+                          </button>
                         </div>
                       )}
                     </div>
@@ -927,10 +863,10 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                   onChange={(e) => setFormacao(e.target.value)}
                   className="appearance-none pl-4 pr-9 py-2 text-sm font-black bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-2 border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer shadow-xs"
                 >
-                  <option value="4-3-3">4-3-3</option>
-                  <option value="4-4-2">4-4-2</option>
-                  <option value="3-5-2">3-5-2</option>
+                  <option value="4-4-2">4-4-2 (Losango)</option>
                   <option value="4-2-3-1">4-2-3-1</option>
+                  <option value="4-3-3">4-3-3</option>
+                  <option value="3-5-2">3-5-2</option>
                 </select>
                 <ChevronDown className="w-4 h-4 text-blue-600 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
               </div>
@@ -959,18 +895,12 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
           {(() => {
             const titularesList = atletas.filter((a) => escalacaoMap[a.id]?.titular);
             const reservas = atletas.filter((a) => escalacaoMap[a.id] && !escalacaoMap[a.id].titular);
-            const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-3-3'];
+            const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2'];
             const slotsAtribuidos = atribuirTitularesAosSlots(titularesList, slots);
-
-            const linhaAta = slotsAtribuidos.filter((s) => s.slot.linha === 'ata');
-            const linhaMei = slotsAtribuidos.filter((s) => s.slot.linha === 'mei');
-            const linhaDef = slotsAtribuidos.filter((s) => s.slot.linha === 'def');
-            const linhaGol = slotsAtribuidos.filter((s) => s.slot.linha === 'gol');
 
             const renderPlayerPin = (
               slot: SlotPosicaoCampinho,
-              atleta: Atleta | null,
-              isGoleiro: boolean = false
+              atleta: Atleta | null
             ) => {
               if (!atleta) {
                 return (
@@ -983,19 +913,20 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                     }}
                     className="flex flex-col items-center group cursor-pointer transition-transform hover:scale-105 active:scale-95"
                   >
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-dashed border-white/70 bg-white/15 backdrop-blur-xs flex flex-col items-center justify-center text-white/90 group-hover:bg-white/25 transition-all shadow-md">
-                      <span className="text-[10px] font-black uppercase tracking-wider">{slot.label}</span>
-                      <span className="text-xs font-bold leading-none">+</span>
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-blue-400 bg-white/95 backdrop-blur-xs flex flex-col items-center justify-center text-blue-600 group-hover:bg-white group-hover:border-blue-600 transition-all shadow-md relative">
+                      <span className="text-base font-black leading-none text-blue-600">+</span>
+                      {/* Selo da sigla da posição */}
+                      <span className="absolute -top-1.5 -right-1 text-[8.5px] font-black px-1.5 py-0.2 rounded-full shadow bg-blue-600 text-white border border-white leading-tight">
+                        {slot.label}
+                      </span>
                     </div>
-                    <div className="mt-1 px-2 py-0.5 rounded bg-black/60 text-[10px] font-bold text-white/90 backdrop-blur-xs">
+                    <div className="mt-1 px-1.5 py-0.5 rounded bg-black/75 text-[9px] font-bold text-white shadow backdrop-blur-xs leading-tight">
                       Vazio
                     </div>
                   </button>
                 );
               }
 
-              const escalado = escalacaoMap[atleta.id];
-              const posBadge = escalado?.posicaoJogo || slot.label;
               const iniciais = atleta.nome
                 .split(' ')
                 .filter(Boolean)
@@ -1013,37 +944,30 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                     setModalTrocaAberto(true);
                   }}
                   className="flex flex-col items-center group cursor-pointer transition-transform hover:scale-110 active:scale-95 relative"
-                  title={`${atleta.nome} (${posBadge}) - Clique para trocar`}
+                  title={`${atleta.nome} (${slot.label}) - Clique para trocar`}
                 >
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full p-0.5 bg-gradient-to-tr from-amber-400 to-yellow-200 shadow-xl relative flex items-center justify-center">
+                  {/* Bolinha branca com borda azul (#2563eb) */}
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white border-2 border-blue-600 shadow-xl relative flex items-center justify-center p-0.5 overflow-visible">
                     {atleta.fotoUrl ? (
                       <img
                         src={atleta.fotoUrl}
                         alt={atleta.nome}
-                        className="w-full h-full rounded-full object-cover border-2 border-slate-900"
+                        className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
-                      <div
-                        className={`w-full h-full rounded-full flex items-center justify-center font-black text-xs sm:text-sm text-white ${
-                          isGoleiro ? 'bg-amber-600' : 'bg-blue-600'
-                        } border-2 border-slate-900`}
-                      >
+                      <div className="w-full h-full rounded-full bg-white flex items-center justify-center font-black text-xs sm:text-sm text-blue-700 tracking-tight">
                         {atleta.numeroCamisa ? `#${atleta.numeroCamisa}` : iniciais}
                       </div>
                     )}
 
-                    {/* Badge da posição no topo do avatar */}
-                    <span
-                      className={`absolute -top-1.5 -right-1 text-[9px] font-black px-1.5 py-0.5 rounded-full shadow border border-white text-white ${
-                        isGoleiro ? 'bg-amber-600' : 'bg-blue-600'
-                      }`}
-                    >
-                      {posBadge}
+                    {/* Selo com a sigla da posição (GOL, LE, ZAG, LD, VOL, MEI, ATA) */}
+                    <span className="absolute -top-1.5 -right-1 text-[8.5px] sm:text-[9px] font-black px-1.5 py-0.2 rounded-full shadow bg-blue-600 text-white border border-white leading-tight pointer-events-none">
+                      {slot.label}
                     </span>
                   </div>
 
-                  {/* Nome do jogador */}
-                  <div className="mt-1 px-2 py-0.5 rounded-md bg-slate-950/90 text-[11px] sm:text-xs font-black text-white shadow-md border border-white/20 max-w-[85px] sm:max-w-[105px] truncate text-center">
+                  {/* Nome do jogador legível embaixo */}
+                  <div className="mt-1 px-1.5 py-0.5 rounded-md bg-black/85 text-[10px] sm:text-[11px] font-black text-white shadow border border-white/20 max-w-[85px] sm:max-w-[100px] truncate text-center leading-tight">
                     {atleta.apelido || atleta.nome.split(' ')[0]}
                   </div>
                 </button>
@@ -1052,7 +976,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
             return (
               <div className="space-y-6">
-                <div className="relative w-full max-w-xl mx-auto rounded-3xl overflow-hidden shadow-2xl border-4 border-emerald-950 bg-emerald-800 text-white select-none">
+                <div className="relative w-full max-w-xl mx-auto rounded-3xl overflow-hidden shadow-2xl border-4 border-emerald-950 bg-emerald-800 text-white select-none h-[620px] sm:h-[680px]">
                   {/* Gramado listrado em tons de verde */}
                   <div className="absolute inset-0 opacity-15 pointer-events-none flex flex-col">
                     {[...Array(8)].map((_, i) => (
@@ -1062,51 +986,52 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
                   {/* Linhas de Marcação do Campo (SVG de Alta Fidelidade) */}
                   <svg
-                    className="absolute inset-0 w-full h-full pointer-events-none stroke-white/45"
+                    className="absolute inset-0 w-full h-full pointer-events-none stroke-white/50"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                   >
-                    {/* Linha Externa */}
-                    <rect x="16" y="16" width="calc(100% - 32px)" height="calc(100% - 32px)" strokeWidth="2.5" rx="10" />
-                    {/* Linha do Meio de Campo */}
-                    <line x1="16" y1="50%" x2="calc(100% - 16px)" y2="50%" strokeWidth="2.5" />
+                    {/* Linha Externa do Campo */}
+                    <rect x="3%" y="2%" width="94%" height="96%" strokeWidth="2.5" rx="8" />
+
+                    {/* Linha do Meio de Campo (exatamente 50%) */}
+                    <line x1="3%" y1="50%" x2="97%" y2="50%" strokeWidth="2.5" />
+
                     {/* Círculo Central */}
-                    <circle cx="50%" cy="50%" r="55" strokeWidth="2.5" />
-                    <circle cx="50%" cy="50%" r="3.5" fill="rgba(255,255,255,0.7)" />
+                    <circle cx="50%" cy="50%" r="52" strokeWidth="2.5" />
+                    <circle cx="50%" cy="50%" r="3.5" fill="rgba(255,255,255,0.75)" />
 
-                    {/* Grande Área Superior (Adversário) */}
-                    <rect x="24%" y="16" width="52%" height="80" strokeWidth="2.5" />
-                    <rect x="36%" y="16" width="28%" height="32" strokeWidth="2" />
-                    <circle cx="50%" cy="65" r="3" fill="rgba(255,255,255,0.7)" />
+                    {/* Grande Área Superior (Adversário) - termina em 18% para atacantes em top 24% ficarem fora */}
+                    <rect x="22%" y="2%" width="56%" height="16%" strokeWidth="2.5" />
+                    <rect x="35%" y="2%" width="30%" height="6%" strokeWidth="2" />
+                    <circle cx="50%" cy="13%" r="3" fill="rgba(255,255,255,0.75)" />
 
-                    {/* Grande Área Inferior (Nosso Goleiro) */}
-                    <rect x="24%" y="calc(100% - 96px)" width="52%" height="80" strokeWidth="2.5" />
-                    <rect x="36%" y="calc(100% - 48px)" width="28%" height="32" strokeWidth="2" />
-                    <circle cx="50%" cy="calc(100% - 65px)" r="3" fill="rgba(255,255,255,0.7)" />
+                    {/* Gol adversário (indicador no topo) */}
+                    <rect x="42%" y="0.5%" width="16%" height="1.5%" strokeWidth="2" fill="rgba(255,255,255,0.25)" />
+
+                    {/* Grande Área Inferior (Nosso Goleiro) - começa em 82% para zagueiros e laterais em top 78% ficarem antes da área */}
+                    <rect x="22%" y="82%" width="56%" height="16%" strokeWidth="2.5" />
+                    <rect x="35%" y="92%" width="30%" height="6%" strokeWidth="2" />
+                    <circle cx="50%" cy="87%" r="3" fill="rgba(255,255,255,0.75)" />
+
+                    {/* Nosso Gol (indicador na base) */}
+                    <rect x="42%" y="98%" width="16%" height="1.5%" strokeWidth="2" fill="rgba(255,255,255,0.25)" />
                   </svg>
 
-                  {/* Posicionamento dos Jogadores em 4 Linhas */}
-                  <div className="relative z-10 py-7 px-3 flex flex-col justify-between min-h-[580px] sm:min-h-[640px]">
-                    {/* 1. Ataque */}
-                    <div className="flex justify-around items-center px-2">
-                      {linhaAta.map(({ slot, atleta }) => renderPlayerPin(slot, atleta))}
+                  {/* Posicionamento Absoluto dos 11 Jogadores com % Exatos (left% / top%) */}
+                  {slotsAtribuidos.map(({ slot, atleta }) => (
+                    <div
+                      key={slot.id}
+                      style={{
+                        position: 'absolute',
+                        left: `${slot.left}%`,
+                        top: `${slot.top}%`,
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                      className="z-20 flex flex-col items-center pointer-events-auto"
+                    >
+                      {renderPlayerPin(slot, atleta)}
                     </div>
-
-                    {/* 2. Meio-Campo */}
-                    <div className="flex justify-around items-center px-1">
-                      {linhaMei.map(({ slot, atleta }) => renderPlayerPin(slot, atleta))}
-                    </div>
-
-                    {/* 3. Defesa */}
-                    <div className="flex justify-around items-center px-1">
-                      {linhaDef.map(({ slot, atleta }) => renderPlayerPin(slot, atleta))}
-                    </div>
-
-                    {/* 4. Goleiro */}
-                    <div className="flex justify-center items-center">
-                      {linhaGol.map(({ slot, atleta }) => renderPlayerPin(slot, atleta, true))}
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
                 {/* BANCO DE RESERVAS */}

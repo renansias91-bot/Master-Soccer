@@ -625,6 +625,16 @@ export const firebaseService = {
     const path = `jogos/${id}`;
     try {
       await deleteDoc(doc(db, 'jogos', id));
+
+      // Exclui avaliações filhas vinculadas a esse jogo no Firestore
+      try {
+        const snap = await getDocs(query(collection(db, 'avaliacoes'), where('jogoAgendaId', '==', id)));
+        for (const docSnap of snap.docs) {
+          await deleteDoc(doc(db, 'avaliacoes', docSnap.id)).catch(() => {});
+        }
+      } catch (errAv) {
+        console.warn('Aviso ao apagar avaliações vinculadas ao jogo:', errAv);
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
     }
