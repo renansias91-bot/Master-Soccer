@@ -17,8 +17,17 @@ import {
   Shield,
   Activity,
   Flame,
+  Info,
 } from 'lucide-react';
-import { Atleta, AvaliacaoJogo, JogoAgenda, NotasPilares, POSICOES_JOGO } from '../types';
+import {
+  Atleta,
+  AvaliacaoJogo,
+  JogoAgenda,
+  NotasPilares,
+  POSICOES_JOGO,
+  TAGS_DESTAQUE_DISPONIVEIS,
+  TAGS_ATENCAO_DISPONIVEIS,
+} from '../types';
 import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
@@ -65,12 +74,27 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   const [obsMental, setObsMental] = useState('');
   const [obsDisciplinar, setObsDisciplinar] = useState('');
 
-  const [minutosJogados, setMinutosJogados] = useState<number>(80);
+  // Minutos divididos em 1º e 2º Tempo com opções rápidas
+  const [minutos1Tempo, setMinutos1Tempo] = useState<number>(40);
+  const [minutos2Tempo, setMinutos2Tempo] = useState<number>(40);
+  const [opcaoRapidaTempo, setOpcaoRapidaTempo] = useState<string>('80');
+
+  // Posição e Estatísticas
   const [posicaoJogo, setPosicaoJogo] = useState<string>('Meia (10)');
   const [gols, setGols] = useState<number>(0);
   const [assistencias, setAssistencias] = useState<number>(0);
   const [cartoesAmarelos, setCartoesAmarelos] = useState<number>(0);
   const [cartaoVermelho, setCartaoVermelho] = useState<boolean>(false);
+
+  // Pontos de Destaque, Atenção e Caixinhas Livres
+  const [pontosFortes, setPontosFortes] = useState<string[]>([]);
+  const [pontosMelhoria, setPontosMelhoria] = useState<string[]>([]);
+  const [pontosPositivosTexto, setPontosPositivosTexto] = useState('');
+  const [pontosMelhorarTexto, setPontosMelhorarTexto] = useState('');
+
+  // Controle da Legenda Compacta (começando fechada)
+  const [legendaAberta, setLegendaAberta] = useState<boolean>(false);
+
   const [feedbackSalvo, setFeedbackSalvo] = useState<string | null>(null);
 
   // Filtra jogos por categoria
@@ -135,12 +159,44 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       setFisica(avExistente.notas.fisica);
       setMental(avExistente.notas.mental);
       setDisciplinar(avExistente.notas.disciplinar);
-      setMinutosJogados(avExistente.minutosJogados || 80);
+
+      // Minutos 1º e 2º tempo
+      if (avExistente.minutos1Tempo !== undefined && avExistente.minutos2Tempo !== undefined) {
+        setMinutos1Tempo(avExistente.minutos1Tempo);
+        setMinutos2Tempo(avExistente.minutos2Tempo);
+        atualizarOpcaoRapidaPorMinutos(avExistente.minutos1Tempo, avExistente.minutos2Tempo);
+      } else {
+        const total = avExistente.minutosJogados || 80;
+        const metade = Math.floor(total / 2);
+        setMinutos1Tempo(metade);
+        setMinutos2Tempo(total - metade);
+        atualizarOpcaoRapidaPorMinutos(metade, total - metade);
+      }
+
       setPosicaoJogo(avExistente.posicaoJogo || escalacaoInfo?.posicaoJogo || 'Meia (10)');
       setGols(avExistente.gols || 0);
       setAssistencias(avExistente.assistencias || 0);
       setCartoesAmarelos(avExistente.cartoesAmarelos || 0);
       setCartaoVermelho(Boolean(avExistente.cartaoVermelho));
+
+      // Pontos fortes e melhoria (tags)
+      setPontosFortes(avExistente.pontosFortes || []);
+      setPontosMelhoria(avExistente.pontosMelhoria || []);
+
+      // Caixinhas de texto livre
+      if (avExistente.pontosPositivosTexto !== undefined) {
+        setPontosPositivosTexto(avExistente.pontosPositivosTexto || '');
+      } else {
+        const matchPos = (avExistente.observacoes || '').match(/\[PONTOS POSITIVOS\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
+        setPontosPositivosTexto(matchPos ? matchPos[1].trim() : '');
+      }
+
+      if (avExistente.pontosMelhorarTexto !== undefined) {
+        setPontosMelhorarTexto(avExistente.pontosMelhorarTexto || '');
+      } else {
+        const matchMel = (avExistente.observacoes || '').match(/\[A MELHORAR\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
+        setPontosMelhorarTexto(matchMel ? matchMel[1].trim() : '');
+      }
 
       if (avExistente.observacoesPorPilar) {
         setObsFisica(avExistente.observacoesPorPilar.fisica || '');
@@ -168,12 +224,18 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       setFisica(7.5);
       setMental(8.0);
       setDisciplinar(9.0);
-      setMinutosJogados(80);
+      setMinutos1Tempo(40);
+      setMinutos2Tempo(40);
+      setOpcaoRapidaTempo('80');
       setPosicaoJogo(escalacaoInfo?.posicaoJogo || (atletaObj ? atletaObj.posicao : 'Meia (10)'));
       setGols(0);
       setAssistencias(0);
       setCartoesAmarelos(0);
       setCartaoVermelho(false);
+      setPontosFortes([]);
+      setPontosMelhoria([]);
+      setPontosPositivosTexto('');
+      setPontosMelhorarTexto('');
       setObsFisica('');
       setObsTecnica('');
       setObsTatica('');
@@ -182,10 +244,47 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     }
   };
 
+  const atualizarOpcaoRapidaPorMinutos = (m1: number, m2: number) => {
+    if (m1 === 40 && m2 === 40) {
+      setOpcaoRapidaTempo('80');
+    } else if (m1 === 40 && m2 === 0) {
+      setOpcaoRapidaTempo('so1t');
+    } else if (m1 === 0 && m2 === 40) {
+      setOpcaoRapidaTempo('so2t');
+    } else if (m1 === 0 && m2 === 20) {
+      setOpcaoRapidaTempo('entrou2t');
+    } else if (m1 === 20 && m2 === 0) {
+      setOpcaoRapidaTempo('saiu1t');
+    } else {
+      setOpcaoRapidaTempo('custom');
+    }
+  };
+
+  const handleAplicarOpcaoRapidaTempo = (opcao: string) => {
+    setOpcaoRapidaTempo(opcao);
+    if (opcao === '80') {
+      setMinutos1Tempo(40);
+      setMinutos2Tempo(40);
+    } else if (opcao === 'so1t') {
+      setMinutos1Tempo(40);
+      setMinutos2Tempo(0);
+    } else if (opcao === 'so2t') {
+      setMinutos1Tempo(0);
+      setMinutos2Tempo(40);
+    } else if (opcao === 'entrou2t') {
+      setMinutos1Tempo(0);
+      setMinutos2Tempo(20);
+    } else if (opcao === 'saiu1t') {
+      setMinutos1Tempo(20);
+      setMinutos2Tempo(0);
+    }
+  };
+
   const handleAbrirAvaliacaoJogo = (jogo: JogoAgenda) => {
     setJogoSelecionadoParaAvaliar(jogo);
     setAtletaIndexAtivo(0);
     setFeedbackSalvo(null);
+    setLegendaAberta(false);
 
     // Calcular atletas escalados deste jogo
     const escalacao = jogo.escalacao || {};
@@ -212,6 +311,31 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     carregarAvaliacaoDoAtleta(atletasDoJogo[novoIndex].id, jogoSelecionadoParaAvaliar);
   };
 
+  // Toggle de tags com limite máximo de 3
+  const togglePontoDestaque = (tag: string) => {
+    setPontosFortes((prev) => {
+      if (prev.includes(tag)) {
+        return prev.filter((t) => t !== tag);
+      }
+      if (prev.length >= 3) {
+        return prev;
+      }
+      return [...prev, tag];
+    });
+  };
+
+  const togglePontoAtencao = (tag: string) => {
+    setPontosMelhoria((prev) => {
+      if (prev.includes(tag)) {
+        return prev.filter((t) => t !== tag);
+      }
+      if (prev.length >= 3) {
+        return prev;
+      }
+      return [...prev, tag];
+    });
+  };
+
   const handleSalvarAvaliacaoJogador = (avancarProximo = true) => {
     if (!jogoSelecionadoParaAvaliar || !atletaAtual) return;
 
@@ -229,6 +353,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     if (obsTatica.trim()) partesObs.push(`[TÁTICO]: ${obsTatica.trim()}`);
     if (obsMental.trim()) partesObs.push(`[MENTAL]: ${obsMental.trim()}`);
     if (obsDisciplinar.trim()) partesObs.push(`[DISCIPLINAR]: ${obsDisciplinar.trim()}`);
+    if (pontosPositivosTexto.trim()) partesObs.push(`[PONTOS POSITIVOS]: ${pontosPositivosTexto.trim()}`);
+    if (pontosMelhorarTexto.trim()) partesObs.push(`[A MELHORAR]: ${pontosMelhorarTexto.trim()}`);
 
     const textoObservacoesFinal =
       partesObs.length > 0 ? partesObs.join('\n\n') : 'Atuação avaliada pela comissão técnica.';
@@ -247,6 +373,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       ? jogoSelecionadoParaAvaliar.escalacao[atletaAtual.id]
       : null;
 
+    const totalMinutos = (Number(minutos1Tempo) || 0) + (Number(minutos2Tempo) || 0);
+
     const novaAvaliacao: AvaliacaoJogo = {
       id: avExistente ? avExistente.id : `av-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       atletaId: atletaAtual.id,
@@ -254,7 +382,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       dataJogo: jogoSelecionadoParaAvaliar.dataJogo,
       adversario: jogoSelecionadoParaAvaliar.adversario,
       competicao: jogoSelecionadoParaAvaliar.tipo || 'Campeonato',
-      minutosJogados: Number(minutosJogados) || 80,
+      minutos1Tempo: Number(minutos1Tempo) || 0,
+      minutos2Tempo: Number(minutos2Tempo) || 0,
+      minutosJogados: totalMinutos,
       resultado: jogoSelecionadoParaAvaliar.placar || undefined,
       titular: escaladoInfo ? escaladoInfo.titular : true,
       posicaoJogo: posicaoJogo || 'Meia (10)',
@@ -272,6 +402,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         mental: obsMental.trim(),
         disciplinar: obsDisciplinar.trim(),
       },
+      pontosFortes,
+      pontosMelhoria,
+      pontosPositivosTexto: pontosPositivosTexto.trim(),
+      pontosMelhorarTexto: pontosMelhorarTexto.trim(),
       jogoAgendaId: jogoSelecionadoParaAvaliar.id,
       avaliador: 'Comissão Técnica',
     };
@@ -314,6 +448,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   // RENDERIZAÇÃO 1: DENTRO DE CADA JOGO - AVALIAÇÃO
   // ==========================================
   if (jogoSelecionadoParaAvaliar) {
+    const minutosTotaisSomados = (Number(minutos1Tempo) || 0) + (Number(minutos2Tempo) || 0);
+
     return (
       <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
         {/* Barra Superior de Retorno */}
@@ -336,11 +472,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           </div>
         </div>
 
-        {/* ========================================================= */}
-        {/* TOPO DA AVALIAÇÃO: */}
-        {/* Master Soccer vs [Adversário] */}
-        {/* Data, Hora, Local, Categoria, Tipo de Jogo */}
-        {/* ========================================================= */}
+        {/* TOPO DA AVALIAÇÃO: Master Soccer vs [Adversário] */}
         <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white p-5 sm:p-6 rounded-2xl shadow-md border border-blue-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <MasterSoccerEscudo size={48} className="drop-shadow-sm shrink-0" />
@@ -485,50 +617,146 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             )}
 
             {/* ========================================================= */}
-            {/* CAMPOS OBRIGATÓRIOS EM CADA JOGADOR (SEM SUMIR): */}
-            {/* - Minutos Jogados nesta Partida: [ 80 ] min */}
-            {/* - Jogou de: [ selecionar posição ] */}
-            {/* - Gol, Assistência, Cartão Amarelo, Cartão Vermelho */}
+            {/* 1. TEMPO - DIVIDIR EM 1º E 2º TEMPO COM OPÇÕES PRONTAS */}
             {/* ========================================================= */}
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Minutos Jogados nesta Partida */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Minutos Jogados nesta Partida:</span>
-                  </label>
-                  <div className="flex items-center gap-2">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <span>Tempo de Jogo:</span>
+                </label>
+
+                {/* Dropdown com as 5 Opções Prontas */}
+                <div className="w-full sm:w-auto">
+                  <select
+                    value={opcaoRapidaTempo}
+                    onChange={(e) => handleAplicarOpcaoRapidaTempo(e.target.value)}
+                    className="w-full sm:w-72 h-9 px-3 text-xs font-bold bg-white dark:bg-slate-900 border border-blue-500/60 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer shadow-xs"
+                  >
+                    <option value="80">Jogou o jogo todo (80 min)</option>
+                    <option value="so1t">Jogou só 1º tempo (40 min)</option>
+                    <option value="so2t">Jogou só 2º tempo (40 min)</option>
+                    <option value="entrou2t">Entrou no 2º tempo (20 min)</option>
+                    <option value="saiu1t">Saiu no 1º tempo (20 min)</option>
+                    <option value="custom">Outro (Ajuste manual abaixo)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Ajuste Manual: 1º Tempo, 2º Tempo e Total Automático */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* 1º Tempo: [ - 40 + ] min */}
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    1º Tempo:
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMinutos1Tempo((prev) => Math.max(0, prev - 5));
+                        setOpcaoRapidaTempo('custom');
+                      }}
+                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm text-slate-700 dark:text-slate-200 flex items-center justify-center transition"
+                    >
+                      -
+                    </button>
                     <input
                       type="number"
                       min="0"
-                      max="120"
-                      value={minutosJogados}
-                      onChange={(e) => setMinutosJogados(Number(e.target.value) || 0)}
-                      className="w-24 h-10 px-3 text-center text-sm font-mono font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      max="60"
+                      value={minutos1Tempo}
+                      onChange={(e) => {
+                        setMinutos1Tempo(Math.max(0, Number(e.target.value)));
+                        setOpcaoRapidaTempo('custom');
+                      }}
+                      className="w-12 h-7 text-center font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-900 dark:text-white focus:outline-none"
                     />
-                    <span className="text-xs font-bold text-slate-500">min</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMinutos1Tempo((prev) => Math.min(60, prev + 5));
+                        setOpcaoRapidaTempo('custom');
+                      }}
+                      className="w-7 h-7 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-sm flex items-center justify-center transition"
+                    >
+                      +
+                    </button>
+                    <span className="text-xs text-slate-500 font-semibold ml-0.5">min</span>
                   </div>
                 </div>
 
-                {/* Jogou de: [ selecionar posição das 10 opções ] */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Jogou de:</span>
-                  </label>
-                  <select
-                    value={posicaoJogo}
-                    onChange={(e) => setPosicaoJogo(e.target.value)}
-                    className="w-full h-10 px-3 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  >
-                    {POSICOES_JOGO.map((pos) => (
-                      <option key={pos} value={pos}>
-                        {pos}
-                      </option>
-                    ))}
-                  </select>
+                {/* 2º Tempo: [ - 40 + ] min */}
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    2º Tempo:
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMinutos2Tempo((prev) => Math.max(0, prev - 5));
+                        setOpcaoRapidaTempo('custom');
+                      }}
+                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm text-slate-700 dark:text-slate-200 flex items-center justify-center transition"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      max="60"
+                      value={minutos2Tempo}
+                      onChange={(e) => {
+                        setMinutos2Tempo(Math.max(0, Number(e.target.value)));
+                        setOpcaoRapidaTempo('custom');
+                      }}
+                      className="w-12 h-7 text-center font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-900 dark:text-white focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMinutos2Tempo((prev) => Math.min(60, prev + 5));
+                        setOpcaoRapidaTempo('custom');
+                      }}
+                      className="w-7 h-7 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-sm flex items-center justify-center transition"
+                    >
+                      +
+                    </button>
+                    <span className="text-xs text-slate-500 font-semibold ml-0.5">min</span>
+                  </div>
                 </div>
+              </div>
+
+              {/* Total Automático */}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs text-slate-500 font-medium">
+                  Total automático:
+                </span>
+                <span className="px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/70 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-mono font-bold text-xs">
+                  Total automático: {minutosTotaisSomados} min
+                </span>
+              </div>
+            </div>
+
+            {/* SELEÇÃO DE POSIÇÃO NO JOGO & ESTATÍSTICAS DA PARTIDA */}
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Jogou de:</span>
+                </label>
+                <select
+                  value={posicaoJogo}
+                  onChange={(e) => setPosicaoJogo(e.target.value)}
+                  className="w-full h-10 px-3 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                >
+                  {POSICOES_JOGO.map((pos) => (
+                    <option key={pos} value={pos}>
+                      {pos}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Estatísticas da Partida: Gol, Assistência, Cartão Amarelo, Cartão Vermelho */}
@@ -632,7 +860,35 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             </div>
 
             {/* ========================================================= */}
-            {/* OS 5 QUESITOS: TÍTULO + SLIDER AZUL + NOTA: X/10 - TEXTO + LEGENDA + CAIXINHA FIXA 120px */}
+            {/* 2. LEGENDA - COMPACTA E FECHADA NO TOPO DA AVALIAÇÃO */}
+            {/* [ ⓘ Legenda: 0-2 Muito Ruim • 3-4 Ruim • 5-6 Precisa Melhorar • 7 Bom • 8 Muito Bom • 9 Excelente • 10 Perfeito ] */}
+            {/* ========================================================= */}
+            <div className="rounded-xl border border-blue-200 dark:border-slate-800 overflow-hidden bg-blue-50/50 dark:bg-slate-850">
+              <button
+                type="button"
+                onClick={() => setLegendaAberta(!legendaAberta)}
+                className="w-full px-3.5 py-2 flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-100/60 dark:hover:bg-slate-800 transition-colors"
+              >
+                <div className="flex items-center gap-1.5 text-left truncate">
+                  <span className="text-blue-600 dark:text-blue-400 font-bold shrink-0">ⓘ</span>
+                  <span className="text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 truncate">
+                    Legenda: 0-2 Muito Ruim • 3-4 Ruim • 5-6 Precisa Melhorar • 7 Bom • 8 Muito Bom • 9 Excelente • 10 Perfeito
+                  </span>
+                </div>
+                <span className="text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0 ml-2">
+                  {legendaAberta ? 'Fechar ▲' : 'Expandir ▼'}
+                </span>
+              </button>
+
+              {legendaAberta && (
+                <div className="px-4 py-2.5 bg-white dark:bg-slate-900 border-t border-blue-200/60 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 leading-relaxed text-center animate-in fade-in">
+                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar • 7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
+                </div>
+              )}
+            </div>
+
+            {/* ========================================================= */}
+            {/* OS 5 QUESITOS: TÍTULO + SLIDER AZUL + NOTA: X/10 - TEXTO + CAIXINHA FIXA 120px (SEM LEGENDA REPETIDA) */}
             {/* ========================================================= */}
             <div className="space-y-4">
               {/* 1. FÍSICO */}
@@ -664,29 +920,12 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   className="w-full cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
                   style={{ accentColor: '#2563eb' }}
                 />
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: 10,
-                    background: '#fff',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    color: '#555',
-                    lineHeight: 1.6,
-                    textAlign: 'center',
-                  }}
-                >
-                  <b>Legenda:</b>
-                  <br />
-                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
-                  7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
-                </div>
                 <textarea
                   value={obsFisica}
                   onChange={(e) => setObsFisica(e.target.value)}
                   placeholder="Observação do Físico..."
                   style={{ height: '120px', resize: 'none' }}
-                  className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
               </div>
 
@@ -719,29 +958,12 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   className="w-full cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
                   style={{ accentColor: '#2563eb' }}
                 />
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: 10,
-                    background: '#fff',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    color: '#555',
-                    lineHeight: 1.6,
-                    textAlign: 'center',
-                  }}
-                >
-                  <b>Legenda:</b>
-                  <br />
-                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
-                  7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
-                </div>
                 <textarea
                   value={obsTecnica}
                   onChange={(e) => setObsTecnica(e.target.value)}
                   placeholder="Observação do Técnico..."
                   style={{ height: '120px', resize: 'none' }}
-                  className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
               </div>
 
@@ -774,29 +996,12 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   className="w-full cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
                   style={{ accentColor: '#2563eb' }}
                 />
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: 10,
-                    background: '#fff',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    color: '#555',
-                    lineHeight: 1.6,
-                    textAlign: 'center',
-                  }}
-                >
-                  <b>Legenda:</b>
-                  <br />
-                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
-                  7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
-                </div>
                 <textarea
                   value={obsTatica}
                   onChange={(e) => setObsTatica(e.target.value)}
                   placeholder="Observação do Tático..."
                   style={{ height: '120px', resize: 'none' }}
-                  className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
               </div>
 
@@ -829,29 +1034,12 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   className="w-full cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
                   style={{ accentColor: '#2563eb' }}
                 />
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: 10,
-                    background: '#fff',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    color: '#555',
-                    lineHeight: 1.6,
-                    textAlign: 'center',
-                  }}
-                >
-                  <b>Legenda:</b>
-                  <br />
-                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
-                  7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
-                </div>
                 <textarea
                   value={obsMental}
                   onChange={(e) => setObsMental(e.target.value)}
                   placeholder="Observação do Mental..."
                   style={{ height: '120px', resize: 'none' }}
-                  className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
               </div>
 
@@ -884,30 +1072,115 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   className="w-full cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
                   style={{ accentColor: '#2563eb' }}
                 />
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: 10,
-                    background: '#fff',
-                    borderRadius: 8,
-                    fontSize: 12,
-                    color: '#555',
-                    lineHeight: 1.6,
-                    textAlign: 'center',
-                  }}
-                >
-                  <b>Legenda:</b>
-                  <br />
-                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
-                  7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
-                </div>
                 <textarea
                   value={obsDisciplinar}
                   onChange={(e) => setObsDisciplinar(e.target.value)}
                   placeholder="Observação do Disciplinar..."
                   style={{ height: '120px', resize: 'none' }}
-                  className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
+              </div>
+            </div>
+
+            {/* ========================================================= */}
+            {/* 3. VOLTAR PONTOS POSITIVOS E A MELHORAR (TAGS + CAIXINHAS) */}
+            {/* No final da avaliação de cada jogador, DEPOIS das notas e ANTES de salvar */}
+            {/* ========================================================= */}
+            <div className="space-y-5 pt-4 border-t border-slate-200 dark:border-slate-800">
+              {/* TAGS DESTAQUE & ATENÇÃO */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* DESTAQUE */}
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                      <span>⭐</span> Pontos de Destaque
+                    </label>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      {pontosFortes.length}/3 selecionados
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {TAGS_DESTAQUE_DISPONIVEIS.map((tag) => {
+                      const ativo = pontosFortes.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => togglePontoDestaque(tag)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                            ativo
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ATENÇÃO / APRIMORAMENTO */}
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                      <span>⚠️</span> Pontos de Atenção / Aprimoramento
+                    </label>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      {pontosMelhoria.length}/3 selecionados
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {TAGS_ATENCAO_DISPONIVEIS.map((tag) => {
+                      const ativo = pontosMelhoria.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => togglePontoAtencao(tag)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                            ativo
+                              ? 'bg-rose-700 text-white shadow-xs'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* CAIXINHAS DE TEXTO LIVRE: PONTOS POSITIVOS E A MELHORAR */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* ✅ Pontos Positivos */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1.5 flex items-center gap-1.5">
+                    <span>✅</span> Pontos Positivos:
+                  </label>
+                  <textarea
+                    value={pontosPositivosTexto}
+                    onChange={(e) => setPontosPositivosTexto(e.target.value)}
+                    placeholder="O que o atleta fez de bom na partida..."
+                    style={{ height: '90px', resize: 'none' }}
+                    className="w-full p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
+
+                {/* ⚠️ A Melhorar */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-1.5 flex items-center gap-1.5">
+                    <span>⚠️</span> A Melhorar:
+                  </label>
+                  <textarea
+                    value={pontosMelhorarTexto}
+                    onChange={(e) => setPontosMelhorarTexto(e.target.value)}
+                    placeholder="O que o atleta precisa melhorar ou focar nos treinos..."
+                    style={{ height: '90px', resize: 'none' }}
+                    className="w-full p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
               </div>
             </div>
 

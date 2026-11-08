@@ -166,6 +166,8 @@ export interface AvaliacaoFirestoreDoc {
   };
   pontosFortes?: string[];
   pontosMelhoria?: string[];
+  pontosPositivosTexto?: string;
+  pontosMelhorarTexto?: string;
   atualizadoEm: string;
 }
 
@@ -294,6 +296,8 @@ export const firebaseService = {
       notas: avaliacao.notas,
       pontosFortes: avaliacao.pontosFortes || [],
       pontosMelhoria: avaliacao.pontosMelhoria || [],
+      pontosPositivosTexto: avaliacao.pontosPositivosTexto || '',
+      pontosMelhorarTexto: avaliacao.pontosMelhorarTexto || '',
       atualizadoEm: new Date().toISOString(),
     };
 
@@ -381,6 +385,8 @@ export const firebaseService = {
           observacoesPorPilar: d.observacoesPorPilar || undefined,
           pontosFortes: d.pontosFortes || [],
           pontosMelhoria: d.pontosMelhoria || [],
+          pontosPositivosTexto: d.pontosPositivosTexto || undefined,
+          pontosMelhorarTexto: d.pontosMelhorarTexto || undefined,
           avaliador: d.avaliador || d.nomeProfessor || 'Comissão Técnica',
         });
       });
@@ -456,6 +462,8 @@ export const firebaseService = {
             observacoesPorPilar: d.observacoesPorPilar || undefined,
             pontosFortes: d.pontosFortes || [],
             pontosMelhoria: d.pontosMelhoria || [],
+            pontosPositivosTexto: d.pontosPositivosTexto || undefined,
+            pontosMelhorarTexto: d.pontosMelhorarTexto || undefined,
             avaliador: d.avaliador || d.nomeProfessor || 'Comissão Técnica',
           });
         });

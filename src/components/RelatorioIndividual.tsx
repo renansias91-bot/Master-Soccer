@@ -39,6 +39,8 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
   const [buscaJogador, setBuscaJogador] = useState('');
   const [jogoIndexAtivo, setJogoIndexAtivo] = useState<number>(0);
 
+  const [legendaAberta, setLegendaAberta] = useState<boolean>(false);
+
   const atletaAtivo = atletas.find((a) => a.id === atletaAtivoId) || atletas[0];
 
   // Avaliações do atleta ativo ordenadas por data
@@ -326,7 +328,11 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                           <span>·</span>
                           <span className="font-mono">{formatarDataExibicao(avaliacaoSelecionada.dataJogo)}</span>
                           <span>·</span>
-                          <span className="font-mono">{avaliacaoSelecionada.minutosJogados}' em campo</span>
+                          <span className="font-mono">
+                            {avaliacaoSelecionada.minutos1Tempo !== undefined && avaliacaoSelecionada.minutos2Tempo !== undefined
+                              ? `${avaliacaoSelecionada.minutosJogados}' em campo (1ºT: ${avaliacaoSelecionada.minutos1Tempo}' | 2ºT: ${avaliacaoSelecionada.minutos2Tempo}')`
+                              : `${avaliacaoSelecionada.minutosJogados}' em campo`}
+                          </span>
                           {avaliacaoSelecionada.posicaoJogo && (
                             <>
                               <span>·</span>
@@ -379,7 +385,32 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                       </div>
                     </div>
 
-                    {/* OS 5 QUESITOS: NOTA + LEGENDA EMBAIXO + CAIXINHA FIXA DE OBSERVAÇÃO */}
+                    {/* LEGENDA COMPACTA E FECHADA NO TOPO */}
+                    <div className="rounded-xl border border-blue-200 dark:border-slate-800 overflow-hidden bg-blue-50/50 dark:bg-slate-850">
+                      <button
+                        type="button"
+                        onClick={() => setLegendaAberta(!legendaAberta)}
+                        className="w-full px-3.5 py-2 flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-100/60 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5 text-left truncate">
+                          <span className="text-blue-600 dark:text-blue-400 font-bold shrink-0">ⓘ</span>
+                          <span className="text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 truncate">
+                            Legenda: 0-2 Muito Ruim • 3-4 Ruim • 5-6 Precisa Melhorar • 7 Bom • 8 Muito Bom • 9 Excelente • 10 Perfeito
+                          </span>
+                        </div>
+                        <span className="text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0 ml-2">
+                          {legendaAberta ? 'Fechar ▲' : 'Expandir ▼'}
+                        </span>
+                      </button>
+
+                      {legendaAberta && (
+                        <div className="px-4 py-2.5 bg-white dark:bg-slate-900 border-t border-blue-200/60 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 leading-relaxed text-center animate-in fade-in">
+                          0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar • 7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
+                        </div>
+                      )}
+                    </div>
+
+                    {/* OS 5 QUESITOS: NOTA + SLIDER AZUL + CAIXINHA FIXA DE OBSERVAÇÃO (SEM REPETIR LEGENDA) */}
                     <div className="space-y-4">
                       {/* 1. FÍSICO */}
                       <div
@@ -413,33 +444,13 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                           />
                         </div>
 
-                        {/* LEGENDA EMBAIXO DE CADA ITEM */}
-                        <div
-                          style={{
-                            marginTop: 10,
-                            padding: 10,
-                            background: '#f9fafb',
-                            borderRadius: 8,
-                            fontSize: 12,
-                            color: '#555',
-                            lineHeight: 1.6,
-                            textAlign: 'center',
-                          }}
-                          className="dark:bg-slate-900 dark:text-slate-300"
-                        >
-                          <b>Legenda:</b>
-                          <br />
-                          0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
-                          7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
-                        </div>
-
                         {/* Caixinha Fixa de Observação (120px, resize: none) */}
                         <textarea
                           readOnly
                           value={getObsPilar(avaliacaoSelecionada, 'fisica')}
                           placeholder="Observação do Físico..."
                           style={{ height: '120px', resize: 'none' }}
-                          className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+                          className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
                         />
                       </div>
 
@@ -474,32 +485,12 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                           />
                         </div>
 
-                        {/* LEGENDA EMBAIXO DE CADA ITEM */}
-                        <div
-                          style={{
-                            marginTop: 10,
-                            padding: 10,
-                            background: '#f9fafb',
-                            borderRadius: 8,
-                            fontSize: 12,
-                            color: '#555',
-                            lineHeight: 1.6,
-                            textAlign: 'center',
-                          }}
-                          className="dark:bg-slate-900 dark:text-slate-300"
-                        >
-                          <b>Legenda:</b>
-                          <br />
-                          0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
-                          7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
-                        </div>
-
                         <textarea
                           readOnly
                           value={getObsPilar(avaliacaoSelecionada, 'tecnica')}
                           placeholder="Observação do Técnico..."
                           style={{ height: '120px', resize: 'none' }}
-                          className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+                          className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
                         />
                       </div>
 
@@ -534,32 +525,12 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                           />
                         </div>
 
-                        {/* LEGENDA EMBAIXO DE CADA ITEM */}
-                        <div
-                          style={{
-                            marginTop: 10,
-                            padding: 10,
-                            background: '#f9fafb',
-                            borderRadius: 8,
-                            fontSize: 12,
-                            color: '#555',
-                            lineHeight: 1.6,
-                            textAlign: 'center',
-                          }}
-                          className="dark:bg-slate-900 dark:text-slate-300"
-                        >
-                          <b>Legenda:</b>
-                          <br />
-                          0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
-                          7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
-                        </div>
-
                         <textarea
                           readOnly
                           value={getObsPilar(avaliacaoSelecionada, 'tatica')}
                           placeholder="Observação do Tático..."
                           style={{ height: '120px', resize: 'none' }}
-                          className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+                          className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
                         />
                       </div>
 
@@ -594,32 +565,12 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                           />
                         </div>
 
-                        {/* LEGENDA EMBAIXO DE CADA ITEM */}
-                        <div
-                          style={{
-                            marginTop: 10,
-                            padding: 10,
-                            background: '#f9fafb',
-                            borderRadius: 8,
-                            fontSize: 12,
-                            color: '#555',
-                            lineHeight: 1.6,
-                            textAlign: 'center',
-                          }}
-                          className="dark:bg-slate-900 dark:text-slate-300"
-                        >
-                          <b>Legenda:</b>
-                          <br />
-                          0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
-                          7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
-                        </div>
-
                         <textarea
                           readOnly
                           value={getObsPilar(avaliacaoSelecionada, 'mental')}
                           placeholder="Observação do Mental..."
                           style={{ height: '120px', resize: 'none' }}
-                          className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+                          className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
                         />
                       </div>
 
@@ -654,35 +605,96 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                           />
                         </div>
 
-                        {/* LEGENDA EMBAIXO DE CADA ITEM */}
-                        <div
-                          style={{
-                            marginTop: 10,
-                            padding: 10,
-                            background: '#f9fafb',
-                            borderRadius: 8,
-                            fontSize: 12,
-                            color: '#555',
-                            lineHeight: 1.6,
-                            textAlign: 'center',
-                          }}
-                          className="dark:bg-slate-900 dark:text-slate-300"
-                        >
-                          <b>Legenda:</b>
-                          <br />
-                          0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar •<br />
-                          7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
-                        </div>
-
                         <textarea
                           readOnly
                           value={getObsPilar(avaliacaoSelecionada, 'disciplinar')}
                           placeholder="Observação do Disciplinar..."
                           style={{ height: '120px', resize: 'none' }}
-                          className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+                          className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
                         />
                       </div>
                     </div>
+
+                    {/* ========================================================= */}
+                    {/* DESTAQUES, ATENÇÃO E PONTOS POSITIVOS / A MELHORAR */}
+                    {/* ========================================================= */}
+                    {((avaliacaoSelecionada.pontosFortes && avaliacaoSelecionada.pontosFortes.length > 0) ||
+                      (avaliacaoSelecionada.pontosMelhoria && avaliacaoSelecionada.pontosMelhoria.length > 0) ||
+                      avaliacaoSelecionada.pontosPositivosTexto ||
+                      avaliacaoSelecionada.pontosMelhorarTexto) && (
+                      <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                        {/* TAGS DESTAQUE & ATENÇÃO */}
+                        {((avaliacaoSelecionada.pontosFortes && avaliacaoSelecionada.pontosFortes.length > 0) ||
+                          (avaliacaoSelecionada.pontosMelhoria && avaliacaoSelecionada.pontosMelhoria.length > 0)) && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Destaques (Azul) */}
+                            {avaliacaoSelecionada.pontosFortes && avaliacaoSelecionada.pontosFortes.length > 0 && (
+                              <div className="p-4 rounded-xl bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 space-y-2">
+                                <span className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
+                                  <span>⭐</span> Pontos de Destaque
+                                </span>
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                  {avaliacaoSelecionada.pontosFortes.map((tag) => (
+                                    <span
+                                      key={tag}
+                                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-xs"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Atenção (Vermelho/Rosa) */}
+                            {avaliacaoSelecionada.pontosMelhoria && avaliacaoSelecionada.pontosMelhoria.length > 0 && (
+                              <div className="p-4 rounded-xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 space-y-2">
+                                <span className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                                  <span>⚠️</span> Pontos de Atenção / Aprimoramento
+                                </span>
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                  {avaliacaoSelecionada.pontosMelhoria.map((tag) => (
+                                    <span
+                                      key={tag}
+                                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-700 text-white shadow-xs"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* CAIXINHAS DE TEXTO: ✅ PONTOS POSITIVOS e ⚠️ A MELHORAR */}
+                        {(avaliacaoSelecionada.pontosPositivosTexto || avaliacaoSelecionada.pontosMelhorarTexto) && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {avaliacaoSelecionada.pontosPositivosTexto && (
+                              <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 space-y-2">
+                                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                                  <span>✅</span> Pontos Positivos:
+                                </span>
+                                <p className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line leading-relaxed">
+                                  {avaliacaoSelecionada.pontosPositivosTexto}
+                                </p>
+                              </div>
+                            )}
+
+                            {avaliacaoSelecionada.pontosMelhorarTexto && (
+                              <div className="p-4 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 space-y-2">
+                                <span className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                                  <span>⚠️</span> A Melhorar:
+                                </span>
+                                <p className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line leading-relaxed">
+                                  {avaliacaoSelecionada.pontosMelhorarTexto}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

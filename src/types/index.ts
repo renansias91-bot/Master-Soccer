@@ -92,8 +92,41 @@ export interface AvaliacaoJogo {
   jogoAgendaId?: string; // ID do jogo vinculado na Agenda de Jogos
   pontosFortes?: string[];
   pontosMelhoria?: string[];
+  pontosPositivosTexto?: string;
+  pontosMelhorarTexto?: string;
   avaliador?: string;
 }
+
+export const TAGS_DESTAQUE_DISPONIVEIS = [
+  'Visão de jogo',
+  'Passe entre linhas',
+  'Primeiro toque',
+  'Drible 1x1',
+  'Finalização precisa',
+  'Velocidade e arranque',
+  'Força nos duelos',
+  'Antecipação',
+  'Recomposição rápida',
+  'Liderança em campo',
+  'Pressão pós-perda',
+  'Realizou pisada',
+  'Terminou as jogadas',
+] as const;
+
+export const TAGS_ATENCAO_DISPONIVEIS = [
+  'Pé não dominante',
+  'Jogo aéreo / Cabeceio',
+  'Proteção de bola de costas',
+  'Tomada de decisão em transição',
+  'Perda de bola na saída',
+  'Cobertura defensiva',
+  'Intensidade no 2º tempo',
+  'Controle emocional sob pressão',
+  'Concentração',
+  'Comunicação em campo',
+  'Fora da zona 14',
+  'Não pisou na área',
+] as const;
 
 export type TipoJogo = 'Amistoso' | 'Campeonato' | 'Torneio' | string;
 
