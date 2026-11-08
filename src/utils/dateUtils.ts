@@ -57,3 +57,39 @@ export function dataParaValorOrdenacao(dataStr?: string): number {
 
   return 0;
 }
+
+/**
+ * Retorna texto amigável de data do jogo:
+ * - "Hoje • DD/MM/AAAA às HH:MM" se for hoje
+ * - "Amanhã • DD/MM às HH:MM" se for amanhã
+ * - "DD/MM/AAAA às HH:MM" caso contrário
+ */
+export function formatarDataAmigavelJogo(dataStr?: string, hora?: string): string {
+  if (!dataStr) return '';
+  const dataFormatada = formatarDataExibicao(dataStr);
+  const hoje = getDataAtualBrasil();
+
+  const agora = new Date();
+  const amanhaDate = new Date(agora.getTime() + 24 * 60 * 60 * 1000);
+  const amanhaFormatter = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const amanha = amanhaFormatter.format(amanhaDate);
+
+  const horaTexto = hora ? ` às ${hora}` : '';
+
+  if (dataFormatada === hoje) {
+    return `Hoje • ${dataFormatada}${horaTexto}`;
+  }
+
+  if (dataFormatada === amanha) {
+    const partes = dataFormatada.split('/');
+    const diaMes = partes.length >= 2 ? `${partes[0]}/${partes[1]}` : dataFormatada;
+    return `Amanhã • ${diaMes}${horaTexto}`;
+  }
+
+  return `${dataFormatada}${horaTexto}`;
+}

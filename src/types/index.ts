@@ -98,19 +98,19 @@ export interface AvaliacaoJogo {
 }
 
 export const TAGS_DESTAQUE_DISPONIVEIS = [
+  'Finalização',
+  'Pisada / Drible',
   'Visão de jogo',
   'Passe entre linhas',
-  'Primeiro toque',
-  'Drible 1x1',
-  'Finalização precisa',
-  'Velocidade e arranque',
-  'Força nos duelos',
-  'Antecipação',
-  'Recomposição rápida',
-  'Liderança em campo',
-  'Pressão pós-perda',
-  'Realizou pisada',
+  'Desmarque',
+  'Intensidade',
+  'Jogo aéreo',
+  'Proteção de bola',
+  'Liderança',
+  'Comunicação',
+  'Retorno defensivo',
   'Terminou as jogadas',
+  'Realizou pisada',
 ] as const;
 
 export const TAGS_ATENCAO_DISPONIVEIS = [

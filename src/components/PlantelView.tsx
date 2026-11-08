@@ -16,6 +16,9 @@ import {
   Square,
   AlertCircle,
   Trophy,
+  ArrowLeftRight,
+  X,
+  ChevronDown,
 } from 'lucide-react';
 import { Atleta, AvaliacaoJogo, JogoAgenda, POSICOES_JOGO, AtletaEscalado } from '../types';
 import { storageService } from '../services/storage';
@@ -35,6 +38,85 @@ interface PlantelViewProps {
   jogoSelecionadoId?: string;
   onSelecionarJogoId?: (id: string) => void;
 }
+
+export interface SlotPosicaoCampinho {
+  id: string;
+  label: string; // 'GOL', 'LD', 'ZAG', 'LE', 'VOL', 'MEI', 'ATA'
+  nomeCompleto: string;
+  linha: 'ata' | 'mei' | 'def' | 'gol';
+}
+
+export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
+  '4-3-3': [
+    // Ataque (3)
+    { id: 'pe', label: 'ATA', nomeCompleto: 'Ponta Esquerda', linha: 'ata' },
+    { id: 'ca', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata' },
+    { id: 'pd', label: 'ATA', nomeCompleto: 'Ponta Direita', linha: 'ata' },
+    // Meio (3)
+    { id: 'meie', label: 'MEI', nomeCompleto: 'Meio-Campista E', linha: 'mei' },
+    { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei' },
+    { id: 'meid', label: 'MEI', nomeCompleto: 'Meio-Campista D', linha: 'mei' },
+    // Defesa (4)
+    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def' },
+    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def' },
+    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def' },
+    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def' },
+    // Goleiro (1)
+    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol' },
+  ],
+  '4-4-2': [
+    // Ataque (2)
+    { id: 'ata1', label: 'ATA', nomeCompleto: 'Atacante 1', linha: 'ata' },
+    { id: 'ata2', label: 'ATA', nomeCompleto: 'Atacante 2', linha: 'ata' },
+    // Meio (4)
+    { id: 'meie', label: 'MEI', nomeCompleto: 'Meia Esquerda', linha: 'mei' },
+    { id: 'vol1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei' },
+    { id: 'vol2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei' },
+    { id: 'meid', label: 'MEI', nomeCompleto: 'Meia Direita', linha: 'mei' },
+    // Defesa (4)
+    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def' },
+    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def' },
+    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def' },
+    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def' },
+    // Goleiro (1)
+    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol' },
+  ],
+  '3-5-2': [
+    // Ataque (2)
+    { id: 'ata1', label: 'ATA', nomeCompleto: 'Atacante 1', linha: 'ata' },
+    { id: 'ata2', label: 'ATA', nomeCompleto: 'Atacante 2', linha: 'ata' },
+    // Meio (5)
+    { id: 'alae', label: 'LE', nomeCompleto: 'Ala Esquerda', linha: 'mei' },
+    { id: 'mei1', label: 'MEI', nomeCompleto: 'Meia 1', linha: 'mei' },
+    { id: 'vol', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei' },
+    { id: 'mei2', label: 'MEI', nomeCompleto: 'Meia 2', linha: 'mei' },
+    { id: 'alad', label: 'LD', nomeCompleto: 'Ala Direita', linha: 'mei' },
+    // Defesa (3)
+    { id: 'zag1', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def' },
+    { id: 'zag2', label: 'ZAG', nomeCompleto: 'Zagueiro Central', linha: 'def' },
+    { id: 'zag3', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def' },
+    // Goleiro (1)
+    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol' },
+  ],
+  '4-2-3-1': [
+    // Ataque (1)
+    { id: 'ata', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata' },
+    // Meio Ofensivo (3)
+    { id: 'meie', label: 'MEI', nomeCompleto: 'Ponta / Meia E', linha: 'ata' },
+    { id: 'meic', label: 'MEI', nomeCompleto: 'Meia Central (10)', linha: 'mei' },
+    { id: 'meid', label: 'MEI', nomeCompleto: 'Ponta / Meia D', linha: 'ata' },
+    // Volantes (2)
+    { id: 'vol1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei' },
+    { id: 'vol2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei' },
+    // Defesa (4)
+    { id: 'le', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def' },
+    { id: 'zage', label: 'ZAG', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def' },
+    { id: 'zagd', label: 'ZAG', nomeCompleto: 'Zagueiro Direito', linha: 'def' },
+    { id: 'ld', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def' },
+    // Goleiro (1)
+    { id: 'gol', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol' },
+  ],
+};
 
 // Mapeia posição original do atleta para uma das 10 posições oficiais do jogo
 function inferirPosicaoJogoPadrao(posicaoOriginal?: string): string {
@@ -65,6 +147,15 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   onSelecionarJogoId,
 }) => {
   const [busca, setBusca] = useState('');
+  const [abaSubEscalacao, setAbaSubEscalacao] = useState<'lista' | 'campinho'>('lista');
+  const [formacao, setFormacao] = useState<string>('4-3-3');
+  const [modalTrocaAberto, setModalTrocaAberto] = useState<boolean>(false);
+  const [atletaParaTroca, setAtletaParaTroca] = useState<{
+    atletaId: string;
+    tipo: 'titular' | 'reserva';
+    posicaoSlot?: string;
+  } | null>(null);
+
   const [jogoAtivoId, setJogoAtivoId] = useState<string>(() => {
     if (jogoSelecionadoId) return jogoSelecionadoId;
     return jogos.length > 0 ? jogos[0].id : '';
@@ -150,6 +241,121 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         },
       };
     });
+  };
+
+  // Atribuição automática inteligente dos titulares aos slots da formação tática
+  const atribuirTitularesAosSlots = (
+    titularesList: Atleta[],
+    slots: SlotPosicaoCampinho[]
+  ): Array<{ slot: SlotPosicaoCampinho; atleta: Atleta | null }> => {
+    const resultado: Array<{ slot: SlotPosicaoCampinho; atleta: Atleta | null }> = [];
+    const atletasRestantes = [...titularesList];
+    const usados = new Set<string>();
+
+    for (const slot of slots) {
+      const match = atletasRestantes.find((a) => {
+        if (usados.has(a.id)) return false;
+        const pos = (escalacaoMap[a.id]?.posicaoJogo || a.posicao || '').toLowerCase();
+        if (slot.linha === 'gol') return pos.includes('gol');
+        if (slot.linha === 'def') return pos.includes('zag') || pos.includes('lat') || pos.includes('def');
+        if (slot.linha === 'mei') return pos.includes('vol') || pos.includes('mei') || pos.includes('meio');
+        if (slot.linha === 'ata') return pos.includes('ata') || pos.includes('pon') || pos.includes('cent') || pos.includes('ext');
+        return false;
+      });
+
+      if (match) {
+        usados.add(match.id);
+        resultado.push({ slot, atleta: match });
+      } else {
+        resultado.push({ slot, atleta: null });
+      }
+    }
+
+    // Preenche slots vazios com titulares restantes que não encaixaram na posição padrão
+    const unassigned = atletasRestantes.filter((a) => !usados.has(a.id));
+    for (let i = 0; i < resultado.length && unassigned.length > 0; i++) {
+      if (!resultado[i].atleta) {
+        const proximo = unassigned.shift()!;
+        resultado[i].atleta = proximo;
+        usados.add(proximo.id);
+      }
+    }
+
+    return resultado;
+  };
+
+  // Troca titular e reserva
+  const handleTrocarTitularReserva = (titularId: string, reservaId: string) => {
+    setEscalacaoMap((prev) => {
+      const copy = { ...prev };
+      const titAtual = copy[titularId];
+      const resAtual = copy[reservaId];
+
+      if (titAtual && resAtual) {
+        copy[titularId] = {
+          ...titAtual,
+          titular: false,
+        };
+        copy[reservaId] = {
+          ...resAtual,
+          titular: true,
+          posicaoJogo: titAtual.posicaoJogo || resAtual.posicaoJogo,
+        };
+      } else if (titAtual && !resAtual) {
+        const atletaRes = atletas.find((a) => a.id === reservaId);
+        copy[titularId] = { ...titAtual, titular: false };
+        copy[reservaId] = {
+          atletaId: reservaId,
+          titular: true,
+          posicaoJogo: atletaRes ? inferirPosicaoJogoPadrao(atletaRes.posicao) : titAtual.posicaoJogo,
+        };
+      } else if (!titAtual && resAtual) {
+        copy[reservaId] = {
+          ...resAtual,
+          titular: true,
+        };
+      }
+      return copy;
+    });
+    setModalTrocaAberto(false);
+    setAtletaParaTroca(null);
+  };
+
+  // Mover titular para o banco
+  const handleMoverParaBanco = (atletaId: string) => {
+    setEscalacaoMap((prev) => {
+      const atual = prev[atletaId];
+      if (!atual) return prev;
+      return {
+        ...prev,
+        [atletaId]: {
+          ...atual,
+          titular: false,
+        },
+      };
+    });
+    setModalTrocaAberto(false);
+    setAtletaParaTroca(null);
+  };
+
+  // Promover atleta para titular
+  const handlePromoverParaTitular = (atletaId: string, posicaoJogo?: string) => {
+    setEscalacaoMap((prev) => {
+      const atual = prev[atletaId];
+      const atleta = atletas.find((a) => a.id === atletaId);
+      return {
+        ...prev,
+        [atletaId]: {
+          atletaId,
+          titular: true,
+          posicaoJogo:
+            posicaoJogo ||
+            (atual ? atual.posicaoJogo : atleta ? inferirPosicaoJogoPadrao(atleta.posicao) : 'Atacante'),
+        },
+      };
+    });
+    setModalTrocaAberto(false);
+    setAtletaParaTroca(null);
   };
 
   // Salvar Escalação do Jogo
@@ -295,6 +501,36 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
             <span className="font-bold">{salvandoFeedback}</span>
           </div>
         )}
+
+        {/* ABAS SUB-ESCALAÇÃO: [ Lista | Campinho ] */}
+        {jogoAtivo && (
+          <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setAbaSubEscalacao('lista')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+                abaSubEscalacao === 'lista'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Lista</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAbaSubEscalacao('campinho')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+                abaSubEscalacao === 'campinho'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              <span>Campinho</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ========================================================= */}
@@ -310,7 +546,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
             Assim que você selecionar uma partida na caixa acima, você poderá marcar os jogadores convocados, escolher titulares, reservas e a posição tática de cada atleta.
           </p>
         </div>
-      ) : (
+      ) : abaSubEscalacao === 'lista' ? (
         <>
           {/* Campo de Busca Rápida de Atleta */}
           <div className="relative">
@@ -674,6 +910,528 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
             </button>
           </div>
         </>
+      ) : (
+        /* ========================================================= */
+        /* ABA 2: CAMPINHO TÁTICO VERTICAL COM 11 TITULARES */
+        /* ========================================================= */
+        <div className="space-y-6">
+          {/* Topo do Campinho: Seletor de Formação e Botão Salvar */}
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Formação Tática:
+              </span>
+              <div className="relative">
+                <select
+                  value={formacao}
+                  onChange={(e) => setFormacao(e.target.value)}
+                  className="appearance-none pl-4 pr-9 py-2 text-sm font-black bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-2 border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer shadow-xs"
+                >
+                  <option value="4-3-3">4-3-3</option>
+                  <option value="4-4-2">4-4-2</option>
+                  <option value="3-5-2">3-5-2</option>
+                  <option value="4-2-3-1">4-2-3-1</option>
+                </select>
+                <ChevronDown className="w-4 h-4 text-blue-600 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
+              </div>
+              <span
+                className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
+                  titularesCount === 11
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                }`}
+              >
+                {titularesCount} / 11 Titulares
+              </span>
+            </div>
+
+            <button
+              onClick={handleSalvarEscalacao}
+              style={{ backgroundColor: '#2563eb' }}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all shrink-0"
+            >
+              <Save className="w-4 h-4 text-amber-300" />
+              <span>Salvar Escalação do Jogo</span>
+            </button>
+          </div>
+
+          {/* O Campo de Futebol Vertical */}
+          {(() => {
+            const titularesList = atletas.filter((a) => escalacaoMap[a.id]?.titular);
+            const reservas = atletas.filter((a) => escalacaoMap[a.id] && !escalacaoMap[a.id].titular);
+            const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-3-3'];
+            const slotsAtribuidos = atribuirTitularesAosSlots(titularesList, slots);
+
+            const linhaAta = slotsAtribuidos.filter((s) => s.slot.linha === 'ata');
+            const linhaMei = slotsAtribuidos.filter((s) => s.slot.linha === 'mei');
+            const linhaDef = slotsAtribuidos.filter((s) => s.slot.linha === 'def');
+            const linhaGol = slotsAtribuidos.filter((s) => s.slot.linha === 'gol');
+
+            const renderPlayerPin = (
+              slot: SlotPosicaoCampinho,
+              atleta: Atleta | null,
+              isGoleiro: boolean = false
+            ) => {
+              if (!atleta) {
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    onClick={() => {
+                      setAtletaParaTroca({ atletaId: '', tipo: 'titular', posicaoSlot: slot.label });
+                      setModalTrocaAberto(true);
+                    }}
+                    className="flex flex-col items-center group cursor-pointer transition-transform hover:scale-105 active:scale-95"
+                  >
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-dashed border-white/70 bg-white/15 backdrop-blur-xs flex flex-col items-center justify-center text-white/90 group-hover:bg-white/25 transition-all shadow-md">
+                      <span className="text-[10px] font-black uppercase tracking-wider">{slot.label}</span>
+                      <span className="text-xs font-bold leading-none">+</span>
+                    </div>
+                    <div className="mt-1 px-2 py-0.5 rounded bg-black/60 text-[10px] font-bold text-white/90 backdrop-blur-xs">
+                      Vazio
+                    </div>
+                  </button>
+                );
+              }
+
+              const escalado = escalacaoMap[atleta.id];
+              const posBadge = escalado?.posicaoJogo || slot.label;
+              const iniciais = atleta.nome
+                .split(' ')
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((p) => p[0])
+                .join('')
+                .toUpperCase();
+
+              return (
+                <button
+                  key={slot.id}
+                  type="button"
+                  onClick={() => {
+                    setAtletaParaTroca({ atletaId: atleta.id, tipo: 'titular' });
+                    setModalTrocaAberto(true);
+                  }}
+                  className="flex flex-col items-center group cursor-pointer transition-transform hover:scale-110 active:scale-95 relative"
+                  title={`${atleta.nome} (${posBadge}) - Clique para trocar`}
+                >
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full p-0.5 bg-gradient-to-tr from-amber-400 to-yellow-200 shadow-xl relative flex items-center justify-center">
+                    {atleta.fotoUrl ? (
+                      <img
+                        src={atleta.fotoUrl}
+                        alt={atleta.nome}
+                        className="w-full h-full rounded-full object-cover border-2 border-slate-900"
+                      />
+                    ) : (
+                      <div
+                        className={`w-full h-full rounded-full flex items-center justify-center font-black text-xs sm:text-sm text-white ${
+                          isGoleiro ? 'bg-amber-600' : 'bg-blue-600'
+                        } border-2 border-slate-900`}
+                      >
+                        {atleta.numeroCamisa ? `#${atleta.numeroCamisa}` : iniciais}
+                      </div>
+                    )}
+
+                    {/* Badge da posição no topo do avatar */}
+                    <span
+                      className={`absolute -top-1.5 -right-1 text-[9px] font-black px-1.5 py-0.5 rounded-full shadow border border-white text-white ${
+                        isGoleiro ? 'bg-amber-600' : 'bg-blue-600'
+                      }`}
+                    >
+                      {posBadge}
+                    </span>
+                  </div>
+
+                  {/* Nome do jogador */}
+                  <div className="mt-1 px-2 py-0.5 rounded-md bg-slate-950/90 text-[11px] sm:text-xs font-black text-white shadow-md border border-white/20 max-w-[85px] sm:max-w-[105px] truncate text-center">
+                    {atleta.apelido || atleta.nome.split(' ')[0]}
+                  </div>
+                </button>
+              );
+            };
+
+            return (
+              <div className="space-y-6">
+                <div className="relative w-full max-w-xl mx-auto rounded-3xl overflow-hidden shadow-2xl border-4 border-emerald-950 bg-emerald-800 text-white select-none">
+                  {/* Gramado listrado em tons de verde */}
+                  <div className="absolute inset-0 opacity-15 pointer-events-none flex flex-col">
+                    {[...Array(8)].map((_, i) => (
+                      <div key={i} className={`flex-1 ${i % 2 === 0 ? 'bg-black' : 'bg-white'}`} />
+                    ))}
+                  </div>
+
+                  {/* Linhas de Marcação do Campo (SVG de Alta Fidelidade) */}
+                  <svg
+                    className="absolute inset-0 w-full h-full pointer-events-none stroke-white/45"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                  >
+                    {/* Linha Externa */}
+                    <rect x="16" y="16" width="calc(100% - 32px)" height="calc(100% - 32px)" strokeWidth="2.5" rx="10" />
+                    {/* Linha do Meio de Campo */}
+                    <line x1="16" y1="50%" x2="calc(100% - 16px)" y2="50%" strokeWidth="2.5" />
+                    {/* Círculo Central */}
+                    <circle cx="50%" cy="50%" r="55" strokeWidth="2.5" />
+                    <circle cx="50%" cy="50%" r="3.5" fill="rgba(255,255,255,0.7)" />
+
+                    {/* Grande Área Superior (Adversário) */}
+                    <rect x="24%" y="16" width="52%" height="80" strokeWidth="2.5" />
+                    <rect x="36%" y="16" width="28%" height="32" strokeWidth="2" />
+                    <circle cx="50%" cy="65" r="3" fill="rgba(255,255,255,0.7)" />
+
+                    {/* Grande Área Inferior (Nosso Goleiro) */}
+                    <rect x="24%" y="calc(100% - 96px)" width="52%" height="80" strokeWidth="2.5" />
+                    <rect x="36%" y="calc(100% - 48px)" width="28%" height="32" strokeWidth="2" />
+                    <circle cx="50%" cy="calc(100% - 65px)" r="3" fill="rgba(255,255,255,0.7)" />
+                  </svg>
+
+                  {/* Posicionamento dos Jogadores em 4 Linhas */}
+                  <div className="relative z-10 py-7 px-3 flex flex-col justify-between min-h-[580px] sm:min-h-[640px]">
+                    {/* 1. Ataque */}
+                    <div className="flex justify-around items-center px-2">
+                      {linhaAta.map(({ slot, atleta }) => renderPlayerPin(slot, atleta))}
+                    </div>
+
+                    {/* 2. Meio-Campo */}
+                    <div className="flex justify-around items-center px-1">
+                      {linhaMei.map(({ slot, atleta }) => renderPlayerPin(slot, atleta))}
+                    </div>
+
+                    {/* 3. Defesa */}
+                    <div className="flex justify-around items-center px-1">
+                      {linhaDef.map(({ slot, atleta }) => renderPlayerPin(slot, atleta))}
+                    </div>
+
+                    {/* 4. Goleiro */}
+                    <div className="flex justify-center items-center">
+                      {linhaGol.map(({ slot, atleta }) => renderPlayerPin(slot, atleta, true))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* BANCO DE RESERVAS */}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-amber-500" />
+                      <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Banco de Reservas ({reservas.length})
+                      </h3>
+                    </div>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Clique no reserva para colocá-lo como titular
+                    </span>
+                  </div>
+
+                  {reservas.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                      Nenhum atleta no banco de reservas. Vá até a aba <b>Lista</b> para convocar atletas como reserva ou clique em um titular acima para movê-lo ao banco.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                      {reservas.map((res) => {
+                        const escalado = escalacaoMap[res.id];
+                        return (
+                          <button
+                            key={res.id}
+                            type="button"
+                            onClick={() => {
+                              setAtletaParaTroca({ atletaId: res.id, tipo: 'reserva' });
+                              setModalTrocaAberto(true);
+                            }}
+                            className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/80 hover:border-amber-400 hover:bg-amber-50/50 dark:hover:bg-amber-950/30 transition-all text-left group"
+                          >
+                            {res.fotoUrl ? (
+                              <img
+                                src={res.fotoUrl}
+                                alt={res.nome}
+                                className="w-9 h-9 rounded-full object-cover border border-slate-300 dark:border-slate-600 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-amber-500 text-white font-black text-xs flex items-center justify-center shrink-0">
+                                {res.numeroCamisa ? `#${res.numeroCamisa}` : res.nome.charAt(0)}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-extrabold text-slate-900 dark:text-white truncate group-hover:text-amber-700 dark:group-hover:text-amber-300">
+                                {res.apelido || res.nome}
+                              </div>
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <span>{escalado?.posicaoJogo || res.posicao}</span>
+                              </div>
+                            </div>
+                            <ArrowLeftRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600 shrink-0" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Botão Inferior Salvar Escalação do Jogo no Campinho */}
+                <div className="pt-2 flex justify-end">
+                  <button
+                    onClick={handleSalvarEscalacao}
+                    style={{ backgroundColor: '#2563eb' }}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-md transition-all"
+                  >
+                    <Save className="w-4 h-4 text-amber-300" />
+                    <span>Salvar Escalação do Jogo ({totalConvocados} convocados)</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL DE TROCA / SUBSTITUIÇÃO RÁPIDA ENTRE TITULAR E RESERVA */}
+      {/* ========================================================= */}
+      {modalTrocaAberto && atletaParaTroca && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800">
+            {/* Cabeçalho do Modal */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                  {atletaParaTroca.tipo === 'titular'
+                    ? atletaParaTroca.atletaId
+                      ? `Substituir Titular: ${
+                          atletas.find((a) => a.id === atletaParaTroca.atletaId)?.nome || ''
+                        }`
+                      : `Escalar Titular (${atletaParaTroca.posicaoSlot || 'Campo'})`
+                    : `Promover a Titular: ${
+                        atletas.find((a) => a.id === atletaParaTroca.atletaId)?.nome || ''
+                      }`}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {atletaParaTroca.tipo === 'titular'
+                    ? 'Escolha um atleta do banco para entrar no lugar dele:'
+                    : 'Escolha qual titular sai de campo para ele entrar:'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setModalTrocaAberto(false);
+                  setAtletaParaTroca(null);
+                }}
+                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Conteúdo do Modal com Opções de Troca */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
+              {/* CASO 1: Clicou em um Titular (quer trocar por reserva ou mover para o banco) */}
+              {atletaParaTroca.tipo === 'titular' && (
+                <>
+                  {atletaParaTroca.atletaId && (
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-900 flex items-center justify-between">
+                      <span className="text-xs font-bold text-blue-900 dark:text-blue-200">
+                        Quer apenas tirar este atleta de campo?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleMoverParaBanco(atletaParaTroca.atletaId)}
+                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
+                      >
+                        Mover para o Banco
+                      </button>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="text-xs font-extrabold uppercase text-slate-500 tracking-wider mb-2">
+                      Opções no Banco de Reservas:
+                    </h4>
+                    {(() => {
+                      const reservas = atletas.filter(
+                        (a) => escalacaoMap[a.id] && !escalacaoMap[a.id].titular
+                      );
+                      if (reservas.length === 0) {
+                        return (
+                          <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                            Nenhum reserva disponível no banco.
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="space-y-2">
+                          {reservas.map((r) => (
+                            <button
+                              key={r.id}
+                              type="button"
+                              onClick={() => {
+                                if (atletaParaTroca.atletaId) {
+                                  handleTrocarTitularReserva(atletaParaTroca.atletaId, r.id);
+                                } else {
+                                  handlePromoverParaTitular(r.id, atletaParaTroca.posicaoSlot);
+                                }
+                              }}
+                              className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 border border-slate-200 dark:border-slate-700 hover:border-blue-500 transition-all group text-left"
+                            >
+                              <div className="flex items-center gap-3">
+                                {r.fotoUrl ? (
+                                  <img
+                                    src={r.fotoUrl}
+                                    alt={r.nome}
+                                    className="w-9 h-9 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-9 h-9 rounded-full bg-amber-500 text-white font-black text-xs flex items-center justify-center">
+                                    {r.nome.charAt(0)}
+                                  </div>
+                                )}
+                                <div>
+                                  <div className="text-xs font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                    {r.nome}
+                                  </div>
+                                  <div className="text-[10px] text-slate-500">
+                                    {escalacaoMap[r.id]?.posicaoJogo || r.posicao} · {r.categoria}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="px-2.5 py-1 text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900/60 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                Colocar no lugar
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Outros atletas do plantel que não foram convocados */}
+                  <div className="pt-2">
+                    <h4 className="text-xs font-extrabold uppercase text-slate-500 tracking-wider mb-2">
+                      Outros Atletas do Plantel:
+                    </h4>
+                    <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                      {atletas
+                        .filter((a) => !escalacaoMap[a.id])
+                        .slice(0, 10)
+                        .map((outro) => (
+                          <button
+                            key={outro.id}
+                            type="button"
+                            onClick={() => {
+                              if (atletaParaTroca.atletaId) {
+                                handleTrocarTitularReserva(atletaParaTroca.atletaId, outro.id);
+                              } else {
+                                handlePromoverParaTitular(outro.id, atletaParaTroca.posicaoSlot);
+                              }
+                            }}
+                            className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200 dark:border-slate-700/60 text-left transition-all group"
+                          >
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate group-hover:text-blue-600">
+                              {outro.nome} ({outro.posicao})
+                            </span>
+                            <span className="text-[11px] font-bold text-blue-600 group-hover:underline">
+                              Convocar e Escalar
+                            </span>
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* CASO 2: Clicou em um Reserva (quer promover a titular) */}
+              {atletaParaTroca.tipo === 'reserva' && (
+                <>
+                  {titularesCount < 11 && (
+                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+                      <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                        O time tem menos de 11 titulares. Quer entrar direto?
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handlePromoverParaTitular(atletaParaTroca.atletaId)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
+                      >
+                        Entrar Direto
+                      </button>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 className="text-xs font-extrabold uppercase text-slate-500 tracking-wider mb-2">
+                      Titulares em campo (escolha quem sai para o banco):
+                    </h4>
+                    {(() => {
+                      const titularesList = atletas.filter(
+                        (a) => escalacaoMap[a.id]?.titular
+                      );
+                      if (titularesList.length === 0) {
+                        return (
+                          <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                            Nenhum titular escalado ainda.
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="space-y-2">
+                          {titularesList.map((tit) => (
+                            <button
+                              key={tit.id}
+                              type="button"
+                              onClick={() =>
+                                handleTrocarTitularReserva(tit.id, atletaParaTroca.atletaId)
+                              }
+                              className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-amber-50 dark:hover:bg-amber-950/50 border border-slate-200 dark:border-slate-700 hover:border-amber-400 transition-all group text-left"
+                            >
+                              <div className="flex items-center gap-3">
+                                {tit.fotoUrl ? (
+                                  <img
+                                    src={tit.fotoUrl}
+                                    alt={tit.nome}
+                                    className="w-9 h-9 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-9 h-9 rounded-full bg-blue-600 text-white font-black text-xs flex items-center justify-center">
+                                    {tit.nome.charAt(0)}
+                                  </div>
+                                )}
+                                <div>
+                                  <div className="text-xs font-extrabold text-slate-900 dark:text-white group-hover:text-amber-600">
+                                    {tit.nome}
+                                  </div>
+                                  <div className="text-[10px] text-slate-500">
+                                    {escalacaoMap[tit.id]?.posicaoJogo || tit.posicao} · {tit.categoria}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="px-2.5 py-1 text-xs font-bold text-amber-600 bg-amber-100 dark:bg-amber-950/60 rounded-lg group-hover:bg-amber-500 group-hover:text-white transition-all">
+                                Trocar por este
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Rodapé do Modal */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setModalTrocaAberto(false);
+                  setAtletaParaTroca(null);
+                }}
+                className="px-5 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

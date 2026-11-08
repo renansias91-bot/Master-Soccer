@@ -18,6 +18,7 @@ import {
   Activity,
   Flame,
   Info,
+  Search,
 } from 'lucide-react';
 import {
   Atleta,
@@ -28,7 +29,11 @@ import {
   TAGS_DESTAQUE_DISPONIVEIS,
   TAGS_ATENCAO_DISPONIVEIS,
 } from '../types';
-import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
+import {
+  formatarDataExibicao,
+  dataParaValorOrdenacao,
+  formatarDataAmigavelJogo,
+} from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
 
@@ -58,6 +63,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   onNavegarEscalacao,
 }) => {
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('TODAS');
+  const [buscaAdversario, setBuscaAdversario] = useState<string>('');
   const [jogoSelecionadoParaAvaliar, setJogoSelecionadoParaAvaliar] = useState<JogoAgenda | null>(null);
 
   // Estados para o formulário de avaliação do jogador selecionado
@@ -74,10 +80,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   const [obsMental, setObsMental] = useState('');
   const [obsDisciplinar, setObsDisciplinar] = useState('');
 
-  // Minutos divididos em 1º e 2º Tempo com opções rápidas
+  // Minutos divididos em 1º e 2º Tempo
   const [minutos1Tempo, setMinutos1Tempo] = useState<number>(40);
   const [minutos2Tempo, setMinutos2Tempo] = useState<number>(40);
-  const [opcaoRapidaTempo, setOpcaoRapidaTempo] = useState<string>('80');
 
   // Posição e Estatísticas
   const [posicaoJogo, setPosicaoJogo] = useState<string>('Meia (10)');
@@ -86,21 +91,20 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   const [cartoesAmarelos, setCartoesAmarelos] = useState<number>(0);
   const [cartaoVermelho, setCartaoVermelho] = useState<boolean>(false);
 
-  // Pontos de Destaque, Atenção e Caixinhas Livres
+  // Pontos de Destaque e Atenção (seleção por toque)
   const [pontosFortes, setPontosFortes] = useState<string[]>([]);
   const [pontosMelhoria, setPontosMelhoria] = useState<string[]>([]);
-  const [pontosPositivosTexto, setPontosPositivosTexto] = useState('');
-  const [pontosMelhorarTexto, setPontosMelhorarTexto] = useState('');
-
-  // Controle da Legenda Compacta (começando fechada)
-  const [legendaAberta, setLegendaAberta] = useState<boolean>(false);
 
   const [feedbackSalvo, setFeedbackSalvo] = useState<string | null>(null);
 
-  // Filtra jogos por categoria
-  const jogosFiltrados = jogos.filter(
-    (j) => categoriaFiltro === 'TODAS' || j.categoria === categoriaFiltro
-  );
+  // Filtra jogos por categoria e busca por adversário
+  const jogosFiltrados = jogos.filter((j) => {
+    const matchCat = categoriaFiltro === 'TODAS' || j.categoria === categoriaFiltro;
+    const matchBusca =
+      !buscaAdversario.trim() ||
+      j.adversario.toLowerCase().includes(buscaAdversario.toLowerCase());
+    return matchCat && matchBusca;
+  });
 
   // Divide em Próximos e Realizados ordenados por data
   const proximosJogos = jogosFiltrados
@@ -164,13 +168,11 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       if (avExistente.minutos1Tempo !== undefined && avExistente.minutos2Tempo !== undefined) {
         setMinutos1Tempo(avExistente.minutos1Tempo);
         setMinutos2Tempo(avExistente.minutos2Tempo);
-        atualizarOpcaoRapidaPorMinutos(avExistente.minutos1Tempo, avExistente.minutos2Tempo);
       } else {
         const total = avExistente.minutosJogados || 80;
         const metade = Math.floor(total / 2);
         setMinutos1Tempo(metade);
         setMinutos2Tempo(total - metade);
-        atualizarOpcaoRapidaPorMinutos(metade, total - metade);
       }
 
       setPosicaoJogo(avExistente.posicaoJogo || escalacaoInfo?.posicaoJogo || 'Meia (10)');
@@ -182,21 +184,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       // Pontos fortes e melhoria (tags)
       setPontosFortes(avExistente.pontosFortes || []);
       setPontosMelhoria(avExistente.pontosMelhoria || []);
-
-      // Caixinhas de texto livre
-      if (avExistente.pontosPositivosTexto !== undefined) {
-        setPontosPositivosTexto(avExistente.pontosPositivosTexto || '');
-      } else {
-        const matchPos = (avExistente.observacoes || '').match(/\[PONTOS POSITIVOS\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
-        setPontosPositivosTexto(matchPos ? matchPos[1].trim() : '');
-      }
-
-      if (avExistente.pontosMelhorarTexto !== undefined) {
-        setPontosMelhorarTexto(avExistente.pontosMelhorarTexto || '');
-      } else {
-        const matchMel = (avExistente.observacoes || '').match(/\[A MELHORAR\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
-        setPontosMelhorarTexto(matchMel ? matchMel[1].trim() : '');
-      }
 
       if (avExistente.observacoesPorPilar) {
         setObsFisica(avExistente.observacoesPorPilar.fisica || '');
@@ -226,7 +213,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       setDisciplinar(9.0);
       setMinutos1Tempo(40);
       setMinutos2Tempo(40);
-      setOpcaoRapidaTempo('80');
       setPosicaoJogo(escalacaoInfo?.posicaoJogo || (atletaObj ? atletaObj.posicao : 'Meia (10)'));
       setGols(0);
       setAssistencias(0);
@@ -234,8 +220,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       setCartaoVermelho(false);
       setPontosFortes([]);
       setPontosMelhoria([]);
-      setPontosPositivosTexto('');
-      setPontosMelhorarTexto('');
       setObsFisica('');
       setObsTecnica('');
       setObsTatica('');
@@ -244,47 +228,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     }
   };
 
-  const atualizarOpcaoRapidaPorMinutos = (m1: number, m2: number) => {
-    if (m1 === 40 && m2 === 40) {
-      setOpcaoRapidaTempo('80');
-    } else if (m1 === 40 && m2 === 0) {
-      setOpcaoRapidaTempo('so1t');
-    } else if (m1 === 0 && m2 === 40) {
-      setOpcaoRapidaTempo('so2t');
-    } else if (m1 === 0 && m2 === 20) {
-      setOpcaoRapidaTempo('entrou2t');
-    } else if (m1 === 20 && m2 === 0) {
-      setOpcaoRapidaTempo('saiu1t');
-    } else {
-      setOpcaoRapidaTempo('custom');
-    }
-  };
-
-  const handleAplicarOpcaoRapidaTempo = (opcao: string) => {
-    setOpcaoRapidaTempo(opcao);
-    if (opcao === '80') {
-      setMinutos1Tempo(40);
-      setMinutos2Tempo(40);
-    } else if (opcao === 'so1t') {
-      setMinutos1Tempo(40);
-      setMinutos2Tempo(0);
-    } else if (opcao === 'so2t') {
-      setMinutos1Tempo(0);
-      setMinutos2Tempo(40);
-    } else if (opcao === 'entrou2t') {
-      setMinutos1Tempo(0);
-      setMinutos2Tempo(20);
-    } else if (opcao === 'saiu1t') {
-      setMinutos1Tempo(20);
-      setMinutos2Tempo(0);
-    }
-  };
-
   const handleAbrirAvaliacaoJogo = (jogo: JogoAgenda) => {
     setJogoSelecionadoParaAvaliar(jogo);
     setAtletaIndexAtivo(0);
     setFeedbackSalvo(null);
-    setLegendaAberta(false);
 
     // Calcular atletas escalados deste jogo
     const escalacao = jogo.escalacao || {};
@@ -311,29 +258,17 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     carregarAvaliacaoDoAtleta(atletasDoJogo[novoIndex].id, jogoSelecionadoParaAvaliar);
   };
 
-  // Toggle de tags com limite máximo de 3
+  // Toggle de tags sem limite máximo (selecionar quantos quiser)
   const togglePontoDestaque = (tag: string) => {
-    setPontosFortes((prev) => {
-      if (prev.includes(tag)) {
-        return prev.filter((t) => t !== tag);
-      }
-      if (prev.length >= 3) {
-        return prev;
-      }
-      return [...prev, tag];
-    });
+    setPontosFortes((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
   };
 
   const togglePontoAtencao = (tag: string) => {
-    setPontosMelhoria((prev) => {
-      if (prev.includes(tag)) {
-        return prev.filter((t) => t !== tag);
-      }
-      if (prev.length >= 3) {
-        return prev;
-      }
-      return [...prev, tag];
-    });
+    setPontosMelhoria((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
   };
 
   const handleSalvarAvaliacaoJogador = (avancarProximo = true) => {
@@ -353,8 +288,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     if (obsTatica.trim()) partesObs.push(`[TÁTICO]: ${obsTatica.trim()}`);
     if (obsMental.trim()) partesObs.push(`[MENTAL]: ${obsMental.trim()}`);
     if (obsDisciplinar.trim()) partesObs.push(`[DISCIPLINAR]: ${obsDisciplinar.trim()}`);
-    if (pontosPositivosTexto.trim()) partesObs.push(`[PONTOS POSITIVOS]: ${pontosPositivosTexto.trim()}`);
-    if (pontosMelhorarTexto.trim()) partesObs.push(`[A MELHORAR]: ${pontosMelhorarTexto.trim()}`);
 
     const textoObservacoesFinal =
       partesObs.length > 0 ? partesObs.join('\n\n') : 'Atuação avaliada pela comissão técnica.';
@@ -404,8 +337,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       },
       pontosFortes,
       pontosMelhoria,
-      pontosPositivosTexto: pontosPositivosTexto.trim(),
-      pontosMelhorarTexto: pontosMelhorarTexto.trim(),
       jogoAgendaId: jogoSelecionadoParaAvaliar.id,
       avaliador: 'Comissão Técnica',
     };
@@ -421,26 +352,33 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     }
   };
 
-  // Helper para renderizar resumo da escalação no card do jogo
-  const renderResumoEscalacaoCard = (jogo: JogoAgenda) => {
-    const escalacao = jogo.escalacao;
-    if (!escalacao || Object.keys(escalacao).length === 0) {
-      return (
-        <span className="text-[11px] text-slate-400 font-medium">
-          Escalação não definida
-        </span>
-      );
-    }
-
+  // Selo de status de escalação no card do jogo
+  const renderStatusEscalacao = (jogo: JogoAgenda) => {
+    const escalacao = jogo.escalacao || {};
     const items = Object.values(escalacao);
-    const total = items.length;
     const titulares = items.filter((e) => e.titular).length;
-    const reservas = total - titulares;
+    const reservas = items.length - titulares;
+    const pronta = titulares === 11;
 
     return (
-      <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200/50">
-        {titulares} titulares + {reservas} reservas ({total} selecionados)
-      </span>
+      <div className="space-y-1">
+        {pronta ? (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>Escalação pronta</span>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span>Escalação pendente</span>
+          </span>
+        )}
+        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+          {titulares === 0 && reservas === 0
+            ? '0 titulares • 0 reservas'
+            : `${titulares} titulares definidos • ${reservas} reservas`}
+        </div>
+      </div>
     );
   };
 
@@ -617,35 +555,17 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             )}
 
             {/* ========================================================= */}
-            {/* 1. TEMPO - DIVIDIR EM 1º E 2º TEMPO COM OPÇÕES PRONTAS */}
+            {/* 1. TEMPO - 1º E 2º TEMPO COM TOTAL AUTOMÁTICO */}
             {/* ========================================================= */}
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 space-y-3.5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  <span>Tempo de Jogo:</span>
-                </label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-blue-600" />
+                <span>Tempo de Jogo:</span>
+              </label>
 
-                {/* Dropdown com as 5 Opções Prontas */}
-                <div className="w-full sm:w-auto">
-                  <select
-                    value={opcaoRapidaTempo}
-                    onChange={(e) => handleAplicarOpcaoRapidaTempo(e.target.value)}
-                    className="w-full sm:w-72 h-9 px-3 text-xs font-bold bg-white dark:bg-slate-900 border border-blue-500/60 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer shadow-xs"
-                  >
-                    <option value="80">Jogou o jogo todo (80 min)</option>
-                    <option value="so1t">Jogou só 1º tempo (40 min)</option>
-                    <option value="so2t">Jogou só 2º tempo (40 min)</option>
-                    <option value="entrou2t">Entrou no 2º tempo (20 min)</option>
-                    <option value="saiu1t">Saiu no 1º tempo (20 min)</option>
-                    <option value="custom">Outro (Ajuste manual abaixo)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Ajuste Manual: 1º Tempo, 2º Tempo e Total Automático */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                {/* 1º Tempo: [ - 40 + ] min */}
+              {/* Ajuste: 1º Tempo e 2º Tempo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 1º Tempo: [ - ] 40 [ + ] min */}
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     1º Tempo:
@@ -653,11 +573,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => {
-                        setMinutos1Tempo((prev) => Math.max(0, prev - 5));
-                        setOpcaoRapidaTempo('custom');
-                      }}
-                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm text-slate-700 dark:text-slate-200 flex items-center justify-center transition"
+                      onClick={() => setMinutos1Tempo((prev) => Math.max(0, prev - 5))}
+                      className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-base text-slate-700 dark:text-slate-200 flex items-center justify-center transition"
                     >
                       -
                     </button>
@@ -666,19 +583,13 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                       min="0"
                       max="60"
                       value={minutos1Tempo}
-                      onChange={(e) => {
-                        setMinutos1Tempo(Math.max(0, Number(e.target.value)));
-                        setOpcaoRapidaTempo('custom');
-                      }}
-                      className="w-12 h-7 text-center font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-900 dark:text-white focus:outline-none"
+                      onChange={(e) => setMinutos1Tempo(Math.max(0, Number(e.target.value)))}
+                      className="w-12 h-8 text-center font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none"
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        setMinutos1Tempo((prev) => Math.min(60, prev + 5));
-                        setOpcaoRapidaTempo('custom');
-                      }}
-                      className="w-7 h-7 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-sm flex items-center justify-center transition"
+                      onClick={() => setMinutos1Tempo((prev) => Math.min(60, prev + 5))}
+                      className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-base flex items-center justify-center transition"
                     >
                       +
                     </button>
@@ -686,7 +597,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   </div>
                 </div>
 
-                {/* 2º Tempo: [ - 40 + ] min */}
+                {/* 2º Tempo: [ - ] 40 [ + ] min */}
                 <div className="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     2º Tempo:
@@ -694,11 +605,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => {
-                        setMinutos2Tempo((prev) => Math.max(0, prev - 5));
-                        setOpcaoRapidaTempo('custom');
-                      }}
-                      className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-sm text-slate-700 dark:text-slate-200 flex items-center justify-center transition"
+                      onClick={() => setMinutos2Tempo((prev) => Math.max(0, prev - 5))}
+                      className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-bold text-base text-slate-700 dark:text-slate-200 flex items-center justify-center transition"
                     >
                       -
                     </button>
@@ -707,19 +615,13 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                       min="0"
                       max="60"
                       value={minutos2Tempo}
-                      onChange={(e) => {
-                        setMinutos2Tempo(Math.max(0, Number(e.target.value)));
-                        setOpcaoRapidaTempo('custom');
-                      }}
-                      className="w-12 h-7 text-center font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-900 dark:text-white focus:outline-none"
+                      onChange={(e) => setMinutos2Tempo(Math.max(0, Number(e.target.value)))}
+                      className="w-12 h-8 text-center font-mono font-bold text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none"
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        setMinutos2Tempo((prev) => Math.min(60, prev + 5));
-                        setOpcaoRapidaTempo('custom');
-                      }}
-                      className="w-7 h-7 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-sm flex items-center justify-center transition"
+                      onClick={() => setMinutos2Tempo((prev) => Math.min(60, prev + 5))}
+                      className="w-8 h-8 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 dark:bg-blue-950 dark:text-blue-300 font-bold text-base flex items-center justify-center transition"
                     >
                       +
                     </button>
@@ -860,35 +762,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             </div>
 
             {/* ========================================================= */}
-            {/* 2. LEGENDA - COMPACTA E FECHADA NO TOPO DA AVALIAÇÃO */}
-            {/* [ ⓘ Legenda: 0-2 Muito Ruim • 3-4 Ruim • 5-6 Precisa Melhorar • 7 Bom • 8 Muito Bom • 9 Excelente • 10 Perfeito ] */}
-            {/* ========================================================= */}
-            <div className="rounded-xl border border-blue-200 dark:border-slate-800 overflow-hidden bg-blue-50/50 dark:bg-slate-850">
-              <button
-                type="button"
-                onClick={() => setLegendaAberta(!legendaAberta)}
-                className="w-full px-3.5 py-2 flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-blue-100/60 dark:hover:bg-slate-800 transition-colors"
-              >
-                <div className="flex items-center gap-1.5 text-left truncate">
-                  <span className="text-blue-600 dark:text-blue-400 font-bold shrink-0">ⓘ</span>
-                  <span className="text-[11px] sm:text-xs text-slate-700 dark:text-slate-300 truncate">
-                    Legenda: 0-2 Muito Ruim • 3-4 Ruim • 5-6 Precisa Melhorar • 7 Bom • 8 Muito Bom • 9 Excelente • 10 Perfeito
-                  </span>
-                </div>
-                <span className="text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0 ml-2">
-                  {legendaAberta ? 'Fechar ▲' : 'Expandir ▼'}
-                </span>
-              </button>
-
-              {legendaAberta && (
-                <div className="px-4 py-2.5 bg-white dark:bg-slate-900 border-t border-blue-200/60 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 leading-relaxed text-center animate-in fade-in">
-                  0 a 2 = Muito Ruim • 3 a 4 = Ruim • 5 a 6 = Precisa Melhorar • 7 = Bom • 8 = Muito Bom • 9 = Excelente • 10 = Perfeito 👏
-                </div>
-              )}
-            </div>
-
-            {/* ========================================================= */}
-            {/* OS 5 QUESITOS: TÍTULO + SLIDER AZUL + NOTA: X/10 - TEXTO + CAIXINHA FIXA 120px (SEM LEGENDA REPETIDA) */}
+            {/* OS 5 QUESITOS: TÍTULO + SLIDER AZUL + NOTA: X/10 - TEXTO + CAIXINHA 140px COM LETRA 18px */}
             {/* ========================================================= */}
             <div className="space-y-4">
               {/* 1. FÍSICO */}
@@ -924,8 +798,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   value={obsFisica}
                   onChange={(e) => setObsFisica(e.target.value)}
                   placeholder="Observação do Físico..."
-                  style={{ height: '120px', resize: 'none' }}
-                  className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  style={{ height: '140px', resize: 'none', fontSize: '18px' }}
+                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
                 />
               </div>
 
@@ -962,8 +836,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   value={obsTecnica}
                   onChange={(e) => setObsTecnica(e.target.value)}
                   placeholder="Observação do Técnico..."
-                  style={{ height: '120px', resize: 'none' }}
-                  className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  style={{ height: '140px', resize: 'none', fontSize: '18px' }}
+                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
                 />
               </div>
 
@@ -1000,8 +874,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   value={obsTatica}
                   onChange={(e) => setObsTatica(e.target.value)}
                   placeholder="Observação do Tático..."
-                  style={{ height: '120px', resize: 'none' }}
-                  className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  style={{ height: '140px', resize: 'none', fontSize: '18px' }}
+                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
                 />
               </div>
 
@@ -1038,8 +912,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   value={obsMental}
                   onChange={(e) => setObsMental(e.target.value)}
                   placeholder="Observação do Mental..."
-                  style={{ height: '120px', resize: 'none' }}
-                  className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  style={{ height: '140px', resize: 'none', fontSize: '18px' }}
+                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
                 />
               </div>
 
@@ -1076,111 +950,89 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   value={obsDisciplinar}
                   onChange={(e) => setObsDisciplinar(e.target.value)}
                   placeholder="Observação do Disciplinar..."
-                  style={{ height: '120px', resize: 'none' }}
-                  className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  style={{ height: '140px', resize: 'none', fontSize: '18px' }}
+                  className="w-full mt-3 p-3.5 text-[18px] leading-relaxed font-medium bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-950 dark:text-white placeholder:text-[17px] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
                 />
               </div>
             </div>
 
             {/* ========================================================= */}
-            {/* 3. VOLTAR PONTOS POSITIVOS E A MELHORAR (TAGS + CAIXINHAS) */}
-            {/* No final da avaliação de cada jogador, DEPOIS das notas e ANTES de salvar */}
+            {/* SELEÇÃO POR TOQUE: PONTOS DE ATENÇÃO E PONTOS POSITIVOS */}
+            {/* (SEM CAIXAS DE TEXTO LIVRE - SÓ TOQUE PARA SELECIONAR QUANTOS QUISER) */}
             {/* ========================================================= */}
             <div className="space-y-5 pt-4 border-t border-slate-200 dark:border-slate-800">
-              {/* TAGS DESTAQUE & ATENÇÃO */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* DESTAQUE */}
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 flex items-center gap-1.5">
-                      <span>⭐</span> Pontos de Destaque
-                    </label>
-                    <span className="text-[11px] text-slate-400 font-medium">
-                      {pontosFortes.length}/3 selecionados
+              {/* Seção 1: ⚠️ PONTOS DE ATENÇÃO / APRIMORAMENTO */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+                    <span>⚠️</span> PONTOS DE ATENÇÃO / APRIMORAMENTO
+                  </label>
+                  {pontosMelhoria.length > 0 && (
+                    <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
+                      {pontosMelhoria.length} selecionados
                     </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {TAGS_DESTAQUE_DISPONIVEIS.map((tag) => {
-                      const ativo = pontosFortes.includes(tag);
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => togglePontoDestaque(tag)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                            ativo
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          {tag}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  )}
                 </div>
-
-                {/* ATENÇÃO / APRIMORAMENTO */}
-                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
-                      <span>⚠️</span> Pontos de Atenção / Aprimoramento
-                    </label>
-                    <span className="text-[11px] text-slate-400 font-medium">
-                      {pontosMelhoria.length}/3 selecionados
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {TAGS_ATENCAO_DISPONIVEIS.map((tag) => {
-                      const ativo = pontosMelhoria.includes(tag);
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => togglePontoAtencao(tag)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                            ativo
-                              ? 'bg-rose-700 text-white shadow-xs'
-                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          {tag}
-                        </button>
-                      );
-                    })}
-                  </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {TAGS_ATENCAO_DISPONIVEIS.map((tag) => {
+                    const ativo = pontosMelhoria.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => togglePontoAtencao(tag)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          ativo
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        }`}
+                        style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
                 </div>
+                <p className="text-[11px] text-slate-500 font-medium pt-0.5">
+                  Toque para selecionar quantos quiser
+                </p>
               </div>
 
-              {/* CAIXINHAS DE TEXTO LIVRE: PONTOS POSITIVOS E A MELHORAR */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* ✅ Pontos Positivos */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1.5 flex items-center gap-1.5">
-                    <span>✅</span> Pontos Positivos:
+              {/* Seção 2: ✅ PONTOS POSITIVOS */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                    <span>✅</span> PONTOS POSITIVOS
                   </label>
-                  <textarea
-                    value={pontosPositivosTexto}
-                    onChange={(e) => setPontosPositivosTexto(e.target.value)}
-                    placeholder="O que o atleta fez de bom na partida..."
-                    style={{ height: '90px', resize: 'none' }}
-                    className="w-full p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  />
+                  {pontosFortes.length > 0 && (
+                    <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
+                      {pontosFortes.length} selecionados
+                    </span>
+                  )}
                 </div>
-
-                {/* ⚠️ A Melhorar */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-1.5 flex items-center gap-1.5">
-                    <span>⚠️</span> A Melhorar:
-                  </label>
-                  <textarea
-                    value={pontosMelhorarTexto}
-                    onChange={(e) => setPontosMelhorarTexto(e.target.value)}
-                    placeholder="O que o atleta precisa melhorar ou focar nos treinos..."
-                    style={{ height: '90px', resize: 'none' }}
-                    className="w-full p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  />
+                <div className="flex flex-wrap gap-1.5">
+                  {TAGS_DESTAQUE_DISPONIVEIS.map((tag) => {
+                    const ativo = pontosFortes.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => togglePontoDestaque(tag)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          ativo
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        }`}
+                        style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
                 </div>
+                <p className="text-[11px] text-slate-500 font-medium pt-0.5">
+                  Toque para selecionar quantos quiser
+                </p>
               </div>
             </div>
 
@@ -1294,6 +1146,27 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         })}
       </div>
 
+      {/* 3. CAMPO DE BUSCA DE ADVERSÁRIO */}
+      <div className="relative">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <input
+          type="text"
+          value={buscaAdversario}
+          onChange={(e) => setBuscaAdversario(e.target.value)}
+          placeholder="Buscar adversário..."
+          className="w-full h-11 pl-10 pr-16 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+        />
+        {buscaAdversario && (
+          <button
+            type="button"
+            onClick={() => setBuscaAdversario('')}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+          >
+            Limpar
+          </button>
+        )}
+      </div>
+
       {/* SEÇÃO 1: PRÓXIMOS JOGOS (EM CIMA) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -1308,80 +1181,99 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
         {proximosJogos.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-xs">
-            Nenhum próximo jogo agendado. Clique em <strong>"+ Novo Jogo"</strong> para adicionar.
+            {buscaAdversario
+              ? `Nenhum próximo jogo encontrado para "${buscaAdversario}".`
+              : 'Nenhum próximo jogo agendado. Clique em "+ Novo Jogo" para adicionar.'}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            {proximosJogos.map((jogo) => (
-              <div
-                key={jogo.id}
-                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs hover:border-blue-500/40 transition-all flex flex-col justify-between gap-3 group"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                      {jogo.categoria}
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                      {jogo.tipo}
-                    </span>
-                  </div>
+            {proximosJogos.map((jogo) => {
+              const dataAmigavel = formatarDataAmigavelJogo(jogo.dataJogo, jogo.hora);
 
-                  <h4 className="text-base font-extrabold text-slate-900 dark:text-white">
-                    {jogo.adversario}
-                  </h4>
-
-                  {/* Resumo da Escalação */}
-                  <div className="mt-1.5">{renderResumoEscalacaoCard(jogo)}</div>
-
-                  <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 mt-2">
-                    <div className="flex items-center gap-1.5 font-mono font-semibold">
-                      <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                      <span>{formatarDataExibicao(jogo.dataJogo)}</span>
-                      {jogo.hora && <span>às {jogo.hora}</span>}
+              return (
+                <div
+                  key={jogo.id}
+                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs hover:border-blue-500/40 transition-all flex flex-col justify-between gap-3 group"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                        {jogo.categoria}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                        {jogo.tipo}
+                      </span>
                     </div>
-                    {jogo.local && (
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{jogo.local}</span>
+
+                    <h4 className="text-base font-extrabold text-slate-900 dark:text-white">
+                      {jogo.adversario}
+                    </h4>
+
+                    {/* Selo de status de escalação */}
+                    <div className="mt-2">{renderStatusEscalacao(jogo)}</div>
+
+                    <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 mt-2.5">
+                      <div className="flex items-center gap-1.5 font-mono font-semibold">
+                        <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>{dataAmigavel}</span>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Botões do Jogo: EDITAR e EXCLUIR + AVALIAR */}
-                <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => onEditarJogo(jogo)}
-                      className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1 transition"
-                      title="Editar data, hora, adversário e local"
-                    >
-                      <Edit className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Editar</span>
-                    </button>
-                    <button
-                      onClick={() => onExcluirJogo(jogo.id, `${jogo.adversario} (${jogo.categoria})`)}
-                      className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-1 transition"
-                      title="Excluir este jogo"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                      <span>Excluir</span>
-                    </button>
+                      {jogo.local && (
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>{jogo.local}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <button
-                    onClick={() => handleAbrirAvaliacaoJogo(jogo)}
-                    style={{ backgroundColor: '#2563eb' }}
-                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs"
-                    title="Avaliar os jogadores desta partida"
-                  >
-                    <span>Avaliar</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  {/* 3 BOTÕES DO CARD: [ Editar ] [ Escalação ] [ Avaliar > ] */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onEditarJogo(jogo)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1 transition"
+                        title="Editar data, hora, adversário e local"
+                      >
+                        <Edit className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Editar</span>
+                      </button>
+
+                      {onNavegarEscalacao && (
+                        <button
+                          type="button"
+                          onClick={() => onNavegarEscalacao(jogo.id)}
+                          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/60 dark:border-blue-800 flex items-center gap-1 transition"
+                          title="Montar escalação do jogo"
+                        >
+                          <Users className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Escalação</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => onExcluirJogo(jogo.id, `${jogo.adversario} (${jogo.categoria})`)}
+                        className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                        title="Excluir este jogo"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleAbrirAvaliacaoJogo(jogo)}
+                      style={{ backgroundColor: '#2563eb' }}
+                      className="px-4 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1 shadow-xs"
+                      title="Avaliar os jogadores desta partida"
+                    >
+                      <span>Avaliar &gt;</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -1395,16 +1287,24 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               Jogos que Já Aconteceram ({jogosRealizados.length})
             </h3>
           </div>
-          <span className="text-[11px] text-slate-500">Clique para ver / avaliar</span>
+          <span className="text-[11px] text-slate-500">Clique para ver avaliações</span>
         </div>
 
         {jogosRealizados.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-xs">
-            Nenhum jogo realizado ainda. Os jogos disputados aparecerão aqui com as avaliações dos atletas.
+            {buscaAdversario
+              ? `Nenhum jogo finalizado encontrado para "${buscaAdversario}".`
+              : 'Nenhum jogo realizado ainda. Os jogos disputados aparecerão aqui com as avaliações dos atletas.'}
           </div>
         ) : (
           <div className="space-y-3">
             {jogosRealizados.map((jogo) => {
+              const nomeAdv = jogo.adversario.replace(/^vs\s*/i, '').trim();
+              const placarExibicao = jogo.placar
+                ? `Master ${jogo.placar} ${nomeAdv}`
+                : `Master Soccer vs ${nomeAdv}`;
+              const dataAmigavel = formatarDataAmigavelJogo(jogo.dataJogo, jogo.hora);
+
               const totalAvsDoJogo = avaliacoes.filter(
                 (av) =>
                   av.jogoAgendaId === jogo.id ||
@@ -1415,69 +1315,53 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               return (
                 <div
                   key={jogo.id}
-                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs hover:border-blue-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  className="bg-slate-100/90 dark:bg-slate-850 rounded-2xl border border-slate-300 dark:border-slate-700 p-4 sm:p-5 shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
-                  <div
-                    onClick={() => handleAbrirAvaliacaoJogo(jogo)}
-                    className="cursor-pointer flex-1"
-                  >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                         {jogo.categoria}
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-700/70 text-slate-600 dark:text-slate-400">
                         {jogo.tipo}
                       </span>
-                      {jogo.placar && (
-                        <span className="text-xs font-mono font-bold px-2 py-0.2 rounded bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
-                          {jogo.placar}
-                        </span>
-                      )}
                     </div>
 
-                    <h4 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                      <span>{jogo.adversario}</span>
+                    {/* Placar Grande: "Master 2 x 1 Magé" */}
+                    <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                      {placarExibicao}
                     </h4>
 
-                    {/* Resumo da Escalação */}
-                    <div className="mt-1">{renderResumoEscalacaoCard(jogo)}</div>
-
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1 font-medium">
-                      <span className="font-mono">{formatarDataExibicao(jogo.dataJogo)}</span>
-                      <span>·</span>
-                      <span>{jogo.local || 'Campo Master Soccer'}</span>
-                      <span>·</span>
+                    {/* Data • Resultado final */}
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      <span className="font-mono font-semibold">{dataAmigavel}</span>
+                      <span>•</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">Resultado final</span>
+                      {jogo.local && (
+                        <>
+                          <span>•</span>
+                          <span>{jogo.local}</span>
+                        </>
+                      )}
+                      <span>•</span>
                       <span className="text-blue-600 dark:text-blue-400 font-semibold">
                         {totalAvsDoJogo} {totalAvsDoJogo === 1 ? 'atleta avaliado' : 'atletas avaliados'}
                       </span>
                     </div>
+
+                    {/* Selo de status de escalação */}
+                    <div className="pt-1">{renderStatusEscalacao(jogo)}</div>
                   </div>
 
-                  {/* Ações do Jogo: EDITAR e EXCLUIR + Botão de Avaliar */}
-                  <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-none border-slate-100 dark:border-slate-800 shrink-0">
+                  {/* Ação do Jogo Finalizado: APENAS botão [ Ver avaliação ] (sem botão Editar!) */}
+                  <div className="shrink-0 flex items-center justify-end">
                     <button
-                      onClick={() => onEditarJogo(jogo)}
-                      className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1 transition"
-                      title="Editar data, hora, adversário e local"
-                    >
-                      <Edit className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Editar</span>
-                    </button>
-                    <button
-                      onClick={() => onExcluirJogo(jogo.id, `${jogo.adversario} (${jogo.categoria})`)}
-                      className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center gap-1 transition"
-                      title="Excluir este jogo"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                      <span>Excluir</span>
-                    </button>
-                    <button
+                      type="button"
                       onClick={() => handleAbrirAvaliacaoJogo(jogo)}
                       style={{ backgroundColor: '#2563eb' }}
-                      className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs"
-                      title="Ver ou continuar avaliações"
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs"
                     >
-                      <span>Avaliar</span>
+                      <span>Ver avaliação</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>

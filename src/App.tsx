@@ -91,6 +91,7 @@ export default function App() {
 
   const [isJogoModalOpen, setIsJogoModalOpen] = useState(false);
   const [jogoEditando, setJogoEditando] = useState<JogoAgenda | null>(null);
+  const [jogoSelecionadoParaEscalacaoId, setJogoSelecionadoParaEscalacaoId] = useState<string | undefined>();
 
   const [isCategoriasModalOpen, setIsCategoriasModalOpen] = useState(false);
   const [isInstalarModalOpen, setIsInstalarModalOpen] = useState(false);
@@ -686,7 +687,8 @@ export default function App() {
             onExcluirJogo={handleExcluirJogo}
             onSalvarAvaliacao={handleSalvarAvaliacao}
             onSelecionarAtleta={handleAbrirRelatorioAtleta}
-            onNavegarEscalacao={() => {
+            onNavegarEscalacao={(jogoId) => {
+              setJogoSelecionadoParaEscalacaoId(jogoId);
               setAbaAtiva('escalacao');
             }}
           />
@@ -705,6 +707,8 @@ export default function App() {
             onExcluirAtleta={handleExcluirAtleta}
             jogos={jogos}
             onSalvarJogo={handleSalvarJogo}
+            jogoSelecionadoId={jogoSelecionadoParaEscalacaoId}
+            onSelecionarJogoId={setJogoSelecionadoParaEscalacaoId}
           />
         )}
 
