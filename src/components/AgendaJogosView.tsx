@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Calendar,
   Clock,
@@ -66,9 +66,117 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   onNavegarEscalacao,
 }) => {
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('TODAS');
+  const [competicaoFiltro, setCompeticaoFiltro] = useState<string>('TODAS');
   const [buscaAdversario, setBuscaAdversario] = useState<string>('');
   const [jogoSelecionadoParaAvaliar, setJogoSelecionadoParaAvaliar] = useState<JogoAgenda | null>(null);
   const [modoLeitura, setModoLeitura] = useState<boolean>(false);
+
+  // Categorias disponíveis para o Filtro 1 (TODAS + categorias dinâmicas dos jogos e atletas)
+  const categoriasFiltroLista = useMemo<string[]>(() => {
+    const catsSet = new Set<string>();
+    jogos.forEach((j) => {
+      if (j.categoria) catsSet.add(j.categoria);
+    });
+    categorias.forEach((c) => {
+      if (c) catsSet.add(c);
+    });
+    return Array.from(catsSet).sort();
+  }, [jogos, categorias]);
+
+  // Jogos da categoria selecionada (para contagem e extração de competições)
+  const jogosDaCategoria = useMemo(() => {
+    return categoriaFiltro === 'TODAS'
+      ? jogos
+      : jogos.filter((j) => j.categoria === categoriaFiltro);
+  }, [jogos, categoriaFiltro]);
+
+  const totalJogosNaCategoria = jogosDaCategoria.length;
+
+  // Competições disponíveis para o Filtro 2 (considerando a categoria selecionada, ordenadas por mais jogos)
+  const competicoesDisponiveis = useMemo<Array<{ nome: string; count: number }>>(() => {
+    const contagem: Record<string, number> = {};
+    jogosDaCategoria.forEach((j) => {
+      const nomeComp = j.tipo?.trim() || 'Amistoso';
+      contagem[nomeComp] = (contagem[nomeComp] || 0) + 1;
+    });
+
+    return Object.entries(contagem)
+      .filter(([_, count]) => count > 0)
+      .sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0].localeCompare(b[0]);
+      })
+      .map(([nome, count]) => ({ nome, count }));
+  }, [jogosDaCategoria]);
+
+  // Se a competição selecionada não existir mais após troca de categoria, volta para 'TODAS'
+  useEffect(() => {
+    if (competicaoFiltro !== 'TODAS') {
+      const existe = competicoesDisponiveis.some((c) => c.nome === competicaoFiltro);
+      if (!existe) {
+        setCompeticaoFiltro('TODAS');
+      }
+    }
+  }, [competicoesDisponiveis, competicaoFiltro]);
+
+  // Filtra jogos por categoria, competição e busca por adversário
+  const jogosFiltrados = useMemo(() => {
+    return jogosDaCategoria.filter((j) => {
+      const compNome = j.tipo?.trim() || 'Amistoso';
+      const matchComp = competicaoFiltro === 'TODAS' || compNome === competicaoFiltro;
+      const matchBusca =
+        !buscaAdversario.trim() ||
+        j.adversario.toLowerCase().includes(buscaAdversario.trim().toLowerCase());
+      return matchComp && matchBusca;
+    });
+  }, [jogosDaCategoria, competicaoFiltro, buscaAdversario]);
+
+  // Agrupamento por competição (usado quando Filtro 2 = 'TODAS')
+  const gruposPorCompeticao = useMemo<
+    Array<{
+      competicao: string;
+      total: number;
+      pendentes: number;
+      jogos: JogoAgenda[];
+    }>
+  >(() => {
+    const mapa: Record<string, JogoAgenda[]> = {};
+
+    jogosFiltrados.forEach((j) => {
+      const comp = j.tipo?.trim() || 'Amistoso';
+      if (!mapa[comp]) mapa[comp] = [];
+      mapa[comp].push(j);
+    });
+
+    return Object.entries(mapa)
+      .sort((a, b) => {
+        if (b[1].length !== a[1].length) return b[1].length - a[1].length;
+        return a[0].localeCompare(b[0]);
+      })
+      .map(([competicao, listaJogos]) => {
+        const jogosOrdenados = listaJogos.slice().sort((a, b) => {
+          if (a.realizado !== b.realizado) return a.realizado ? 1 : -1;
+          if (!a.realizado) {
+            return dataParaValorOrdenacao(a.dataJogo) - dataParaValorOrdenacao(b.dataJogo);
+          }
+          return dataParaValorOrdenacao(b.dataJogo) - dataParaValorOrdenacao(a.dataJogo);
+        });
+
+        const pendentes = listaJogos.filter((j) => {
+          if (j.realizado) return false;
+          const escalacao = j.escalacao || {};
+          const titulares = Object.values(escalacao).filter((e) => e.titular).length;
+          return titulares < 11;
+        }).length;
+
+        return {
+          competicao,
+          total: listaJogos.length,
+          pendentes,
+          jogos: jogosOrdenados,
+        };
+      });
+  }, [jogosFiltrados]);
 
   // Estados para o formulário de avaliação do jogador selecionado
   const [atletaIndexAtivo, setAtletaIndexAtivo] = useState<number>(0);
@@ -101,24 +209,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
   const [feedbackSalvo, setFeedbackSalvo] = useState<string | null>(null);
   const [modalApagarAvaliacaoEtapa, setModalApagarAvaliacaoEtapa] = useState<0 | 1 | 2>(0);
-
-  // Filtra jogos por categoria e busca por adversário
-  const jogosFiltrados = jogos.filter((j) => {
-    const matchCat = categoriaFiltro === 'TODAS' || j.categoria === categoriaFiltro;
-    const matchBusca =
-      !buscaAdversario.trim() ||
-      j.adversario.toLowerCase().includes(buscaAdversario.toLowerCase());
-    return matchCat && matchBusca;
-  });
-
-  // Divide em Próximos e Realizados ordenados por data
-  const proximosJogos = jogosFiltrados
-    .filter((j) => !j.realizado)
-    .sort((a, b) => dataParaValorOrdenacao(a.dataJogo) - dataParaValorOrdenacao(b.dataJogo));
-
-  const jogosRealizados = jogosFiltrados
-    .filter((j) => j.realizado)
-    .sort((a, b) => dataParaValorOrdenacao(b.dataJogo) - dataParaValorOrdenacao(a.dataJogo));
 
   // =========================================================
   // LIGAÇÃO COM A ESCALAÇÃO:
@@ -1401,15 +1491,189 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   }
 
   // ==========================================
+  // RENDERIZAÇÃO DO CARD DE JOGO (PADRÃO UNIFICADO)
+  // ==========================================
+  const renderCardJogo = (jogo: JogoAgenda) => {
+    // 1. Jogo Finalizado (Card cinza com placar grande + botão vermelho [Excluir] e [Ver avaliação >])
+    if (jogo.realizado) {
+      const nomeAdv = jogo.adversario.replace(/^vs\s*/i, '').trim();
+      const placarExibicao = jogo.placar
+        ? `Master ${jogo.placar} ${nomeAdv}`
+        : `Master Soccer vs ${nomeAdv}`;
+      const dataAmigavel = formatarDataAmigavelJogo(jogo.dataJogo, jogo.hora);
+
+      const totalAvsDoJogo = avaliacoes.filter(
+        (av) =>
+          av.jogoAgendaId === jogo.id ||
+          (av.adversario.toLowerCase().includes(jogo.adversario.toLowerCase()) &&
+            av.categoria === jogo.categoria)
+      ).length;
+
+      return (
+        <div
+          key={jogo.id}
+          className="bg-slate-100/90 dark:bg-slate-850 rounded-2xl border border-slate-300 dark:border-slate-700 p-4 sm:p-5 shadow-xs transition-all flex flex-col justify-between gap-3 group"
+        >
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                {jogo.categoria}
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                {jogo.tipo}
+              </span>
+            </div>
+
+            <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+              {placarExibicao}
+            </h4>
+
+            <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400 font-medium">
+              <div className="flex items-center gap-1.5 font-mono font-semibold">
+                <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>{dataAmigavel}</span>
+                <span>•</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Resultado final</span>
+              </div>
+              {jogo.local && (
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span>{jogo.local}</span>
+                </div>
+              )}
+              <div className="text-blue-600 dark:text-blue-400 font-semibold text-[11px] pt-0.5">
+                {totalAvsDoJogo} {totalAvsDoJogo === 1 ? 'atleta avaliado' : 'atletas avaliados'}
+              </div>
+            </div>
+
+            <div className="pt-1">{renderStatusEscalacao(jogo)}</div>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => onExcluirJogo(jogo.id, placarExibicao)}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 flex items-center gap-1.5 transition active:scale-98 cursor-pointer"
+              title="Excluir este jogo, escalação e avaliações"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Excluir</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleAbrirAvaliacaoJogo(jogo, true)}
+              style={{ backgroundColor: '#2563eb' }}
+              className="px-4 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+            >
+              <span>Ver avaliação &gt;</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 2. Jogo Não Realizado (Linha 1 a Linha 6 completas)
+    const dataAmigavel = formatarDataAmigavelJogo(jogo.dataJogo, jogo.hora);
+
+    return (
+      <div
+        key={jogo.id}
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs hover:border-blue-500/40 transition-all flex flex-col justify-between gap-3 group"
+      >
+        <div>
+          {/* Linha 1: selo azul SUB-15 à esquerda, selo laranja Copa Rio de Janeiro à direita */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              {jogo.categoria}
+            </span>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+              {jogo.tipo}
+            </span>
+          </div>
+
+          {/* Linha 2: vs Magé em negrito */}
+          <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+            {jogo.adversario}
+          </h4>
+
+          {/* Linha 3 & 4: selo Escalação pendente em laranja, ou Escalação pronta em verde + 0 titulares • 0 reservas */}
+          <div className="mt-2.5 space-y-1">{renderStatusEscalacao(jogo)}</div>
+
+          {/* Linha 5: data 06/11/2026 às 14:30 + local Campo do Batatal - Magé */}
+          <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 mt-2.5">
+            <div className="flex items-center gap-1.5 font-mono font-semibold">
+              <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span>{dataAmigavel}</span>
+            </div>
+            {jogo.local && (
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>{jogo.local}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Linha 6: 3 botões [Editar] [Escalação] [Avaliar >] (+ Excluir) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onEditarJogo(jogo)}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1 transition cursor-pointer"
+              title="Editar data, hora, adversário e local"
+            >
+              <Edit className="w-3.5 h-3.5 text-slate-500" />
+              <span>Editar</span>
+            </button>
+
+            {onNavegarEscalacao && (
+              <button
+                type="button"
+                onClick={() => onNavegarEscalacao(jogo.id)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/60 dark:border-blue-800 flex items-center gap-1 transition cursor-pointer"
+                title="Montar escalação do jogo"
+              >
+                <Users className="w-3.5 h-3.5 text-blue-600" />
+                <span>Escalação</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onExcluirJogo(jogo.id, `${jogo.adversario} (${jogo.categoria})`)}
+              className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+              title="Excluir este jogo"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleAbrirAvaliacaoJogo(jogo, false)}
+            style={{ backgroundColor: '#2563eb' }}
+            className="px-4 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1 shadow-xs cursor-pointer"
+            title="Avaliar os jogadores desta partida"
+          >
+            <span>Avaliar &gt;</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================
   // RENDERIZAÇÃO 2: LISTA DE JOGOS DA AGENDA
   // ==========================================
   return (
     <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
-      {/* Topo com Título, Categorias e Botão + NOVO JOGO */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
+      {/* 1) TOPO DA PÁGINA: Título Agenda de Jogos, subtítulo e botão azul [+ Novo Jogo] em largura total */}
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
+            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
               Agenda de Jogos
             </h2>
             <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
@@ -1421,40 +1685,42 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           </p>
         </div>
 
-        {/* Botão + NOVO JOGO */}
+        {/* Botão azul [+ Novo Jogo] em largura total */}
         <button
           onClick={onNovoJogo}
           style={{ backgroundColor: '#2563eb' }}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all whitespace-nowrap shrink-0 border border-blue-500/40"
+          className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 text-sm font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer border border-blue-500/40"
         >
           <Plus className="w-4 h-4 text-amber-300" />
           <span>+ Novo Jogo</span>
         </button>
       </div>
 
-      {/* Filtros de Categoria */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+      {/* 2) FILTRO 1 - POR CATEGORIA - EM BOTÕES QUE QUEBRAM DE LINHA (GRID 2 COLUNAS) */}
+      <div className="grid grid-cols-2 gap-2.5">
         <button
+          type="button"
           onClick={() => setCategoriaFiltro('TODAS')}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+          className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs ${
             categoriaFiltro === 'TODAS'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+              ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
+              : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
           }`}
         >
           Todos os Jogos ({jogos.length})
         </button>
-        {categorias.map((cat) => {
+        {categoriasFiltroLista.map((cat) => {
           const count = jogos.filter((j) => j.categoria === cat).length;
           const ativo = categoriaFiltro === cat;
           return (
             <button
               key={cat}
+              type="button"
               onClick={() => setCategoriaFiltro(cat)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs ${
                 ativo
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
+                  : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
               {cat} ({count})
@@ -1463,7 +1729,47 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         })}
       </div>
 
-      {/* 3. CAMPO DE BUSCA DE ADVERSÁRIO */}
+      {/* 3) FILTRO 2 - POR COMPETIÇÃO - EM BOTÕES QUE QUEBRAM DE LINHA (GRID 2 COLUNAS) */}
+      <div className="space-y-1.5">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-0.5">
+          Competição
+        </span>
+        <div className="grid grid-cols-2 gap-2.5">
+          {/* Botão [Todas] */}
+          <button
+            type="button"
+            onClick={() => setCompeticaoFiltro('TODAS')}
+            className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[46px] ${
+              competicaoFiltro === 'TODAS'
+                ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
+                : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            Todas ({totalJogosNaCategoria})
+          </button>
+
+          {/* Botões de cada competição ordenada por quantidade, da maior para a menor */}
+          {competicoesDisponiveis.map((comp) => {
+            const ativo = competicaoFiltro === comp.nome;
+            return (
+              <button
+                key={comp.nome}
+                type="button"
+                onClick={() => setCompeticaoFiltro(comp.nome)}
+                className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[46px] ${
+                  ativo
+                    ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
+                    : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <span>{comp.nome} ({comp.count})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 4) CAMPO DE BUSCA DE ADVERSÁRIO EM LARGURA TOTAL */}
       <div className="relative">
         <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
@@ -1471,232 +1777,86 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           value={buscaAdversario}
           onChange={(e) => setBuscaAdversario(e.target.value)}
           placeholder="Buscar adversário..."
-          className="w-full h-11 pl-10 pr-16 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+          className="w-full h-11 pl-10 pr-16 text-xs sm:text-sm font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
         />
         {buscaAdversario && (
           <button
             type="button"
             onClick={() => setBuscaAdversario('')}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
           >
             Limpar
           </button>
         )}
       </div>
 
-      {/* SEÇÃO 1: PRÓXIMOS JOGOS (EM CIMA) */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-blue-600" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-              Próximos Jogos ({proximosJogos.length})
-            </h3>
-          </div>
-          <span className="text-[11px] text-slate-500">Ordenados por data</span>
-        </div>
-
-        {proximosJogos.length === 0 ? (
+      {/* 5) LISTA DE JOGOS: AGRUPADA POR COMPETIÇÃO (QUANDO TODAS) OU DIRETA (QUANDO COMPETIÇÃO ESPECÍFICA) */}
+      {competicaoFiltro === 'TODAS' ? (
+        gruposPorCompeticao.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-xs">
             {buscaAdversario
-              ? `Nenhum próximo jogo encontrado para "${buscaAdversario}".`
-              : 'Nenhum próximo jogo agendado. Clique em "+ Novo Jogo" para adicionar.'}
+              ? `Nenhum jogo encontrado para "${buscaAdversario}".`
+              : 'Nenhum jogo cadastrado neste filtro. Clique em "+ Novo Jogo" para adicionar.'}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {gruposPorCompeticao.map((grupo) => (
+              <div key={grupo.competicao} className="space-y-3">
+                {/* Título de seção: COPA RIO DE JANEIRO (3) • 2 com escalação pendente */}
+                <div className="flex flex-wrap items-center gap-2 pb-1 border-b border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center gap-1.5">
+                    <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
+                    <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                      {grupo.competicao} ({grupo.total})
+                    </h3>
+                  </div>
+                  <div className="text-xs font-bold">
+                    {grupo.pendentes === 0 ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                        • Tudo pronto
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400 font-extrabold">
+                        • {grupo.pendentes}{' '}
+                        {grupo.pendentes === 1
+                          ? 'com escalação pendente'
+                          : 'com escalação pendente'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Cards daquela competição ordenados por data (mais próximo primeiro) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {grupo.jogos.map((jogo) => renderCardJogo(jogo))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : (
+        /* Visualização quando uma competição específica está selecionada (sem repetir título de seção) */
+        jogosFiltrados.length === 0 ? (
+          <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-xs">
+            {buscaAdversario
+              ? `Nenhum jogo encontrado para "${buscaAdversario}" em ${competicaoFiltro}.`
+              : `Nenhum jogo cadastrado na competição ${competicaoFiltro}.`}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            {proximosJogos.map((jogo) => {
-              const dataAmigavel = formatarDataAmigavelJogo(jogo.dataJogo, jogo.hora);
-
-              return (
-                <div
-                  key={jogo.id}
-                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs hover:border-blue-500/40 transition-all flex flex-col justify-between gap-3 group"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                        {jogo.categoria}
-                      </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                        {jogo.tipo}
-                      </span>
-                    </div>
-
-                    <h4 className="text-base font-extrabold text-slate-900 dark:text-white">
-                      {jogo.adversario}
-                    </h4>
-
-                    {/* Selo de status de escalação */}
-                    <div className="mt-2">{renderStatusEscalacao(jogo)}</div>
-
-                    <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 mt-2.5">
-                      <div className="flex items-center gap-1.5 font-mono font-semibold">
-                        <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                        <span>{dataAmigavel}</span>
-                      </div>
-                      {jogo.local && (
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>{jogo.local}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 3 BOTÕES DO CARD: [ Editar ] [ Escalação ] [ Avaliar > ] */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onEditarJogo(jogo)}
-                        className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1 transition"
-                        title="Editar data, hora, adversário e local"
-                      >
-                        <Edit className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Editar</span>
-                      </button>
-
-                      {onNavegarEscalacao && (
-                        <button
-                          type="button"
-                          onClick={() => onNavegarEscalacao(jogo.id)}
-                          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/60 dark:border-blue-800 flex items-center gap-1 transition"
-                          title="Montar escalação do jogo"
-                        >
-                          <Users className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Escalação</span>
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => onExcluirJogo(jogo.id, `${jogo.adversario} (${jogo.categoria})`)}
-                        className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                        title="Excluir este jogo"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleAbrirAvaliacaoJogo(jogo, false)}
-                      style={{ backgroundColor: '#2563eb' }}
-                      className="px-4 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1 shadow-xs"
-                      title="Avaliar os jogadores desta partida"
-                    >
-                      <span>Avaliar &gt;</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {jogosFiltrados
+              .slice()
+              .sort((a, b) => {
+                if (a.realizado !== b.realizado) return a.realizado ? 1 : -1;
+                if (!a.realizado) {
+                  return dataParaValorOrdenacao(a.dataJogo) - dataParaValorOrdenacao(b.dataJogo);
+                }
+                return dataParaValorOrdenacao(b.dataJogo) - dataParaValorOrdenacao(a.dataJogo);
+              })
+              .map((jogo) => renderCardJogo(jogo))}
           </div>
-        )}
-      </div>
-
-      {/* SEÇÃO 2: JOGOS QUE JÁ ACONTECERAM (EMBAIXO) */}
-      <div className="space-y-3 pt-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-500" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-              Jogos que Já Aconteceram ({jogosRealizados.length})
-            </h3>
-          </div>
-          <span className="text-[11px] text-slate-500">Clique para ver avaliações</span>
-        </div>
-
-        {jogosRealizados.length === 0 ? (
-          <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-xs">
-            {buscaAdversario
-              ? `Nenhum jogo finalizado encontrado para "${buscaAdversario}".`
-              : 'Nenhum jogo realizado ainda. Os jogos disputados aparecerão aqui com as avaliações dos atletas.'}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {jogosRealizados.map((jogo) => {
-              const nomeAdv = jogo.adversario.replace(/^vs\s*/i, '').trim();
-              const placarExibicao = jogo.placar
-                ? `Master ${jogo.placar} ${nomeAdv}`
-                : `Master Soccer vs ${nomeAdv}`;
-              const dataAmigavel = formatarDataAmigavelJogo(jogo.dataJogo, jogo.hora);
-
-              const totalAvsDoJogo = avaliacoes.filter(
-                (av) =>
-                  av.jogoAgendaId === jogo.id ||
-                  (av.adversario.toLowerCase().includes(jogo.adversario.toLowerCase()) &&
-                    av.categoria === jogo.categoria)
-              ).length;
-
-              return (
-                <div
-                  key={jogo.id}
-                  className="bg-slate-100/90 dark:bg-slate-850 rounded-2xl border border-slate-300 dark:border-slate-700 p-4 sm:p-5 shadow-xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                >
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                        {jogo.categoria}
-                      </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-700/70 text-slate-600 dark:text-slate-400">
-                        {jogo.tipo}
-                      </span>
-                    </div>
-
-                    {/* Placar Grande: "Master 2 x 1 Magé" */}
-                    <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                      {placarExibicao}
-                    </h4>
-
-                    {/* Data • Resultado final */}
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      <span className="font-mono font-semibold">{dataAmigavel}</span>
-                      <span>•</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">Resultado final</span>
-                      {jogo.local && (
-                        <>
-                          <span>•</span>
-                          <span>{jogo.local}</span>
-                        </>
-                      )}
-                      <span>•</span>
-                      <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                        {totalAvsDoJogo} {totalAvsDoJogo === 1 ? 'atleta avaliado' : 'atletas avaliados'}
-                      </span>
-                    </div>
-
-                    {/* Selo de status de escalação */}
-                    <div className="pt-1">{renderStatusEscalacao(jogo)}</div>
-                  </div>
-
-                  {/* Ação do Jogo Finalizado: Botão vermelho [ Excluir ] ao lado de [ Ver avaliação > ] */}
-                  <div className="shrink-0 flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onExcluirJogo(jogo.id, placarExibicao)}
-                      className="px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 flex items-center gap-1.5 transition active:scale-98"
-                      title="Excluir este jogo, escalação e avaliações"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Excluir</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleAbrirAvaliacaoJogo(jogo, true)}
-                      style={{ backgroundColor: '#2563eb' }}
-                      className="px-4 py-2 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs"
-                    >
-                      <span>Ver avaliação &gt;</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+        )
+      )}
     </div>
   );
 };

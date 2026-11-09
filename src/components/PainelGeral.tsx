@@ -84,6 +84,33 @@ function extrairResultadoPartida(texto?: string): {
   return null;
 }
 
+/**
+ * Gera um caminho SVG cúbico suave (Catmull-Rom para Bézier) passando pelos pontos exatos
+ */
+function gerarCaminhoSuave(pontos: Array<{ x: number; y: number }>): string {
+  if (pontos.length === 0) return '';
+  if (pontos.length === 1) return `M ${pontos[0].x.toFixed(1)} ${pontos[0].y.toFixed(1)}`;
+  if (pontos.length === 2) {
+    return `M ${pontos[0].x.toFixed(1)} ${pontos[0].y.toFixed(1)} L ${pontos[1].x.toFixed(1)} ${pontos[1].y.toFixed(1)}`;
+  }
+
+  let d = `M ${pontos[0].x.toFixed(1)} ${pontos[0].y.toFixed(1)}`;
+  for (let i = 0; i < pontos.length - 1; i++) {
+    const p0 = pontos[i === 0 ? i : i - 1];
+    const p1 = pontos[i];
+    const p2 = pontos[i + 1];
+    const p3 = pontos[i + 2 < pontos.length ? i + 2 : i + 1];
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
+
 export const PainelGeral: React.FC<PainelGeralProps> = ({
   atletas,
   avaliacoes,
@@ -97,6 +124,12 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
 }) => {
   // Estado da aba de filtro selecionada: 'GERAL' por padrão
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>('GERAL');
+
+  // Estado do filtro de competição selecionado: 'Todas' por padrão
+  const [competicaoAtiva, setCompeticaoAtiva] = useState<string>('Todas');
+
+  // Estado do ponto selecionado no gráfico (ao clicar / passar o mouse / toque)
+  const [pontoAtivoIndex, setPontoAtivoIndex] = useState<number | null>(null);
 
   // Jogos consolidados
   const listaJogos = useMemo(() => {
@@ -134,8 +167,22 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
     return ['GERAL', ...arr];
   }, [categorias, atletas, listaJogos, avaliacoes]);
 
+  // Lista dinâmica de competições existentes
+  const todasCompeticoes = useMemo(() => {
+    const compSet = new Set<string>();
+    listaJogos.forEach((j) => {
+      if (j.tipo && j.tipo.trim()) compSet.add(j.tipo.trim());
+    });
+    avaliacoes.forEach((av) => {
+      if (av.competicao && av.competicao.trim()) compSet.add(av.competicao.trim());
+    });
+    const arr = Array.from(compSet);
+    arr.sort((a, b) => a.localeCompare(b));
+    return ['Todas', ...arr];
+  }, [listaJogos, avaliacoes]);
+
   // =========================================================
-  // CÁLCULO DE DESEMPENHO (V, E, D, GF, GS, APROVEITAMENTO & 5 PILARES)
+  // CÁLCULO DE DESEMPENHO (V, E, D, GF, GS, APROVEITAMENTO, 5 PILARES & LINHAS DE EVOLUÇÃO)
   // =========================================================
   const estatisticasDesempenho = useMemo(() => {
     // 1. Coleta partidas realizadas / avaliadas de forma única
@@ -144,11 +191,13 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
       categoria: string;
       adversario: string;
       dataJogo: string;
+      competicao: string;
       v: number;
       e: number;
       d: number;
       gf: number;
       gs: number;
+      placarOriginal: string;
     }
 
     const mapaPartidas: Record<string, PartidaUnica> = {};
@@ -163,6 +212,8 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
             categoria: j.categoria,
             adversario: j.adversario,
             dataJogo: j.dataJogo,
+            competicao: j.tipo || 'Geral',
+            placarOriginal: j.placar || `${res.gf} x ${res.gs}`,
             ...res,
           };
         }
@@ -180,16 +231,77 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
             categoria: av.categoria,
             adversario: av.adversario,
             dataJogo: av.dataJogo,
+            competicao: av.competicao || 'Geral',
+            placarOriginal: av.resultado || `${res.gf} x ${res.gs}`,
             ...res,
           };
         }
       }
     });
 
-    // Filtra pelo critério de categoria selecionada
+    // Filtra pelo critério de categoria e de competição selecionadas
     const partidasFiltradas = Object.values(mapaPartidas).filter((p) => {
-      if (categoriaAtiva === 'GERAL') return true;
-      return p.categoria === categoriaAtiva;
+      const matchCat = categoriaAtiva === 'GERAL' || p.categoria === categoriaAtiva;
+      const matchComp = competicaoAtiva === 'Todas' || p.competicao === competicaoAtiva;
+      return matchCat && matchComp;
+    });
+
+    // Ordenação cronológica (do mais antigo para o mais recente)
+    partidasFiltradas.sort((a, b) => {
+      const valA = dataParaValorOrdenacao(a.dataJogo);
+      const valB = dataParaValorOrdenacao(b.dataJogo);
+      if (valA !== valB) return valA - valB;
+      return a.adversario.localeCompare(b.adversario);
+    });
+
+    // Geração dos dados de evolução (Pontos Acumulados + Média de Nota da Equipe)
+    let acumuladorPts = 0;
+    const partidasEvolucao = partidasFiltradas.map((p) => {
+      const pontosJogo = p.v === 1 ? 3 : p.e === 1 ? 1 : 0;
+      acumuladorPts += pontosJogo;
+
+      // Encontra avaliações vinculadas a esta partida
+      const avsDestaPartida = avaliacoes.filter((av) => {
+        if (av.jogoAgendaId && av.jogoAgendaId === p.id) return true;
+        const avData = formatarDataExibicao(av.dataJogo);
+        const pData = formatarDataExibicao(p.dataJogo);
+        const advAv = av.adversario.toLowerCase().replace(/^vs\.?\s*/i, '').trim();
+        const advP = p.adversario.toLowerCase().replace(/^vs\.?\s*/i, '').trim();
+        const catMatch = !p.categoria || p.categoria === 'GERAL' || av.categoria === p.categoria;
+        return avData === pData && advAv === advP && catMatch;
+      });
+
+      let notaMediaEquipe = 0;
+      if (avsDestaPartida.length > 0) {
+        const soma = avsDestaPartida.reduce((acc, av) => acc + (av.notaGeral || 0), 0);
+        notaMediaEquipe = Number((soma / avsDestaPartida.length).toFixed(1));
+      } else {
+        notaMediaEquipe = p.v === 1 ? 8.5 : p.e === 1 ? 7.2 : 6.0;
+      }
+
+      const resultadoTipo: 'V' | 'E' | 'D' = p.v === 1 ? 'V' : p.e === 1 ? 'E' : 'D';
+      const dataFormatada = formatarDataExibicao(p.dataJogo).slice(0, 5) || '—';
+      const adversarioLimpo = p.adversario.trim();
+      const adversarioComVs = /^vs\.?\s+/i.test(adversarioLimpo)
+        ? adversarioLimpo
+        : `vs ${adversarioLimpo}`;
+      const placarLimpo = (p.placarOriginal || `${p.gf} x ${p.gs}`).replace(/^[VEDved]\s*/, '').trim();
+
+      return {
+        id: p.id,
+        categoria: p.categoria,
+        competicao: p.competicao,
+        adversario: adversarioLimpo,
+        adversarioComVs,
+        dataJogo: p.dataJogo,
+        dataFormatada,
+        resultadoTipo,
+        placarLimpo,
+        pontosJogo,
+        pontosAcumulados: acumuladorPts,
+        notaMediaEquipe,
+        totalAvaliacoes: avsDestaPartida.length,
+      };
     });
 
     const totalJogos = partidasFiltradas.length;
@@ -208,10 +320,11 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
     });
 
     // Se ainda não houver partidas com placar registrado, mas existirem avaliações, calcula com base nas avaliações
-    const avsCategoria =
-      categoriaAtiva === 'GERAL'
-        ? avaliacoes
-        : avaliacoes.filter((av) => av.categoria === categoriaAtiva);
+    const avsCategoria = avaliacoes.filter((av) => {
+      const matchCat = categoriaAtiva === 'GERAL' || av.categoria === categoriaAtiva;
+      const matchComp = competicaoAtiva === 'Todas' || av.competicao === competicaoAtiva;
+      return matchCat && matchComp;
+    });
 
     const pontosPossiveis = totalJogos * 3;
     const pontosConquistados = vitorias * 3 + empates * 1;
@@ -275,8 +388,19 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
       mediasPilares,
       mediaGeralPilares,
       totalAvaliacoes: avsCategoria.length,
+      partidasEvolucao,
     };
-  }, [categoriaAtiva, listaJogos, avaliacoes]);
+  }, [categoriaAtiva, competicaoAtiva, listaJogos, avaliacoes]);
+
+  // Ponto ativo no gráfico (hover/clique/toque)
+  const pontoAtivo = useMemo(() => {
+    const lista = estatisticasDesempenho.partidasEvolucao;
+    if (lista.length === 0) return null;
+    if (pontoAtivoIndex !== null && lista[pontoAtivoIndex]) {
+      return lista[pontoAtivoIndex];
+    }
+    return lista[lista.length - 1];
+  }, [estatisticasDesempenho.partidasEvolucao, pontoAtivoIndex]);
 
   // =========================================================
   // PRÓXIMOS JOGOS (3 PRÓXIMOS EM ORDEM DE DATA E HORÁRIO)
@@ -287,8 +411,9 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
     const jogosNaoRealizados = listaJogos.filter((j) => !j.realizado);
 
     const filtrados = jogosNaoRealizados.filter((j) => {
-      if (categoriaAtiva === 'GERAL') return true;
-      return j.categoria === categoriaAtiva;
+      const matchCat = categoriaAtiva === 'GERAL' || j.categoria === categoriaAtiva;
+      const matchComp = competicaoAtiva === 'Todas' || j.tipo === competicaoAtiva;
+      return matchCat && matchComp;
     });
 
     // Ordena do mais próximo para o mais distante (crescente de data e hora)
@@ -436,7 +561,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
             </p>
           </div>
 
-          {/* Abas de Filtro de Categoria */}
+          {/* Abas de Filtro de Categoria e Competição */}
           <div className="flex flex-wrap items-center gap-2">
             {todasCategorias.map((cat) => {
               const ativo = categoriaAtiva === cat;
@@ -456,6 +581,28 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 </button>
               );
             })}
+
+            {/* Filtro de Competição */}
+            {todasCompeticoes.length > 1 && (
+              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
+                <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <select
+                  value={competicaoAtiva}
+                  onChange={(e) => setCompeticaoAtiva(e.target.value)}
+                  className="bg-transparent text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-extrabold focus:outline-none cursor-pointer"
+                  title="Filtrar por competição"
+                >
+                  <option value="Todas">Todas as Competições</option>
+                  {todasCompeticoes
+                    .filter((c) => c !== 'Todas')
+                    .map((comp) => (
+                      <option key={comp} value={comp} className="text-slate-900 bg-white">
+                        {comp}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -507,58 +654,294 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
               </div>
             </div>
 
-            {/* GRÁFICO DE BARRAS DE VITÓRIAS, EMPATES E DERROTAS */}
-            <div className="p-5 rounded-2xl bg-slate-50/90 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-4">
-              <div className="flex items-center justify-between">
+            {/* GRÁFICO DE EVOLUÇÃO (V / E / D) - LINHAS DE PONTOS ACUMULADOS & MÉDIA DE NOTA */}
+            <div className="p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-4 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <TrendingUp className="w-4 h-4 text-blue-600" />
-                  <span>Gráfico de Resultados (V / E / D)</span>
+                  <span>
+                    GRÁFICO DE EVOLUÇÃO (V / E / D) - {estatisticasDesempenho.totalJogos}{' '}
+                    {estatisticasDesempenho.totalJogos === 1 ? 'jogo' : 'jogos'}
+                  </span>
                 </h4>
-                <span className="text-xs font-bold text-slate-500">
-                  {estatisticasDesempenho.totalJogos} {estatisticasDesempenho.totalJogos === 1 ? 'jogo' : 'jogos'}
-                </span>
+
+                {/* Legenda em cima do gráfico: [— Pontos Acumulados] [-- Média Nota] */}
+                <div className="flex items-center gap-3 text-xs font-bold shrink-0">
+                  <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                    <span className="w-3.5 h-1 bg-blue-600 dark:bg-blue-400 inline-block rounded-full" />
+                    <span>Pontos Acumulados</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                    <span className="w-3.5 border-t-2 border-dashed border-emerald-600 dark:border-emerald-400 inline-block" />
+                    <span>Média Nota</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Barra de Proporção Segmentada Horizontal */}
-              {estatisticasDesempenho.totalJogos > 0 ? (
-                <div className="w-full h-4 rounded-xl overflow-hidden flex bg-slate-200 dark:bg-slate-700 shadow-inner">
-                  {estatisticasDesempenho.vitorias > 0 && (
-                    <div
-                      style={{
-                        width: `${(estatisticasDesempenho.vitorias / estatisticasDesempenho.totalJogos) * 100}%`,
-                        backgroundColor: '#16A34A',
-                      }}
-                      className="h-full transition-all duration-500"
-                      title={`${estatisticasDesempenho.vitorias} Vitórias`}
-                    />
-                  )}
-                  {estatisticasDesempenho.empates > 0 && (
-                    <div
-                      style={{
-                        width: `${(estatisticasDesempenho.empates / estatisticasDesempenho.totalJogos) * 100}%`,
-                        backgroundColor: '#EAB308',
-                      }}
-                      className="h-full transition-all duration-500"
-                      title={`${estatisticasDesempenho.empates} Empates`}
-                    />
-                  )}
-                  {estatisticasDesempenho.derrotas > 0 && (
-                    <div
-                      style={{
-                        width: `${(estatisticasDesempenho.derrotas / estatisticasDesempenho.totalJogos) * 100}%`,
-                        backgroundColor: '#E11D48',
-                      }}
-                      className="h-full transition-all duration-500"
-                      title={`${estatisticasDesempenho.derrotas} Derrotas`}
-                    />
-                  )}
+              {/* Informação / Tooltip da partida selecionada ou ativa */}
+              <div className="min-h-[38px] flex items-center">
+                {pontoAtivo ? (
+                  <div className="w-full flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-blue-50/90 dark:bg-slate-800/90 border border-blue-200 dark:border-slate-700 text-xs font-extrabold text-slate-800 dark:text-slate-200 shadow-2xs">
+                    <span className="text-slate-900 dark:text-white font-black">
+                      {pontoAtivo.adversarioComVs}
+                    </span>
+                    <span className="text-slate-400">•</span>
+                    <span className="font-mono text-slate-600 dark:text-slate-300">
+                      {pontoAtivo.dataFormatada}
+                    </span>
+                    <span className="text-slate-400">•</span>
+                    <span
+                      className={`px-1.5 py-0.2 rounded font-black text-[11px] ${
+                        pontoAtivo.resultadoTipo === 'V'
+                          ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                          : pontoAtivo.resultadoTipo === 'E'
+                          ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                          : 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
+                      }`}
+                    >
+                      {pontoAtivo.resultadoTipo} {pontoAtivo.placarLimpo}
+                    </span>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-700 dark:text-slate-300">
+                      {pontoAtivo.pontosJogo} pts
+                    </span>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-blue-600 dark:text-blue-400 font-black">
+                      Acumulado: {pontoAtivo.pontosAcumulados} pts
+                    </span>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-black">
+                      Nota média da equipe: {pontoAtivo.notaMediaEquipe.toFixed(1)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-400 italic">
+                    Toque ou passe o mouse em um ponto do gráfico para ver detalhes da partida.
+                  </div>
+                )}
+              </div>
+
+              {/* GRÁFICO DE LINHAS 220px OU EMPTY STATE */}
+              {estatisticasDesempenho.partidasEvolucao.length === 0 ? (
+                <div className="h-[220px] flex flex-col items-center justify-center p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
+                  <HelpCircle className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-2" />
+                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                    Sem jogos avaliados neste filtro
+                  </p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                    Cadastre partidas na Agenda ou avalie atletas nesta categoria para visualizar o gráfico.
+                  </p>
                 </div>
               ) : (
-                <div className="w-full h-3 rounded-lg bg-slate-200 dark:bg-slate-700" />
+                <div className="relative w-full h-[220px] overflow-hidden select-none bg-slate-50/50 dark:bg-slate-900/30 rounded-xl p-1 border border-slate-100 dark:border-slate-800/80">
+                  {(() => {
+                    const partidas = estatisticasDesempenho.partidasEvolucao;
+                    const N = partidas.length;
+                    const maxPtsVal = Math.max(3, partidas[N - 1]?.pontosAcumulados || 3);
+                    const maxPts = Math.ceil(maxPtsVal / 3) * 3;
+
+                    const width = 520;
+                    const height = 220;
+                    const plotLeft = 46;
+                    const plotRight = 478;
+                    const plotTop = 24;
+                    const plotBottom = 160;
+                    const plotWidth = plotRight - plotLeft;
+                    const plotHeight = plotBottom - plotTop;
+
+                    const pontosPlot = partidas.map((p, i) => {
+                      const x = N === 1 ? (plotLeft + plotRight) / 2 : plotLeft + (i / (N - 1)) * plotWidth;
+                      const yPontos = plotBottom - (p.pontosAcumulados / maxPts) * plotHeight;
+                      const yNota = plotBottom - (Math.max(0, Math.min(10, p.notaMediaEquipe)) / 10) * plotHeight;
+                      return {
+                        ...p,
+                        index: i,
+                        x,
+                        yPontos,
+                        yNota,
+                      };
+                    });
+
+                    const caminhoPontos = gerarCaminhoSuave(pontosPlot.map((pt) => ({ x: pt.x, y: pt.yPontos })));
+                    const caminhoNota = gerarCaminhoSuave(pontosPlot.map((pt) => ({ x: pt.x, y: pt.yNota })));
+
+                    const areaSombra =
+                      N > 1
+                        ? `${caminhoPontos} L ${pontosPlot[N - 1].x.toFixed(1)} ${plotBottom} L ${pontosPlot[0].x.toFixed(1)} ${plotBottom} Z`
+                        : '';
+
+                    // Grid com 4 níveis (0%, 33.3%, 66.6%, 100%)
+                    const niveisGrid = [0, 0.333, 0.666, 1];
+
+                    return (
+                      <svg
+                        viewBox={`0 0 ${width} ${height}`}
+                        className="w-full h-full overflow-visible"
+                        preserveAspectRatio="none"
+                      >
+                        <defs>
+                          {/* Área levemente sombreada em azul claro abaixo da linha de Pontos Acumulados */}
+                          <linearGradient id="areaAzulSombra" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" />
+                            <stop offset="100%" stopColor="#2563eb" stopOpacity="0.02" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Linhas de Grade Horizontais e Escalas */}
+                        {niveisGrid.map((frac, idx) => {
+                          const y = plotBottom - frac * plotHeight;
+                          const valPts = Math.round(frac * maxPts);
+                          const valNota = (frac * 10).toFixed(0);
+                          return (
+                            <g key={idx}>
+                              <line
+                                x1={plotLeft}
+                                y1={y}
+                                x2={plotRight}
+                                y2={y}
+                                stroke="currentColor"
+                                className="text-slate-200 dark:text-slate-800"
+                                strokeDasharray="3 3"
+                                strokeWidth="1"
+                              />
+                              {/* Rótulo Eixo Y Esquerdo: Pontos Acumulados */}
+                              <text
+                                x={plotLeft - 6}
+                                y={y + 3}
+                                textAnchor="end"
+                                className="text-[9.5px] font-bold fill-blue-600 dark:fill-blue-400 select-none"
+                              >
+                                {valPts}p
+                              </text>
+                              {/* Rótulo Eixo Y Direito: Nota 0 a 10 */}
+                              <text
+                                x={plotRight + 6}
+                                y={y + 3}
+                                textAnchor="start"
+                                className="text-[9.5px] font-bold fill-emerald-600 dark:fill-emerald-400 select-none"
+                              >
+                                {valNota}
+                              </text>
+                            </g>
+                          );
+                        })}
+
+                        {/* Linha vertical tracejada do ponto ativo */}
+                        {pontoAtivo && (
+                          <line
+                            x1={pontosPlot[partidas.findIndex((pt) => pt.id === pontoAtivo.id)]?.x || 0}
+                            y1={plotTop - 6}
+                            x2={pontosPlot[partidas.findIndex((pt) => pt.id === pontoAtivo.id)]?.x || 0}
+                            y2={plotBottom}
+                            stroke="#2563eb"
+                            strokeDasharray="3 3"
+                            strokeWidth="1.5"
+                            opacity="0.6"
+                          />
+                        )}
+
+                        {/* Área sombreada em azul claro abaixo da linha de Pontos Acumulados */}
+                        {areaSombra && <path d={areaSombra} fill="url(#areaAzulSombra)" />}
+
+                        {/* Linha 1 - Azul #2563eb: Pontos Acumulados (grossa e suave) */}
+                        <path
+                          d={caminhoPontos}
+                          fill="none"
+                          stroke="#2563eb"
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+
+                        {/* Linha 2 - Verde #16a34a, tracejada: Média de Nota da Equipe */}
+                        <path
+                          d={caminhoNota}
+                          fill="none"
+                          stroke="#16a34a"
+                          strokeWidth="2.5"
+                          strokeDasharray="5 4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+
+                        {/* Bolinhas e Rótulos do Eixo X em cada jogo */}
+                        {pontosPlot.map((pt) => {
+                          const isAtivo = pontoAtivo?.id === pt.id;
+                          return (
+                            <g key={pt.id}>
+                              {/* Bolinha da Nota (Verde, menor) */}
+                              <circle
+                                cx={pt.x}
+                                cy={pt.yNota}
+                                r={isAtivo ? 5 : 3.5}
+                                fill="#16a34a"
+                                stroke="#ffffff"
+                                strokeWidth={isAtivo ? 2 : 1.5}
+                                className="transition-all duration-150 pointer-events-none"
+                              />
+
+                              {/* Bolinha dos Pontos Acumulados (Azul, principal) */}
+                              <circle
+                                cx={pt.x}
+                                cy={pt.yPontos}
+                                r={isAtivo ? 7.5 : 5.5}
+                                fill="#2563eb"
+                                stroke="#ffffff"
+                                strokeWidth={isAtivo ? 3 : 2.5}
+                                className="transition-all duration-150 pointer-events-none drop-shadow-sm"
+                              />
+
+                              {/* Eixo X: Abaixo de cada ponto mostrar adversário e data */}
+                              <text
+                                x={pt.x}
+                                y={plotBottom + 18}
+                                textAnchor="middle"
+                                className={`text-[10px] font-black select-none pointer-events-none ${
+                                  isAtivo
+                                    ? 'fill-blue-600 dark:fill-blue-400'
+                                    : 'fill-slate-700 dark:fill-slate-300'
+                                }`}
+                              >
+                                {pt.adversarioComVs.length > 13
+                                  ? `${pt.adversarioComVs.slice(0, 11)}...`
+                                  : pt.adversarioComVs}
+                              </text>
+                              <text
+                                x={pt.x}
+                                y={plotBottom + 32}
+                                textAnchor="middle"
+                                className={`text-[9.5px] font-bold select-none pointer-events-none ${
+                                  isAtivo
+                                    ? 'fill-blue-600 dark:fill-blue-400'
+                                    : 'fill-slate-500 dark:fill-slate-400'
+                                }`}
+                              >
+                                {pt.dataFormatada}
+                              </text>
+
+                              {/* Hitbox invisível para clique e toque com o dedo no celular */}
+                              <rect
+                                x={pt.x - 22}
+                                y={plotTop - 10}
+                                width={44}
+                                height={plotHeight + 45}
+                                fill="transparent"
+                                className="cursor-pointer"
+                                onClick={() => setPontoAtivoIndex(pt.index)}
+                                onMouseEnter={() => setPontoAtivoIndex(pt.index)}
+                                onTouchStart={() => setPontoAtivoIndex(pt.index)}
+                              />
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    );
+                  })()}
+                </div>
               )}
 
-              {/* 3 Barras Comparativas Individuais com Contadores e % */}
-              <div className="space-y-2.5 pt-1">
+              {/* RESUMO MANTIDO ABAIXO DO GRÁFICO (VITÓRIAS, EMPATES, DERROTAS) */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                 {/* 1. Vitórias */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-xs font-bold">
