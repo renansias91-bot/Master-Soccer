@@ -393,7 +393,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     setObsDisciplinar('');
     setMinutos1Tempo(40);
     setMinutos2Tempo(40);
-    setOpcaoTempoRapido('jogo_todo');
     setPontosFortes([]);
     setPontosMelhoria([]);
     setModalApagarAvaliacaoEtapa(0);

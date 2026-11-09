@@ -689,8 +689,10 @@ export default function App() {
             atletas={atletas}
             avaliacoes={avaliacoes}
             categorias={categorias}
+            jogos={jogos}
             onNavegarPlantel={handleNavegarPlantel}
             onSelecionarAtleta={handleAbrirRelatorioAtleta}
+            onNavegarJogo={() => setAbaAtiva('jogo')}
             onNovaAvaliacao={() => {
               setAbaAtiva('jogo');
               handleAbrirNovoJogo();

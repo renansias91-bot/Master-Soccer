@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Users,
   Award,
@@ -6,90 +6,380 @@ import {
   Activity,
   ArrowRight,
   TrendingUp,
-  FileSpreadsheet,
   Download,
   Plus,
+  Trophy,
+  Clock,
+  MapPin,
+  Shield,
+  Percent,
+  Flame,
+  CheckCircle2,
+  AlertCircle,
+  HelpCircle,
 } from 'lucide-react';
-import { Atleta, AvaliacaoJogo, NotasPilares } from '../types';
+import { Atleta, AvaliacaoJogo, NotasPilares, JogoAgenda } from '../types';
 import { RadarChart } from './RadarChart';
 import { storageService } from '../services/storage';
-import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
+import {
+  formatarDataExibicao,
+  dataParaValorOrdenacao,
+  formatarDataAmigavelJogo,
+} from '../utils/dateUtils';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
-
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
 
 interface PainelGeralProps {
   atletas: Atleta[];
   avaliacoes: AvaliacaoJogo[];
   categorias: string[];
+  jogos?: JogoAgenda[];
   onNavegarPlantel: (categoria?: string) => void;
   onSelecionarAtleta: (atleta: Atleta) => void;
   onNovaAvaliacao: () => void;
   onNovoAtleta: () => void;
+  onNavegarJogo?: () => void;
+}
+
+/**
+ * Função utilitária para extrair resultado e placar (Vitória, Empate, Derrota, GF, GS)
+ * de uma string de resultado/placar (ex: "V 2x1", "E 1x1", "D 0x2", "2 x 1", "3 x 1")
+ */
+function extrairResultadoPartida(texto?: string): {
+  v: number;
+  e: number;
+  d: number;
+  gf: number;
+  gs: number;
+} | null {
+  if (!texto) return null;
+  const str = texto.trim();
+
+  // Caso 1: Começa com V, E ou D (ex: "V 2x1", "V 3x0", "E 1x1", "D 0x2")
+  const matchVED = str.match(/^([VEDved])\s*(\d+)?\s*[xX-]?\s*(\d+)?/i);
+  if (matchVED) {
+    const letra = matchVED[1].toUpperCase();
+    const g1 = matchVED[2] ? parseInt(matchVED[2], 10) : letra === 'V' ? 1 : letra === 'E' ? 1 : 0;
+    const g2 = matchVED[3] ? parseInt(matchVED[3], 10) : letra === 'V' ? 0 : letra === 'E' ? 1 : 1;
+    return {
+      v: letra === 'V' ? 1 : 0,
+      e: letra === 'E' ? 1 : 0,
+      d: letra === 'D' ? 1 : 0,
+      gf: g1,
+      gs: g2,
+    };
+  }
+
+  // Caso 2: Placar numérico "2 x 1", "3 - 0", "Master 2 x 1 Magé"
+  const matchPlacar = str.match(/(\d+)\s*[xX-]\s*(\d+)/);
+  if (matchPlacar) {
+    const gf = parseInt(matchPlacar[1], 10);
+    const gs = parseInt(matchPlacar[2], 10);
+    const v = gf > gs ? 1 : 0;
+    const e = gf === gs ? 1 : 0;
+    const d = gf < gs ? 1 : 0;
+    return { v, e, d, gf, gs };
+  }
+
+  return null;
 }
 
 export const PainelGeral: React.FC<PainelGeralProps> = ({
   atletas,
   avaliacoes,
   categorias,
+  jogos: jogosProps,
   onNavegarPlantel,
   onSelecionarAtleta,
   onNovaAvaliacao,
   onNovoAtleta,
+  onNavegarJogo,
 }) => {
-  // Médias gerais da base inteira
-  const calcularMediasBase = (): NotasPilares => {
-    if (avaliacoes.length === 0) {
-      return { tecnica: 0, tatica: 0, fisica: 0, mental: 0, disciplinar: 0 };
-    }
-    const soma = avaliacoes.reduce(
-      (acc, av) => {
-        acc.tecnica += av.notas.tecnica;
-        acc.tatica += av.notas.tatica;
-        acc.fisica += av.notas.fisica;
-        acc.mental += av.notas.mental;
-        acc.disciplinar += av.notas.disciplinar;
-        return acc;
-      },
-      { tecnica: 0, tatica: 0, fisica: 0, mental: 0, disciplinar: 0 }
-    );
-    const n = avaliacoes.length;
-    return {
-      tecnica: Number((soma.tecnica / n).toFixed(1)),
-      tatica: Number((soma.tatica / n).toFixed(1)),
-      fisica: Number((soma.fisica / n).toFixed(1)),
-      mental: Number((soma.mental / n).toFixed(1)),
-      disciplinar: Number((soma.disciplinar / n).toFixed(1)),
+  // Estado da aba de filtro selecionada: 'GERAL' por padrão
+  const [categoriaAtiva, setCategoriaAtiva] = useState<string>('GERAL');
+
+  // Jogos consolidados
+  const listaJogos = useMemo(() => {
+    if (jogosProps && jogosProps.length > 0) return jogosProps;
+    return storageService.getJogosAgenda();
+  }, [jogosProps]);
+
+  // Lista dinâmica de categorias: GERAL | SUB-15 | SUB-16 | SUB-17 + qualquer outra existente
+  const todasCategorias = useMemo(() => {
+    const catsSet = new Set<string>();
+    categorias.forEach((c) => {
+      if (c && c.trim()) catsSet.add(c.trim());
+    });
+    atletas.forEach((a) => {
+      if (a.categoria && a.categoria.trim()) catsSet.add(a.categoria.trim());
+    });
+    listaJogos.forEach((j) => {
+      if (j.categoria && j.categoria.trim()) catsSet.add(j.categoria.trim());
+    });
+    avaliacoes.forEach((av) => {
+      if (av.categoria && av.categoria.trim()) catsSet.add(av.categoria.trim());
+    });
+
+    const arr = Array.from(catsSet);
+    const prioridade: Record<string, number> = {
+      'SUB-15': 1,
+      'SUB-16': 2,
+      'SUB-17': 3,
+      'Sub-20': 4,
+      'SUB-20': 4,
+      Profissional: 5,
     };
-  };
+    arr.sort((a, b) => (prioridade[a] || 99) - (prioridade[b] || 99));
 
-  const mediasBase = calcularMediasBase();
+    return ['GERAL', ...arr];
+  }, [categorias, atletas, listaJogos, avaliacoes]);
 
-  // Destaques da temporada (ordenados por média geral com pelo menos 1 jogo avaliado)
-  const destaques = atletas
-    .map((atleta) => {
-      const stats = storageService.getEstatisticasAtleta(atleta.id);
-      return { atleta, stats };
-    })
-    .filter((item) => item.stats.totalJogos > 0)
-    .sort((a, b) => b.stats.mediaGeral - a.stats.mediaGeral)
-    .slice(0, 4);
+  // =========================================================
+  // CÁLCULO DE DESEMPENHO (V, E, D, GF, GS, APROVEITAMENTO & 5 PILARES)
+  // =========================================================
+  const estatisticasDesempenho = useMemo(() => {
+    // 1. Coleta partidas realizadas / avaliadas de forma única
+    interface PartidaUnica {
+      id: string;
+      categoria: string;
+      adversario: string;
+      dataJogo: string;
+      v: number;
+      e: number;
+      d: number;
+      gf: number;
+      gs: number;
+    }
 
-  // Últimas avaliações cadastradas
-  const ultimasAvaliacoes = [...avaliacoes]
-    .sort((a, b) => dataParaValorOrdenacao(b.dataJogo) - dataParaValorOrdenacao(a.dataJogo))
-    .slice(0, 5);
+    const mapaPartidas: Record<string, PartidaUnica> = {};
+
+    // 1.1 Do cadastro de jogos da agenda
+    listaJogos.forEach((j) => {
+      if (j.realizado || j.placar) {
+        const res = extrairResultadoPartida(j.placar);
+        if (res) {
+          mapaPartidas[j.id] = {
+            id: j.id,
+            categoria: j.categoria,
+            adversario: j.adversario,
+            dataJogo: j.dataJogo,
+            ...res,
+          };
+        }
+      }
+    });
+
+    // 1.2 Das avaliações cadastradas (deduplicando por jogo)
+    avaliacoes.forEach((av) => {
+      const key = av.jogoAgendaId || `${av.dataJogo}_${av.adversario}_${av.categoria}`;
+      if (!mapaPartidas[key] && av.resultado) {
+        const res = extrairResultadoPartida(av.resultado);
+        if (res) {
+          mapaPartidas[key] = {
+            id: key,
+            categoria: av.categoria,
+            adversario: av.adversario,
+            dataJogo: av.dataJogo,
+            ...res,
+          };
+        }
+      }
+    });
+
+    // Filtra pelo critério de categoria selecionada
+    const partidasFiltradas = Object.values(mapaPartidas).filter((p) => {
+      if (categoriaAtiva === 'GERAL') return true;
+      return p.categoria === categoriaAtiva;
+    });
+
+    const totalJogos = partidasFiltradas.length;
+    let vitorias = 0;
+    let empates = 0;
+    let derrotas = 0;
+    let golsFeitos = 0;
+    let golsSofridos = 0;
+
+    partidasFiltradas.forEach((p) => {
+      vitorias += p.v;
+      empates += p.e;
+      derrotas += p.d;
+      golsFeitos += p.gf;
+      golsSofridos += p.gs;
+    });
+
+    // Se ainda não houver partidas com placar registrado, mas existirem avaliações, calcula com base nas avaliações
+    const avsCategoria =
+      categoriaAtiva === 'GERAL'
+        ? avaliacoes
+        : avaliacoes.filter((av) => av.categoria === categoriaAtiva);
+
+    const pontosPossiveis = totalJogos * 3;
+    const pontosConquistados = vitorias * 3 + empates * 1;
+    const aproveitamentoPct =
+      pontosPossiveis > 0 ? Number(((pontosConquistados / pontosPossiveis) * 100).toFixed(1)) : 0;
+
+    // Cálculo das médias dos 5 Pilares para a categoria selecionada
+    let mediasPilares: NotasPilares = {
+      tecnica: 0,
+      tatica: 0,
+      fisica: 0,
+      mental: 0,
+      disciplinar: 0,
+    };
+
+    if (avsCategoria.length > 0) {
+      const soma = avsCategoria.reduce(
+        (acc, av) => {
+          acc.tecnica += av.notas?.tecnica || 0;
+          acc.tatica += av.notas?.tatica || 0;
+          acc.fisica += av.notas?.fisica || 0;
+          acc.mental += av.notas?.mental || 0;
+          acc.disciplinar += av.notas?.disciplinar || 0;
+          return acc;
+        },
+        { tecnica: 0, tatica: 0, fisica: 0, mental: 0, disciplinar: 0 }
+      );
+      const n = avsCategoria.length;
+      mediasPilares = {
+        tecnica: Number((soma.tecnica / n).toFixed(1)),
+        tatica: Number((soma.tatica / n).toFixed(1)),
+        fisica: Number((soma.fisica / n).toFixed(1)),
+        mental: Number((soma.mental / n).toFixed(1)),
+        disciplinar: Number((soma.disciplinar / n).toFixed(1)),
+      };
+    }
+
+    const mediaGeralPilares =
+      avsCategoria.length > 0
+        ? Number(
+            (
+              (mediasPilares.tecnica +
+                mediasPilares.tatica +
+                mediasPilares.fisica +
+                mediasPilares.mental +
+                mediasPilares.disciplinar) /
+              5
+            ).toFixed(1)
+          )
+        : 0;
+
+    return {
+      totalJogos,
+      vitorias,
+      empates,
+      derrotas,
+      golsFeitos,
+      golsSofridos,
+      saldoGols: golsFeitos - golsSofridos,
+      aproveitamentoPct,
+      mediasPilares,
+      mediaGeralPilares,
+      totalAvaliacoes: avsCategoria.length,
+    };
+  }, [categoriaAtiva, listaJogos, avaliacoes]);
+
+  // =========================================================
+  // PRÓXIMOS JOGOS (3 PRÓXIMOS EM ORDEM DE DATA E HORÁRIO)
+  // Regra: Em GERAL mostra os 3 mais próximos de qualquer categoria.
+  // Se SUB-15, mostra os 3 mais próximos de SUB-15.
+  // =========================================================
+  const proximosJogos = useMemo(() => {
+    const jogosNaoRealizados = listaJogos.filter((j) => !j.realizado);
+
+    const filtrados = jogosNaoRealizados.filter((j) => {
+      if (categoriaAtiva === 'GERAL') return true;
+      return j.categoria === categoriaAtiva;
+    });
+
+    // Ordena do mais próximo para o mais distante (crescente de data e hora)
+    filtrados.sort((a, b) => {
+      const valA = dataParaValorOrdenacao(a.dataJogo);
+      const valB = dataParaValorOrdenacao(b.dataJogo);
+      if (valA !== valB) return valA - valB;
+      const horaA = a.hora || '00:00';
+      const horaB = b.hora || '00:00';
+      return horaA.localeCompare(horaB);
+    });
+
+    return filtrados.slice(0, 3);
+  }, [categoriaAtiva, listaJogos]);
+
+  // =========================================================
+  // DESEMPENHO DOS JOGADORES / DESTAQUES DA TEMPORADA
+  // Lista dos atletas em ordem do melhor para o pior, com média e posição
+  // Obedece o mesmo filtro: em GERAL mostra todos, em SUB-15 só SUB-15, etc.
+  // =========================================================
+  const atletasRanqueados = useMemo(() => {
+    const atletasFiltrados = atletas.filter((a) => {
+      if (categoriaAtiva === 'GERAL') return true;
+      return a.categoria === categoriaAtiva;
+    });
+
+    const atletasComStats = atletasFiltrados.map((atleta) => {
+      const avs = avaliacoes.filter((av) => {
+        if (av.atletaId !== atleta.id) return false;
+        if (categoriaAtiva === 'GERAL') return true;
+        return av.categoria === categoriaAtiva;
+      });
+
+      const totalJogos = avs.length;
+      const mediaGeral =
+        totalJogos > 0 ? Number((avs.reduce((acc, av) => acc + av.notaGeral, 0) / totalJogos).toFixed(1)) : 0;
+
+      // Melhor pilar
+      let melhorPilarNome = 'Equilibrado';
+      if (totalJogos > 0) {
+        const medias = {
+          Técnico: avs.reduce((acc, av) => acc + (av.notas?.tecnica || 0), 0) / totalJogos,
+          Tático: avs.reduce((acc, av) => acc + (av.notas?.tatica || 0), 0) / totalJogos,
+          Físico: avs.reduce((acc, av) => acc + (av.notas?.fisica || 0), 0) / totalJogos,
+          Mental: avs.reduce((acc, av) => acc + (av.notas?.mental || 0), 0) / totalJogos,
+          Disciplinar: avs.reduce((acc, av) => acc + (av.notas?.disciplinar || 0), 0) / totalJogos,
+        };
+        const entradas = Object.entries(medias);
+        entradas.sort((a, b) => b[1] - a[1]);
+        if (entradas[0] && entradas[0][1] > 0) {
+          melhorPilarNome = entradas[0][0];
+        }
+      }
+
+      return {
+        atleta,
+        totalJogos,
+        mediaGeral,
+        melhorPilarNome,
+      };
+    });
+
+    // Ordenação: Do melhor para o pior (maior média para menor média)
+    atletasComStats.sort((a, b) => {
+      if (b.mediaGeral !== a.mediaGeral) {
+        return b.mediaGeral - a.mediaGeral;
+      }
+      if (b.totalJogos !== a.totalJogos) {
+        return b.totalJogos - a.totalJogos;
+      }
+      return a.atleta.nome.localeCompare(b.atleta.nome);
+    });
+
+    return atletasComStats;
+  }, [categoriaAtiva, atletas, avaliacoes]);
 
   const getCorNota = (nota: number) => {
-    if (nota >= 8.5) return 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800';
-    if (nota >= 7.0) return 'text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 border-cyan-300 dark:border-cyan-800';
-    if (nota >= 5.0) return 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800';
-    return 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800';
+    if (nota >= 8.5)
+      return 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-800';
+    if (nota >= 7.0)
+      return 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-800';
+    if (nota >= 5.0)
+      return 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 border-amber-300 dark:border-amber-800';
+    return 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-800';
   };
 
   return (
-    <div className="space-y-6 pb-[120px]">
-      {/* Banner de Boas-Vindas Master Soccer (Azul e Amarelo com Escudo Oficial) */}
+    <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
+      {/* ========================================================= */}
+      {/* BANNER DE BOAS-VINDAS MASTER SOCCER (AZUL E OURO) */}
+      {/* ========================================================= */}
       <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white rounded-3xl p-6 sm:p-8 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-2 border-blue-800/80 relative overflow-hidden">
         {/* Glow sutil de fundo dourado */}
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
@@ -106,7 +396,8 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
               Controle & Avaliação das Categorias de Base
             </h2>
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed font-medium">
-              Monitoramento dos atletas no Sub-15, Sub-16 e Sub-17 com notas estruturadas nos 5 pilares fundamentais e pareceres pós-jogo.
+              Monitoramento dos atletas com notas estruturadas nos 5 pilares fundamentais, estatísticas
+              oficiais e pareceres pós-jogo.
             </p>
           </div>
         </div>
@@ -114,300 +405,664 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
         <div className="flex flex-wrap items-center gap-3 shrink-0 z-10">
           <button
             onClick={onNovoAtleta}
-            className="px-5 py-3 text-sm font-extrabold text-slate-950 bg-amber-400 hover:bg-amber-300 active:scale-98 rounded-2xl transition-all shadow-sm"
+            className="px-5 py-3 text-sm font-extrabold text-slate-950 bg-amber-400 hover:bg-amber-300 active:scale-98 rounded-2xl transition-all shadow-sm cursor-pointer"
           >
             + Cadastrar Atleta
           </button>
           <button
             onClick={onNovaAvaliacao}
-            className="px-5 py-3 text-sm font-extrabold text-white bg-blue-600 hover:bg-blue-500 active:scale-98 rounded-2xl transition-all shadow-sm border border-blue-400/40"
+            className="px-5 py-3 text-sm font-extrabold text-white bg-blue-600 hover:bg-blue-500 active:scale-98 rounded-2xl transition-all shadow-sm border border-blue-400/40 cursor-pointer"
           >
             Agenda de Jogos
           </button>
         </div>
       </div>
 
-      {/* Cards de Métricas e Categorias com Molduras Refinadas */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        {/* Total Atletas */}
-        <div
-          onClick={() => onNavegarPlantel('TODAS')}
-          className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-3xl border-2 border-slate-200 dark:border-slate-800 shadow-xs hover:border-blue-500 hover:shadow-md cursor-pointer transition-all"
-        >
-          <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 text-sm font-bold mb-1.5">
-            <span>Plantel Total</span>
-            <Users className="w-5 h-5 text-blue-600" />
-          </div>
-          <p className="text-3xl sm:text-4xl font-black font-mono text-slate-900 dark:text-white tabular-nums">
-            {atletas.length}
-          </p>
-          <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
-            <span>{atletas.filter((a) => a.status === 'Ativo').length} ativos</span>
-            <span aria-hidden="true">·</span>
-            <span className="text-blue-600 dark:text-blue-400 font-extrabold">Ver lista →</span>
-          </div>
-        </div>
-
-        {/* Categorias e contagem */}
-        {categorias.slice(0, 3).map((cat) => {
-          const count = atletas.filter((a) => a.categoria === cat).length;
-          const avaliacoesCat = avaliacoes.filter((av) => av.categoria === cat).length;
-          return (
-            <div
-              key={cat}
-              onClick={() => onNavegarPlantel(cat)}
-              className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-3xl border-2 border-slate-200 dark:border-slate-800 shadow-xs hover:border-amber-500 hover:shadow-md cursor-pointer transition-all"
-            >
-              <div className="flex items-center justify-between text-sm mb-1.5">
-                <span className="font-black text-slate-800 dark:text-slate-100">{cat}</span>
-                <span className="px-2.5 py-0.5 text-xs font-extrabold rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/50">
-                  {avaliacoesCat} jogos
-                </span>
-              </div>
-              <p className="text-3xl sm:text-4xl font-black font-mono text-slate-900 dark:text-white tabular-nums">
-                {count} <span className="text-sm font-medium text-slate-400">atletas</span>
-              </p>
-              <div className="mt-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400 font-extrabold">
-                Abrir categoria →
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Grid de 2 Colunas: Radar Médio da Base + Atletas Destaques */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Radar Médio da Base */}
-        <div className="lg:col-span-5 bg-white dark:bg-slate-900 p-6 rounded-3xl border-2 border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center justify-between">
-          <div className="w-full flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                Média Geral dos 5 Pilares
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
-                Balanço consolidado de todas as partidas avaliadas
-              </p>
-            </div>
-            <span className="text-xs sm:text-sm font-mono font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/50 px-3 py-1 rounded-xl border border-blue-200 dark:border-blue-800 shrink-0">
-              {avaliacoes.length} Jogos
-            </span>
-          </div>
-
-          <div className="py-2">
-            <RadarChart notas={mediasBase} size={280} />
-          </div>
-
-          <div className="w-full grid grid-cols-5 gap-2 text-center pt-4 border-t-2 border-slate-100 dark:border-slate-800">
-            <div>
-              <span className="text-xs font-bold text-slate-400 block">TÉC</span>
-              <span className="text-sm sm:text-base font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
-                {mediasBase.tecnica.toFixed(1)}
-              </span>
-            </div>
-            <div>
-              <span className="text-xs font-bold text-slate-400 block">TÁT</span>
-              <span className="text-sm sm:text-base font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
-                {mediasBase.tatica.toFixed(1)}
-              </span>
-            </div>
-            <div>
-              <span className="text-xs font-bold text-slate-400 block">FÍS</span>
-              <span className="text-sm sm:text-base font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
-                {mediasBase.fisica.toFixed(1)}
-              </span>
-            </div>
-            <div>
-              <span className="text-xs font-bold text-slate-400 block">MEN</span>
-              <span className="text-sm sm:text-base font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
-                {mediasBase.mental.toFixed(1)}
-              </span>
-            </div>
-            <div>
-              <span className="text-xs font-bold text-slate-400 block">DISC</span>
-              <span className="text-sm sm:text-base font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
-                {mediasBase.disciplinar.toFixed(1)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Atletas Destaques da Temporada */}
-        <div className="lg:col-span-7 bg-white dark:bg-slate-900 p-6 rounded-3xl border-2 border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                Destaques da Temporada
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
-                Atletas com melhor rendimento acumulado nos jogos
-              </p>
-            </div>
-            <button
-              onClick={() => onNavegarPlantel('TODAS')}
-              className="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition"
-            >
-              <span>Ver Todos</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {destaques.map(({ atleta, stats }) => (
-              <div
-                key={atleta.id}
-                onClick={() => onSelecionarAtleta(atleta)}
-                className="p-4 rounded-2xl bg-slate-50/90 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border-2 border-slate-200/90 dark:border-slate-700/80 transition-all cursor-pointer flex items-center justify-between gap-3 shadow-2xs hover:border-blue-400"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 flex items-center justify-center font-black text-sm text-slate-700 dark:text-slate-200 border-2 border-slate-300 dark:border-slate-600">
-                    {atleta.fotoUrl ? (
-                      <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
-                    ) : (
-                      obterIniciaisApelido(atleta)
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-lg border border-blue-200/70">
-                        {atleta.categoria}
-                      </span>
-                      <h4 className="text-base font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight">
-                        {atleta.apelido || atleta.nome.split(' ')[0]}
-                      </h4>
-                    </div>
-                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                      {atleta.nome}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
-                      <span>{atleta.posicao}</span>
-                      <span aria-hidden="true">·</span>
-                      <span>{stats.totalJogos} {stats.totalJogos === 1 ? 'partida' : 'partidas'}</span>
-                      <span aria-hidden="true">·</span>
-                      <span className="text-blue-600 dark:text-blue-400 font-bold">Forte: {stats.melhorPilar.nome}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-right">
-                    <span className="text-xs text-slate-400 block font-semibold">Média</span>
-                    <span
-                      className={`text-sm font-mono font-black px-2.5 py-1 rounded-xl border tabular-nums ${getCorNota(
-                        stats.mediaGeral
-                      )}`}
-                    >
-                      {stats.mediaGeral.toFixed(1)}
-                    </span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-slate-400" />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="pt-4 border-t-2 border-slate-100 dark:border-slate-800 mt-3 flex items-center justify-between text-xs sm:text-sm text-slate-500 font-medium">
-            <span>Avaliações com critérios técnicos padronizados de 1 a 10</span>
-            <button
-              onClick={() => storageService.exportarAvaliacoesCsv()}
-              className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-blue-600 dark:text-blue-400 font-bold hover:underline"
-            >
-              <Download className="w-4 h-4" />
-              <span>Baixar Planilha CSV</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Feed de Últimas Avaliações Registradas */}
-      <div className="bg-white dark:bg-slate-900 p-6 sm:p-7 rounded-3xl border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
+      {/* ========================================================= */}
+      {/* 2 & 3. SEÇÃO DESEMPENHO (ABAS DE FILTRO + GRÁFICO + PILARES) */}
+      {/* ========================================================= */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+        {/* Topo da Seção: Título e Abas de Filtro GERAL | SUB-15 | SUB-16 | SUB-17 ... */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-              Últimas Avaliações Pós-Jogo Registradas
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
-              Pareceres e notas técnicas mais recentes da comissão
+            <div className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                Desempenho da Equipe
+              </h3>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+              Resultados, aproveitamento e média dos 5 pilares das partidas avaliadas
             </p>
           </div>
+
+          {/* Abas de Filtro de Categoria */}
+          <div className="flex flex-wrap items-center gap-2">
+            {todasCategorias.map((cat) => {
+              const ativo = categoriaAtiva === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setCategoriaAtiva(cat)}
+                  className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer shadow-xs active:scale-98 ${
+                    ativo
+                      ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/50'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                  }`}
+                  style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* GRÁFICO E NÚMEROS DE DESEMPENHO + PENTÁGONO */}
+        {/* ========================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* COLUNA ESQUERDA: Aproveitamento, Barras V/E/D e Tabela de Números (7 cols) */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* Card de Destaque: Aproveitamento % */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-blue-50 via-white to-blue-50/50 dark:from-slate-850 dark:via-slate-850 dark:to-blue-950/30 border-2 border-blue-200 dark:border-blue-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+              <div className="space-y-1">
+                <span className="text-[11px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                  Aproveitamento {categoriaAtiva === 'GERAL' ? 'Geral' : `Categoria ${categoriaAtiva}`}
+                </span>
+                <div className="text-3xl sm:text-4xl font-black font-mono text-slate-900 dark:text-white tabular-nums flex items-baseline gap-2">
+                  <span>{estatisticasDesempenho.aproveitamentoPct}%</span>
+                  <span className="text-xs font-bold text-slate-500 font-sans">dos pontos disputados</span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                  {estatisticasDesempenho.totalJogos > 0
+                    ? `Calculado sobre ${estatisticasDesempenho.totalJogos} ${
+                        estatisticasDesempenho.totalJogos === 1 ? 'partida avaliada' : 'partidas avaliadas'
+                      }`
+                    : 'Nenhuma partida finalizada registrada nesta categoria'}
+                </p>
+              </div>
+
+              {/* Selo visual de status do aproveitamento */}
+              <div className="shrink-0">
+                <div
+                  className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-black border flex items-center gap-1.5 shadow-2xs ${
+                    estatisticasDesempenho.aproveitamentoPct >= 70
+                      ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                      : estatisticasDesempenho.aproveitamentoPct >= 45
+                      ? 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-800'
+                      : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                  }`}
+                >
+                  <Percent className="w-4 h-4" />
+                  <span>
+                    {estatisticasDesempenho.aproveitamentoPct >= 70
+                      ? 'Excelente Desempenho'
+                      : estatisticasDesempenho.aproveitamentoPct >= 45
+                      ? 'Campanha Regular'
+                      : 'Em Evolução'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* GRÁFICO DE BARRAS DE VITÓRIAS, EMPATES E DERROTAS */}
+            <div className="p-5 rounded-2xl bg-slate-50/90 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <TrendingUp className="w-4 h-4 text-blue-600" />
+                  <span>Gráfico de Resultados (V / E / D)</span>
+                </h4>
+                <span className="text-xs font-bold text-slate-500">
+                  {estatisticasDesempenho.totalJogos} {estatisticasDesempenho.totalJogos === 1 ? 'jogo' : 'jogos'}
+                </span>
+              </div>
+
+              {/* Barra de Proporção Segmentada Horizontal */}
+              {estatisticasDesempenho.totalJogos > 0 ? (
+                <div className="w-full h-4 rounded-xl overflow-hidden flex bg-slate-200 dark:bg-slate-700 shadow-inner">
+                  {estatisticasDesempenho.vitorias > 0 && (
+                    <div
+                      style={{
+                        width: `${(estatisticasDesempenho.vitorias / estatisticasDesempenho.totalJogos) * 100}%`,
+                        backgroundColor: '#16A34A',
+                      }}
+                      className="h-full transition-all duration-500"
+                      title={`${estatisticasDesempenho.vitorias} Vitórias`}
+                    />
+                  )}
+                  {estatisticasDesempenho.empates > 0 && (
+                    <div
+                      style={{
+                        width: `${(estatisticasDesempenho.empates / estatisticasDesempenho.totalJogos) * 100}%`,
+                        backgroundColor: '#EAB308',
+                      }}
+                      className="h-full transition-all duration-500"
+                      title={`${estatisticasDesempenho.empates} Empates`}
+                    />
+                  )}
+                  {estatisticasDesempenho.derrotas > 0 && (
+                    <div
+                      style={{
+                        width: `${(estatisticasDesempenho.derrotas / estatisticasDesempenho.totalJogos) * 100}%`,
+                        backgroundColor: '#E11D48',
+                      }}
+                      className="h-full transition-all duration-500"
+                      title={`${estatisticasDesempenho.derrotas} Derrotas`}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="w-full h-3 rounded-lg bg-slate-200 dark:bg-slate-700" />
+              )}
+
+              {/* 3 Barras Comparativas Individuais com Contadores e % */}
+              <div className="space-y-2.5 pt-1">
+                {/* 1. Vitórias */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
+                      Vitórias
+                    </span>
+                    <span className="font-mono text-slate-800 dark:text-slate-200">
+                      {estatisticasDesempenho.vitorias}{' '}
+                      <span className="text-[11px] text-slate-500 font-sans">
+                        (
+                        {estatisticasDesempenho.totalJogos > 0
+                          ? Math.round(
+                              (estatisticasDesempenho.vitorias / estatisticasDesempenho.totalJogos) * 100
+                            )
+                          : 0}
+                        %)
+                      </span>
+                    </span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden">
+                    <div
+                      style={{
+                        width: `${
+                          estatisticasDesempenho.totalJogos > 0
+                            ? (estatisticasDesempenho.vitorias / estatisticasDesempenho.totalJogos) * 100
+                            : 0
+                        }%`,
+                        backgroundColor: '#16A34A',
+                      }}
+                      className="h-full rounded-lg transition-all duration-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Empates */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
+                      Empates
+                    </span>
+                    <span className="font-mono text-slate-800 dark:text-slate-200">
+                      {estatisticasDesempenho.empates}{' '}
+                      <span className="text-[11px] text-slate-500 font-sans">
+                        (
+                        {estatisticasDesempenho.totalJogos > 0
+                          ? Math.round(
+                              (estatisticasDesempenho.empates / estatisticasDesempenho.totalJogos) * 100
+                            )
+                          : 0}
+                        %)
+                      </span>
+                    </span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden">
+                    <div
+                      style={{
+                        width: `${
+                          estatisticasDesempenho.totalJogos > 0
+                            ? (estatisticasDesempenho.empates / estatisticasDesempenho.totalJogos) * 100
+                            : 0
+                        }%`,
+                        backgroundColor: '#EAB308',
+                      }}
+                      className="h-full rounded-lg transition-all duration-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Derrotas */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="flex items-center gap-1.5 text-rose-700 dark:text-rose-400">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block" />
+                      Derrotas
+                    </span>
+                    <span className="font-mono text-slate-800 dark:text-slate-200">
+                      {estatisticasDesempenho.derrotas}{' '}
+                      <span className="text-[11px] text-slate-500 font-sans">
+                        (
+                        {estatisticasDesempenho.totalJogos > 0
+                          ? Math.round(
+                              (estatisticasDesempenho.derrotas / estatisticasDesempenho.totalJogos) * 100
+                            )
+                          : 0}
+                        %)
+                      </span>
+                    </span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden">
+                    <div
+                      style={{
+                        width: `${
+                          estatisticasDesempenho.totalJogos > 0
+                            ? (estatisticasDesempenho.derrotas / estatisticasDesempenho.totalJogos) * 100
+                            : 0
+                        }%`,
+                        backgroundColor: '#E11D48',
+                      }}
+                      className="h-full rounded-lg transition-all duration-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* GRID DE NÚMEROS: Nº Jogos, Vitórias, Empates, Derrotas, Gols Feitos, Gols Sofridos, Aproveitamento */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* Nº de Jogos */}
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">
+                  Nº de Jogos
+                </span>
+                <span className="text-2xl font-black font-mono text-slate-900 dark:text-white tabular-nums">
+                  {estatisticasDesempenho.totalJogos}
+                </span>
+              </div>
+
+              {/* Vitórias */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/60 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-emerald-800 dark:text-emerald-300 block tracking-wider">
+                  Vitórias
+                </span>
+                <span className="text-2xl font-black font-mono text-emerald-700 dark:text-emerald-400 tabular-nums">
+                  {estatisticasDesempenho.vitorias}
+                </span>
+              </div>
+
+              {/* Empates */}
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-amber-800 dark:text-amber-300 block tracking-wider">
+                  Empates
+                </span>
+                <span className="text-2xl font-black font-mono text-amber-700 dark:text-amber-400 tabular-nums">
+                  {estatisticasDesempenho.empates}
+                </span>
+              </div>
+
+              {/* Derrotas */}
+              <div className="p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/60 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-rose-800 dark:text-rose-300 block tracking-wider">
+                  Derrotas
+                </span>
+                <span className="text-2xl font-black font-mono text-rose-700 dark:text-rose-400 tabular-nums">
+                  {estatisticasDesempenho.derrotas}
+                </span>
+              </div>
+
+              {/* Gols Feitos */}
+              <div className="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/60 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-blue-800 dark:text-blue-300 block tracking-wider">
+                  Gols Feitos
+                </span>
+                <span className="text-2xl font-black font-mono text-blue-700 dark:text-blue-400 tabular-nums">
+                  {estatisticasDesempenho.golsFeitos}
+                </span>
+              </div>
+
+              {/* Gols Sofridos */}
+              <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block tracking-wider">
+                  Gols Sofridos
+                </span>
+                <span className="text-2xl font-black font-mono text-slate-800 dark:text-slate-200 tabular-nums">
+                  {estatisticasDesempenho.golsSofridos}
+                </span>
+              </div>
+
+              {/* Saldo de Gols */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-slate-500 block tracking-wider">
+                  Saldo de Gols
+                </span>
+                <span
+                  className={`text-2xl font-black font-mono tabular-nums ${
+                    estatisticasDesempenho.saldoGols > 0
+                      ? 'text-emerald-600'
+                      : estatisticasDesempenho.saldoGols < 0
+                      ? 'text-rose-600'
+                      : 'text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  {estatisticasDesempenho.saldoGols > 0
+                    ? `+${estatisticasDesempenho.saldoGols}`
+                    : estatisticasDesempenho.saldoGols}
+                </span>
+              </div>
+
+              {/* Aproveitamento % */}
+              <div className="p-3.5 rounded-2xl bg-blue-600 text-white shadow-xs">
+                <span className="text-[10px] font-extrabold uppercase text-blue-100 block tracking-wider">
+                  Aproveitamento
+                </span>
+                <span className="text-2xl font-black font-mono tabular-nums">
+                  {estatisticasDesempenho.aproveitamentoPct}%
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* COLUNA DIREITA: O Pentágono dos 5 Pilares (5 cols) */}
+          <div className="lg:col-span-5 bg-slate-50/80 dark:bg-slate-850 rounded-2xl p-5 sm:p-6 border-2 border-slate-200 dark:border-slate-800 flex flex-col items-center justify-between shadow-2xs">
+            <div className="w-full flex items-center justify-between mb-2">
+              <div>
+                <h4 className="text-sm sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  Média dos 5 Pilares
+                </h4>
+                <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
+                  {categoriaAtiva === 'GERAL' ? 'Balanço Geral de todas as categorias' : `Média exclusiva ${categoriaAtiva}`}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-bold text-slate-400 block uppercase">Média Geral</span>
+                <span className="text-base font-mono font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-lg border border-blue-200 dark:border-blue-800">
+                  {estatisticasDesempenho.mediaGeralPilares.toFixed(1)} / 10
+                </span>
+              </div>
+            </div>
+
+            {/* Gráfico Pentagonal (RadarChart) */}
+            <div className="py-2 flex items-center justify-center">
+              <RadarChart notas={estatisticasDesempenho.mediasPilares} size={260} />
+            </div>
+
+            {/* Valores numéricos dos 5 Pilares: TÉC, TÁT, FÍS, MEN, DISC */}
+            <div className="w-full grid grid-cols-5 gap-1.5 text-center pt-3 border-t border-slate-200 dark:border-slate-700">
+              <div className="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] font-bold text-slate-400 block">TÉC</span>
+                <span className="text-sm font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
+                  {estatisticasDesempenho.mediasPilares.tecnica.toFixed(1)}
+                </span>
+              </div>
+              <div className="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] font-bold text-slate-400 block">TÁT</span>
+                <span className="text-sm font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
+                  {estatisticasDesempenho.mediasPilares.tatica.toFixed(1)}
+                </span>
+              </div>
+              <div className="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] font-bold text-slate-400 block">FÍS</span>
+                <span className="text-sm font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
+                  {estatisticasDesempenho.mediasPilares.fisica.toFixed(1)}
+                </span>
+              </div>
+              <div className="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] font-bold text-slate-400 block">MEN</span>
+                <span className="text-sm font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
+                  {estatisticasDesempenho.mediasPilares.mental.toFixed(1)}
+                </span>
+              </div>
+              <div className="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] font-bold text-slate-400 block">DISC</span>
+                <span className="text-sm font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
+                  {estatisticasDesempenho.mediasPilares.disciplinar.toFixed(1)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================= */}
+      {/* 5 & 6. SEÇÃO PRÓXIMOS JOGOS (3 PRÓXIMOS EM ORDEM CRONOLÓGICA) */}
+      {/* ========================================================= */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <Calendar className="w-5 h-5 text-blue-600" />
+            <div>
+              <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                Próximos Jogos
+              </h3>
+              <p className="text-xs text-slate-500 font-medium">
+                {categoriaAtiva === 'GERAL'
+                  ? 'Próximas 3 partidas de qualquer categoria por ordem de data e hora'
+                  : `Próximas 3 partidas exclusivas da categoria ${categoriaAtiva}`}
+              </p>
+            </div>
+          </div>
+
           <button
-            onClick={onNovaAvaliacao}
-            className="text-xs sm:text-sm font-extrabold text-blue-600 dark:text-blue-400 hover:text-blue-700 inline-flex items-center gap-1.5 transition"
+            onClick={onNavegarJogo || onNovaAvaliacao}
+            className="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition self-start sm:self-auto cursor-pointer"
           >
-            <Plus className="w-4 h-4 text-amber-500" />
-            <span>Avaliar Nova Partida</span>
+            <span>Ver Agenda Completa</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="space-y-3.5">
-          {ultimasAvaliacoes.map((av) => {
-            const atleta = atletas.find((a) => a.id === av.atletaId);
-            return (
-              <div
-                key={av.id}
-                className="p-5 rounded-2xl bg-slate-50/90 dark:bg-slate-800/50 border-2 border-slate-200/90 dark:border-slate-700/80 space-y-3 shadow-2xs"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
-                      {atleta ? atleta.nome : 'Atleta'}
-                    </span>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/70">
-                      {av.categoria}
-                    </span>
-                    <span className="text-xs text-slate-400">·</span>
-                    <span className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-bold">
-                      vs {av.adversario}
-                    </span>
-                    {av.resultado && (
-                      <span className="text-xs font-mono font-extrabold px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-lg text-slate-800 dark:text-slate-200">
-                        {av.resultado}
+        {proximosJogos.length === 0 ? (
+          <div className="p-8 text-center bg-slate-50/70 dark:bg-slate-850 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 space-y-2">
+            <Calendar className="w-8 h-8 text-slate-400 mx-auto" />
+            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">
+              Nenhum jogo agendado
+            </h4>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              {categoriaAtiva === 'GERAL'
+                ? 'Não há partidas futuras agendadas no momento.'
+                : `Não há partidas futuras agendadas para a categoria ${categoriaAtiva}.`}
+            </p>
+            <button
+              onClick={onNovaAvaliacao}
+              className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-xs cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Agendar Novo Jogo</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {proximosJogos.map((jogo, index) => {
+              const dataAmigavel = formatarDataAmigavelJogo(jogo.dataJogo, jogo.hora);
+
+              return (
+                <div
+                  key={jogo.id}
+                  onClick={onNavegarJogo || onNovaAvaliacao}
+                  className="p-5 rounded-2xl bg-slate-50/90 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border-2 border-slate-200/90 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-600 transition-all cursor-pointer flex flex-col justify-between space-y-3.5 shadow-2xs group"
+                >
+                  <div className="space-y-2.5">
+                    {/* Linha com Categoria + Competição + Selo de ordem (1º próximo) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                          {jogo.categoria}
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                          {jogo.tipo}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                        #{index + 1} Próximo
                       </span>
+                    </div>
+
+                    {/* Nome do Adversário em destaque */}
+                    <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
+                      Master Soccer {jogo.adversario.startsWith('vs') ? jogo.adversario : `vs ${jogo.adversario}`}
+                    </h4>
+                  </div>
+
+                  {/* Informações detalhadas de Data, Hora e Local */}
+                  <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300 font-medium pt-2 border-t border-slate-200/70 dark:border-slate-700/70">
+                    <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-bold">
+                      <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>{dataAmigavel}</span>
+                    </div>
+
+                    {jogo.hora && (
+                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-semibold">
+                        <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span>Horário: {jogo.hora}</span>
+                      </div>
                     )}
-                  </div>
 
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-xs sm:text-sm font-mono text-slate-500 font-semibold">
-                      {formatarDataExibicao(av.dataJogo)}
-                    </span>
-                    <span
-                      className={`text-xs sm:text-sm font-mono font-black px-2.5 py-1 rounded-xl border tabular-nums ${getCorNota(
-                        av.notaGeral
-                      )}`}
-                    >
-                      Nota {av.notaGeral.toFixed(1)}
-                    </span>
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 font-medium">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{jogo.local || 'CT Master Soccer'}</span>
+                    </div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
-                {/* 5 Notas rápidas */}
-                <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">
-                  <span>Téc: <strong className="font-mono text-slate-900 dark:text-white">{av.notas.tecnica.toFixed(1)}</strong></span>
-                  <span>Tát: <strong className="font-mono text-slate-900 dark:text-white">{av.notas.tatica.toFixed(1)}</strong></span>
-                  <span>Fís: <strong className="font-mono text-slate-900 dark:text-white">{av.notas.fisica.toFixed(1)}</strong></span>
-                  <span>Men: <strong className="font-mono text-slate-900 dark:text-white">{av.notas.mental.toFixed(1)}</strong></span>
-                  <span>Disc: <strong className="font-mono text-slate-900 dark:text-white">{av.notas.disciplinar.toFixed(1)}</strong></span>
-                </div>
+      {/* ========================================================= */}
+      {/* 7. SEÇÃO DESEMPENHO DOS JOGADORES / DESTAQUES DA TEMPORADA */}
+      {/* Lista ordenada do melhor para o pior, com média e posição */}
+      {/* ========================================================= */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <Trophy className="w-5 h-5 text-amber-500" />
+              <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                Desempenho dos Jogadores / Destaques da Temporada
+              </h3>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+              Classificação geral dos atletas do melhor para o pior ({categoriaAtiva})
+            </p>
+          </div>
 
-                {/* Parecer / Observação */}
-                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900/80 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 leading-relaxed italic font-medium">
-                  "{av.observacoes}"
-                </p>
+          <button
+            onClick={() => onNavegarPlantel(categoriaAtiva === 'GERAL' ? 'TODAS' : categoriaAtiva)}
+            className="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition cursor-pointer self-start sm:self-auto"
+          >
+            <span>Ver Plantel Completo</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
 
-                {atleta && (
-                  <div className="flex justify-end pt-1">
-                    <button
-                      onClick={() => onSelecionarAtleta(atleta)}
-                      className="text-xs sm:text-sm font-bold text-blue-600 dark:text-blue-400 hover:underline"
+        {atletasRanqueados.length === 0 ? (
+          <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+            Nenhum atleta encontrado nesta categoria.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {atletasRanqueados.map(({ atleta, totalJogos, mediaGeral, melhorPilarNome }, index) => {
+              const posicaoRanking = index + 1;
+              const ehOuro = posicaoRanking === 1;
+              const ehPrata = posicaoRanking === 2;
+              const ehBronze = posicaoRanking === 3;
+
+              return (
+                <div
+                  key={atleta.id}
+                  onClick={() => onSelecionarAtleta(atleta)}
+                  className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border-2 border-slate-200/90 dark:border-slate-700/80 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs hover:border-blue-400 group"
+                >
+                  <div className="flex items-center gap-3.5">
+                    {/* Badge da Posição no Ranking (1º, 2º, 3º...) */}
+                    <div
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center font-black text-sm sm:text-base shrink-0 shadow-2xs ${
+                        ehOuro
+                          ? 'bg-amber-400 text-slate-950 border border-amber-300'
+                          : ehPrata
+                          ? 'bg-slate-300 text-slate-900 border border-slate-200'
+                          : ehBronze
+                          ? 'bg-amber-700 text-white border border-amber-600'
+                          : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 font-mono'
+                      }`}
                     >
-                      Ver histórico e ficha completa de {atleta.nome.split(' ')[0]} →
-                    </button>
+                      {ehOuro ? '1º' : ehPrata ? '2º' : ehBronze ? '3º' : `${posicaoRanking}º`}
+                    </div>
+
+                    {/* Avatar com Sigla do APELIDO */}
+                    <div className="w-12 h-12 rounded-2xl bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 flex items-center justify-center font-black text-sm text-slate-800 dark:text-slate-100 border-2 border-slate-300 dark:border-slate-600">
+                      {atleta.fotoUrl ? (
+                        <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
+                      ) : (
+                        obterIniciaisApelido(atleta)
+                      )}
+                    </div>
+
+                    {/* Dados do Jogador: APELIDO PRIMEIRO E GRANDE, Nome completo abaixo */}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-lg border border-blue-200/70">
+                          {atleta.categoria}
+                        </span>
+                        <h4 className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight group-hover:underline">
+                          {atleta.apelido || atleta.nome.split(' ')[0]}
+                        </h4>
+                      </div>
+                      <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200">
+                        {atleta.nome}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">{atleta.posicao}</span>
+                        <span>·</span>
+                        <span>Pé: {atleta.pernaDominante}</span>
+                        <span>·</span>
+                        <span className="text-blue-600 dark:text-blue-400 font-bold">
+                          {totalJogos} {totalJogos === 1 ? 'partida avaliada' : 'partidas avaliadas'}
+                        </span>
+                        {totalJogos > 0 && (
+                          <>
+                            <span>·</span>
+                            <span className="text-slate-600 dark:text-slate-300">Ponto forte: {melhorPilarNome}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
+
+                  {/* Média Geral e seta */}
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-700/60">
+                    <div className="text-left sm:text-right">
+                      <span className="text-[11px] text-slate-400 block font-bold uppercase tracking-wider">
+                        Média Geral
+                      </span>
+                      <span
+                        className={`text-base sm:text-lg font-mono font-black px-3 py-1 rounded-xl border tabular-nums shadow-2xs inline-block ${getCorNota(
+                          mediaGeral
+                        )}`}
+                      >
+                        {totalJogos > 0 ? mediaGeral.toFixed(1) : '--'}
+                      </span>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="pt-3 border-t-2 border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs sm:text-sm text-slate-500 font-medium">
+          <span>Critérios técnicos padronizados de 1 a 10 pela comissão</span>
+          <button
+            onClick={() => storageService.exportarAvaliacoesCsv()}
+            className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            <span>Baixar Planilha CSV</span>
+          </button>
         </div>
       </div>
     </div>
   );
 };
+
+export default PainelGeral;

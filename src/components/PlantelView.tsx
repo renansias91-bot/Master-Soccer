@@ -53,10 +53,10 @@ export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
   // FORMAÇÃO 4-4-2 LOSANGO
   '4-4-2 Losango': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
-    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 15, top: 72 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
     { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
     { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
-    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 85, top: 72 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
     { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 58 },
     { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 22, top: 42 },
     { id: 'MEI_D', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 78, top: 42 },
@@ -68,10 +68,10 @@ export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
   // FORMAÇÃO 4-3-3
   '4-3-3': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
-    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 15, top: 72 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
     { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
     { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
-    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 85, top: 72 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
     { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 58 },
     { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 30, top: 42 },
     { id: 'MEI_D', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 70, top: 42 },
@@ -83,10 +83,10 @@ export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
   // FORMAÇÃO 4-2-4 - 4 DA FRENTE BAIXOS, PROXIMOS DO MEIO
   '4-2-4': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
-    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 15, top: 72 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
     { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
     { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
-    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 85, top: 72 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
     { id: 'VOL1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei', left: 35, top: 56 },
     { id: 'VOL2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei', left: 65, top: 56 },
     { id: 'PE_E', label: 'PE', nomeCompleto: 'Ponta Esquerda', linha: 'ata', left: 14, top: 36 },
@@ -98,10 +98,10 @@ export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
   // FORMAÇÃO 4-2-3-1
   '4-2-3-1': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
-    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 15, top: 72 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
     { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
     { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
-    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 85, top: 72 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
     { id: 'VOL1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei', left: 38, top: 58 },
     { id: 'VOL2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei', left: 62, top: 58 },
     { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 20, top: 38 },
@@ -113,10 +113,10 @@ export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
   // FORMAÇÃO 4-1-4-1
   '4-1-4-1': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
-    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 15, top: 72 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
     { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
     { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
-    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 85, top: 72 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
     { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 60 },
     { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campista Esquerdo', linha: 'mei', left: 16, top: 40 },
     { id: 'MEI_C1', label: 'MEI', nomeCompleto: 'Meio-Campista Central 1', linha: 'mei', left: 38, top: 42 },
