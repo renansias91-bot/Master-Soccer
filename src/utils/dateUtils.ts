@@ -93,3 +93,43 @@ export function formatarDataAmigavelJogo(dataStr?: string, hora?: string): strin
 
   return `${dataFormatada}${horaTexto}`;
 }
+
+/**
+ * Converte data e hora para número de ordenação preciso (YYYYMMDDHHMM)
+ */
+export function dataHoraParaValorOrdenacao(dataStr?: string, horaStr?: string): number {
+  const dataVal = dataParaValorOrdenacao(dataStr);
+  let minutos = 0;
+  if (horaStr) {
+    const limpo = horaStr.trim();
+    const partes = limpo.split(':');
+    const h = parseInt(partes[0] || '0', 10);
+    const m = parseInt(partes[1] || '0', 10);
+    minutos = (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+  }
+  return dataVal * 10000 + minutos;
+}
+
+/**
+ * Ordena lista de jogos conforme a regra estrita do Master Soccer:
+ * 1º) Jogos que ainda vão acontecer (realizado = false) em ordem crescente de data + hora (mais próximo primeiro: ex 06/11 às 14:30, depois 06/11 às 15:50, depois 14/11...).
+ * 2º) Jogos já realizados / finalizados (realizado = true) em ordem decrescente de data + hora (mais recente primeiro: ex 05/11, depois 28/10...).
+ */
+export function ordenarJogosAgenda<T extends { realizado?: boolean; dataJogo: string; hora?: string }>(jogos: T[]): T[] {
+  return jogos.slice().sort((a, b) => {
+    const realA = Boolean(a.realizado);
+    const realB = Boolean(b.realizado);
+    if (realA !== realB) {
+      return realA ? 1 : -1;
+    }
+
+    const valA = dataHoraParaValorOrdenacao(a.dataJogo, a.hora);
+    const valB = dataHoraParaValorOrdenacao(b.dataJogo, b.hora);
+
+    if (!realA) {
+      return valA - valB;
+    }
+
+    return valB - valA;
+  });
+}

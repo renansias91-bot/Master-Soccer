@@ -736,6 +736,7 @@ export default function App() {
             onSalvarJogo={handleSalvarJogo}
             jogoSelecionadoId={jogoSelecionadoParaEscalacaoId}
             onSelecionarJogoId={setJogoSelecionadoParaEscalacaoId}
+            onVoltarParaAgenda={() => setAbaAtiva('jogo')}
           />
         )}
 
@@ -768,6 +769,7 @@ export default function App() {
             onVoltar={() => setAbaAtiva('painel')}
             onNovaAvaliacao={() => setAbaAtiva('jogo')}
             onEditarAtleta={handleAbrirEditarAtleta}
+            onExcluirAvaliacao={handleExcluirAvaliacaoDireto}
           />
         )}
 

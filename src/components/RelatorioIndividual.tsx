@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Users,
   Search,
+  Trash2,
 } from 'lucide-react';
 import { Atleta, AvaliacaoJogo } from '../types';
 import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
@@ -23,6 +24,7 @@ interface RelatorioIndividualProps {
   onVoltar: () => void;
   onNovaAvaliacao: (atletaId?: string) => void;
   onEditarAtleta: (atleta: Atleta) => void;
+  onExcluirAvaliacao?: (id: string) => void;
 }
 
 export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
@@ -32,6 +34,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
   onVoltar,
   onNovaAvaliacao,
   onEditarAtleta,
+  onExcluirAvaliacao,
 }) => {
   // Atleta ativo na tela de Histórico / Relatório (padrão o primeiro ou o passado via prop)
   const [atletaAtivoId, setAtletaAtivoId] = useState<string>(
@@ -39,6 +42,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
   );
   const [buscaJogador, setBuscaJogador] = useState('');
   const [jogoIndexAtivo, setJogoIndexAtivo] = useState<number>(0);
+  const [modalApagarEtapa, setModalApagarEtapa] = useState<0 | 1 | 2>(0);
 
   const [legendaAberta, setLegendaAberta] = useState<boolean>(false);
 
@@ -671,6 +675,128 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                         )}
                       </div>
                     )}
+
+                    {/* ========================================================= */}
+                    {/* BOTÃO [ Apagar esta avaliação ] NO FINAL DO HISTÓRICO DO JOGO */}
+                    {/* ========================================================= */}
+                    <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setModalApagarEtapa(1)}
+                        className="px-4 py-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 border border-rose-200 dark:border-rose-900 rounded-xl transition flex items-center gap-1.5 active:scale-98 cursor-pointer shadow-2xs"
+                        title="Apagar esta avaliação do histórico deste atleta"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Apagar esta avaliação</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ========================================================= */}
+                {/* 1ª CONFIRMAÇÃO EM MODAL: Excluir avaliação? */}
+                {/* ========================================================= */}
+                {modalApagarEtapa === 1 && avaliacaoSelecionada && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150 no-print">
+                    <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+                          <Trash2 className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                            Excluir avaliação?
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                            Confirmação de exclusão
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="my-4">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+                          Tem certeza que deseja excluir esta avaliação de{' '}
+                          <span className="text-blue-600 dark:text-blue-400 font-bold">
+                            {atletaAtivo.apelido || atletaAtivo.nome}
+                          </span>{' '}
+                          vs{' '}
+                          <span className="font-bold text-slate-900 dark:text-white">
+                            {avaliacaoSelecionada.adversario}
+                          </span>
+                          ?
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 mt-6">
+                        <button
+                          type="button"
+                          onClick={() => setModalApagarEtapa(0)}
+                          className="py-2.5 px-4 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setModalApagarEtapa(2)}
+                          className="py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-98 transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <span>Sim, continuar</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ========================================================= */}
+                {/* 2ª CONFIRMAÇÃO EM MODAL: Confirmar exclusão definitiva? */}
+                {/* ========================================================= */}
+                {modalApagarEtapa === 2 && avaliacaoSelecionada && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-150 no-print">
+                    <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border-2 border-rose-500 p-6 relative">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                          <Trash2 className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-rose-600 dark:text-rose-400">
+                            Confirmar exclusão definitiva?
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                            Ação irreversível
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="my-4 space-y-2">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+                          Essa ação não pode ser desfeita.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 mt-6">
+                        <button
+                          type="button"
+                          onClick={() => setModalApagarEtapa(0)}
+                          className="py-2.5 px-4 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onExcluirAvaliacao && avaliacaoSelecionada) {
+                              onExcluirAvaliacao(avaliacaoSelecionada.id);
+                            }
+                            setModalApagarEtapa(0);
+                            setJogoIndexAtivo(0);
+                          }}
+                          className="py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-98 transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Excluir definitivamente</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

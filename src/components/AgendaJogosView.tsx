@@ -33,6 +33,7 @@ import {
   formatarDataExibicao,
   dataParaValorOrdenacao,
   formatarDataAmigavelJogo,
+  ordenarJogosAgenda,
 } from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
@@ -119,9 +120,11 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     }
   }, [competicoesDisponiveis, competicaoFiltro]);
 
-  // Filtra jogos por categoria, competição e busca por adversário
+  // Filtra jogos por categoria, competição e busca por adversário com regra estrita de ordenação por data e hora:
+  // 1º) Jogos que ainda vão acontecer (mais próximo primeiro: ex 06/11 às 14:30, 06/11 às 15:50, 14/11...)
+  // 2º) Jogos que já aconteceram / realizados (mais recente primeiro: ex 05/11, 28/10...)
   const jogosFiltrados = useMemo(() => {
-    return jogosDaCategoria.filter((j) => {
+    const filtrados = jogosDaCategoria.filter((j) => {
       const compNome = j.tipo?.trim() || 'Amistoso';
       const matchComp = competicaoFiltro === 'TODAS' || compNome === competicaoFiltro;
       const matchBusca =
@@ -129,54 +132,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         j.adversario.toLowerCase().includes(buscaAdversario.trim().toLowerCase());
       return matchComp && matchBusca;
     });
+    return ordenarJogosAgenda(filtrados);
   }, [jogosDaCategoria, competicaoFiltro, buscaAdversario]);
-
-  // Agrupamento por competição (usado quando Filtro 2 = 'TODAS')
-  const gruposPorCompeticao = useMemo<
-    Array<{
-      competicao: string;
-      total: number;
-      pendentes: number;
-      jogos: JogoAgenda[];
-    }>
-  >(() => {
-    const mapa: Record<string, JogoAgenda[]> = {};
-
-    jogosFiltrados.forEach((j) => {
-      const comp = j.tipo?.trim() || 'Amistoso';
-      if (!mapa[comp]) mapa[comp] = [];
-      mapa[comp].push(j);
-    });
-
-    return Object.entries(mapa)
-      .sort((a, b) => {
-        if (b[1].length !== a[1].length) return b[1].length - a[1].length;
-        return a[0].localeCompare(b[0]);
-      })
-      .map(([competicao, listaJogos]) => {
-        const jogosOrdenados = listaJogos.slice().sort((a, b) => {
-          if (a.realizado !== b.realizado) return a.realizado ? 1 : -1;
-          if (!a.realizado) {
-            return dataParaValorOrdenacao(a.dataJogo) - dataParaValorOrdenacao(b.dataJogo);
-          }
-          return dataParaValorOrdenacao(b.dataJogo) - dataParaValorOrdenacao(a.dataJogo);
-        });
-
-        const pendentes = listaJogos.filter((j) => {
-          if (j.realizado) return false;
-          const escalacao = j.escalacao || {};
-          const titulares = Object.values(escalacao).filter((e) => e.titular).length;
-          return titulares < 11;
-        }).length;
-
-        return {
-          competicao,
-          total: listaJogos.length,
-          pendentes,
-          jogos: jogosOrdenados,
-        };
-      });
-  }, [jogosFiltrados]);
 
   // Estados para o formulário de avaliação do jogador selecionado
   const [atletaIndexAtivo, setAtletaIndexAtivo] = useState<number>(0);
@@ -208,7 +165,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   const [pontosMelhoria, setPontosMelhoria] = useState<string[]>([]);
 
   const [feedbackSalvo, setFeedbackSalvo] = useState<string | null>(null);
-  const [modalApagarAvaliacaoEtapa, setModalApagarAvaliacaoEtapa] = useState<0 | 1 | 2>(0);
 
   // =========================================================
   // LIGAÇÃO COM A ESCALAÇÃO:
@@ -453,44 +409,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 500);
     }
-  };
-
-  const handleConfirmarApagarAvaliacaoDefinitivo = () => {
-    if (!jogoSelecionadoParaAvaliar || !atletaAtual) return;
-
-    const avExistente = avaliacoes.find(
-      (av) =>
-        av.atletaId === atletaAtual.id &&
-        (av.jogoAgendaId === jogoSelecionadoParaAvaliar.id ||
-          (av.adversario.toLowerCase().includes(jogoSelecionadoParaAvaliar.adversario.toLowerCase()) &&
-            av.categoria === jogoSelecionadoParaAvaliar.categoria))
-    );
-
-    if (avExistente && onExcluirAvaliacao) {
-      onExcluirAvaliacao(avExistente.id);
-    }
-
-    // Resetar campos para valores padrão
-    setTecnica(8.0);
-    setTatica(8.0);
-    setFisica(7.5);
-    setMental(8.0);
-    setDisciplinar(9.0);
-    setObsFisica('');
-    setObsTecnica('');
-    setObsTatica('');
-    setObsMental('');
-    setObsDisciplinar('');
-    setMinutos1Tempo(40);
-    setMinutos2Tempo(40);
-    setPontosFortes([]);
-    setPontosMelhoria([]);
-    setModalApagarAvaliacaoEtapa(0);
-
-    const apelidoOuPrimeiro = atletaAtual.apelido || atletaAtual.nome.split(' ')[0];
-    setFeedbackSalvo(`✓ Avaliação de ${apelidoOuPrimeiro} apagada com sucesso!`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(() => setFeedbackSalvo(null), 3500);
   };
 
   // Selo de status de escalação no card do jogo
@@ -1217,57 +1135,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             {/* SELEÇÃO POR TOQUE: PONTOS DE ATENÇÃO E PONTOS POSITIVOS */}
             {/* (SEM CAIXAS DE TEXTO LIVRE - SÓ TOQUE PARA SELECIONAR QUANTOS QUISER) */}
             {/* ========================================================= */}
+            {/* PONTOS POSITIVOS PRIMEIRO, PONTOS DE ATENÇÃO / APRIMORAMENTO DEPOIS */}
+            {/* ========================================================= */}
             <div className="space-y-5 pt-4 border-t border-slate-200 dark:border-slate-800">
-              {/* Seção 1: ⚠️ PONTOS DE ATENÇÃO / APRIMORAMENTO (Amarelo claro #FEFCE8, badge #FACC15 com texto marrom #713F12, nunca vermelho) */}
-              <div className="p-4 rounded-xl bg-[#FEFCE8] dark:bg-amber-950/30 border border-[#FEF08A] dark:border-amber-800 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-[#713F12] dark:text-amber-200 flex items-center gap-1.5">
-                    <span>⚠️</span> PONTOS DE ATENÇÃO / APRIMORAMENTO
-                  </label>
-                  {pontosMelhoria.length > 0 && (
-                    <span className="text-[11px] font-bold text-[#713F12] dark:text-amber-300">
-                      {pontosMelhoria.length} selecionados
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {TAGS_ATENCAO_DISPONIVEIS.map((tag) => {
-                    const ativo = pontosMelhoria.includes(tag);
-                    return (
-                      <button
-                        key={tag}
-                        type="button"
-                        disabled={modoLeitura}
-                        onClick={() => togglePontoAtencao(tag)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                          ativo
-                            ? modoLeitura
-                              ? 'bg-amber-200 text-[#713F12] shadow-xs'
-                              : 'shadow-xs'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-amber-50'
-                        } ${modoLeitura ? 'cursor-not-allowed opacity-60' : ''}`}
-                        style={
-                          ativo
-                            ? {
-                                backgroundColor: '#FACC15',
-                                color: '#713F12',
-                                border: '1px solid #EAB308',
-                                fontWeight: 700,
-                              }
-                            : {}
-                        }
-                      >
-                        {tag}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-[11px] text-[#78350F] dark:text-amber-300 font-medium pt-0.5">
-                  {modoLeitura ? 'Modo de leitura (desbloqueie no topo para editar)' : 'Toque para selecionar quantos quiser'}
-                </p>
-              </div>
-
-              {/* Seção 2: ✅ PONTOS POSITIVOS / DESTAQUE (Verde claro #F0FDF4, badge verde #16A34A) */}
+              {/* Seção 1: ✅ PONTOS POSITIVOS / DESTAQUE (Verde claro #F0FDF4, badge verde #16A34A) */}
               <div className="p-4 rounded-xl bg-[#F0FDF4] dark:bg-emerald-950/30 border border-[#BBF7D0] dark:border-emerald-800 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase tracking-wider text-[#15803D] dark:text-emerald-300 flex items-center gap-1.5">
@@ -1315,9 +1186,58 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   {modoLeitura ? 'Modo de leitura (desbloqueie no topo para editar)' : 'Toque para selecionar quantos quiser'}
                 </p>
               </div>
+
+              {/* Seção 2: ⚠️ PONTOS DE ATENÇÃO / APRIMORAMENTO (Amarelo claro #FEFCE8, badge #FACC15 com texto marrom #713F12, nunca vermelho) */}
+              <div className="p-4 rounded-xl bg-[#FEFCE8] dark:bg-amber-950/30 border border-[#FEF08A] dark:border-amber-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#713F12] dark:text-amber-200 flex items-center gap-1.5">
+                    <span>⚠️</span> PONTOS DE ATENÇÃO / APRIMORAMENTO
+                  </label>
+                  {pontosMelhoria.length > 0 && (
+                    <span className="text-[11px] font-bold text-[#713F12] dark:text-amber-300">
+                      {pontosMelhoria.length} selecionados
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {TAGS_ATENCAO_DISPONIVEIS.map((tag) => {
+                    const ativo = pontosMelhoria.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        disabled={modoLeitura}
+                        onClick={() => togglePontoAtencao(tag)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                          ativo
+                            ? modoLeitura
+                              ? 'bg-amber-200 text-[#713F12] shadow-xs'
+                              : 'shadow-xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-amber-50'
+                        } ${modoLeitura ? 'cursor-not-allowed opacity-60' : ''}`}
+                        style={
+                          ativo
+                            ? {
+                                backgroundColor: '#FACC15',
+                                color: '#713F12',
+                                border: '1px solid #EAB308',
+                                fontWeight: 700,
+                              }
+                            : {}
+                        }
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-[#78350F] dark:text-amber-300 font-medium pt-0.5">
+                  {modoLeitura ? 'Modo de leitura (desbloqueie no topo para editar)' : 'Toque para selecionar quantos quiser'}
+                </p>
+              </div>
             </div>
 
-            {/* Ações de Salvar do Jogador */}
+            {/* Ações de Salvar do Jogador: Apenas Concluir & Fechar, Salvar Jogador e Salvar & Próximo Jogador */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <button
@@ -1326,20 +1246,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     setJogoSelecionadoParaAvaliar(null);
                     setModoLeitura(false);
                   }}
-                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+                  className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition"
                 >
                   Concluir & Fechar
-                </button>
-
-                {/* Botão [ 🗑️ Apagar esta avaliação ] com DUAS confirmações em modal */}
-                <button
-                  type="button"
-                  onClick={() => setModalApagarAvaliacaoEtapa(1)}
-                  className="px-3.5 py-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900 rounded-xl transition flex items-center gap-1.5 active:scale-98"
-                  title="Apagar a avaliação deste atleta nesta partida"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Apagar esta avaliação</span>
                 </button>
               </div>
 
@@ -1348,7 +1257,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   type="button"
                   disabled={modoLeitura}
                   onClick={() => handleSalvarAvaliacaoJogador(false)}
-                  className="px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-slate-200"
+                  className="px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-slate-200 cursor-pointer"
                 >
                   Salvar Jogador
                 </button>
@@ -1357,121 +1266,13 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   disabled={modoLeitura}
                   onClick={() => handleSalvarAvaliacaoJogador(true)}
                   style={{ backgroundColor: modoLeitura ? '#94a3b8' : '#2563eb' }}
-                  className="px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition flex items-center gap-2 disabled:cursor-not-allowed disabled:shadow-none"
+                  className="px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition flex items-center gap-2 disabled:cursor-not-allowed disabled:shadow-none cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4 text-amber-300" />
                   <span>Salvar & Próximo Jogador</span>
                 </button>
               </div>
             </div>
-
-            {/* ========================================================= */}
-            {/* MODAL 1: PRIMEIRA CONFIRMAÇÃO DE APAGAR AVALIAÇÃO */}
-            {/* ========================================================= */}
-            {modalApagarAvaliacaoEtapa === 1 && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150 no-print">
-                <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
-                      <Trash2 className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                        Apagar avaliação?
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                        Confirmação (Etapa 1 de 2)
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="my-4 space-y-2">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
-                      Tem certeza que deseja apagar a avaliação de{' '}
-                      <span className="text-blue-600 dark:text-blue-400 font-bold">
-                        {atletaAtual.apelido || atletaAtual.nome}
-                      </span>{' '}
-                      nesta partida contra{' '}
-                      <span className="font-bold text-slate-900 dark:text-white">
-                        {jogoSelecionadoParaAvaliar.adversario}
-                      </span>
-                      ?
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Esta ação iniciará o processo de exclusão dos dados avaliados para este atleta.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mt-6">
-                    <button
-                      type="button"
-                      onClick={() => setModalApagarAvaliacaoEtapa(0)}
-                      className="py-2.5 px-4 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModalApagarAvaliacaoEtapa(2)}
-                      className="py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 active:scale-98 transition shadow-xs flex items-center justify-center gap-1.5"
-                    >
-                      <span>Sim, continuar &gt;</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ========================================================= */}
-            {/* MODAL 2: SEGUNDA E DEFINITIVA CONFIRMAÇÃO */}
-            {/* ========================================================= */}
-            {modalApagarAvaliacaoEtapa === 2 && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-150 no-print">
-                <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border-2 border-rose-500 p-6 relative">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                      <Trash2 className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-rose-600 dark:text-rose-400">
-                        Confirmação final
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                        Aviso crítico de irreversibilidade
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="my-4 space-y-2.5">
-                    <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs font-semibold text-rose-800 dark:text-rose-300">
-                      ⚠️ Esta ação é irreversível e apagará todas as notas, minutos e observações de{' '}
-                      <strong>{atletaAtual.apelido || atletaAtual.nome}</strong> desta partida.
-                    </div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
-                      Deseja realmente excluir definitivamente esta avaliação?
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mt-6">
-                    <button
-                      type="button"
-                      onClick={() => setModalApagarAvaliacaoEtapa(1)}
-                      className="py-2.5 px-4 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition"
-                    >
-                      Voltar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleConfirmarApagarAvaliacaoDefinitivo}
-                      className="py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-98 transition shadow-xs flex items-center justify-center gap-1.5"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Excluir definitivamente</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         ) : (
           <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-500 text-xs space-y-2">
@@ -1512,13 +1313,19 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       return (
         <div
           key={jogo.id}
-          className="bg-slate-100/90 dark:bg-slate-850 rounded-2xl border border-slate-300 dark:border-slate-700 p-4 sm:p-5 shadow-xs transition-all flex flex-col justify-between gap-3 group"
+          className="bg-gray-50 dark:bg-slate-850 rounded-2xl border border-slate-300 dark:border-slate-700 p-4 sm:p-5 shadow-xs transition-all flex flex-col justify-between gap-3 group"
         >
           <div className="space-y-2">
+            {/* Topo do card: Categoria à esquerda + selo verde ✓ Jogo Realizado ao lado, e competição à direita */}
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                {jogo.categoria}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                  {jogo.categoria}
+                </span>
+                <span className="bg-green-100 text-green-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <span>✓</span> Jogo Realizado
+                </span>
+              </div>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
                 {jogo.tipo}
               </span>
@@ -1790,52 +1597,21 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         )}
       </div>
 
-      {/* 5) LISTA DE JOGOS: AGRUPADA POR COMPETIÇÃO (QUANDO TODAS) OU DIRETA (QUANDO COMPETIÇÃO ESPECÍFICA) */}
+      {/* 5) LISTA DE JOGOS: LISTA CORRIDA QUANDO [TODAS] (SEM TÍTULO DE SEÇÃO), OU SEÇÃO DA COMPETIÇÃO QUANDO ESPECÍFICA */}
       {competicaoFiltro === 'TODAS' ? (
-        gruposPorCompeticao.length === 0 ? (
+        jogosFiltrados.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-xs">
             {buscaAdversario
               ? `Nenhum jogo encontrado para "${buscaAdversario}".`
               : 'Nenhum jogo cadastrado neste filtro. Clique em "+ Novo Jogo" para adicionar.'}
           </div>
         ) : (
-          <div className="space-y-6">
-            {gruposPorCompeticao.map((grupo) => (
-              <div key={grupo.competicao} className="space-y-3">
-                {/* Título de seção: COPA RIO DE JANEIRO (3) • 2 com escalação pendente */}
-                <div className="flex flex-wrap items-center gap-2 pb-1 border-b border-slate-200 dark:border-slate-800">
-                  <div className="flex items-center gap-1.5">
-                    <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
-                    <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                      {grupo.competicao} ({grupo.total})
-                    </h3>
-                  </div>
-                  <div className="text-xs font-bold">
-                    {grupo.pendentes === 0 ? (
-                      <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
-                        • Tudo pronto
-                      </span>
-                    ) : (
-                      <span className="text-amber-600 dark:text-amber-400 font-extrabold">
-                        • {grupo.pendentes}{' '}
-                        {grupo.pendentes === 1
-                          ? 'com escalação pendente'
-                          : 'com escalação pendente'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Cards daquela competição ordenados por data (mais próximo primeiro) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  {grupo.jogos.map((jogo) => renderCardJogo(jogo))}
-                </div>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {jogosFiltrados.map((jogo) => renderCardJogo(jogo))}
           </div>
         )
       ) : (
-        /* Visualização quando uma competição específica está selecionada (sem repetir título de seção) */
+        /* Visualização quando uma competição específica está selecionada (com título de seção) */
         jogosFiltrados.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-xs">
             {buscaAdversario
@@ -1843,17 +1619,46 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               : `Nenhum jogo cadastrado na competição ${competicaoFiltro}.`}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            {jogosFiltrados
-              .slice()
-              .sort((a, b) => {
-                if (a.realizado !== b.realizado) return a.realizado ? 1 : -1;
-                if (!a.realizado) {
-                  return dataParaValorOrdenacao(a.dataJogo) - dataParaValorOrdenacao(b.dataJogo);
-                }
-                return dataParaValorOrdenacao(b.dataJogo) - dataParaValorOrdenacao(a.dataJogo);
-              })
-              .map((jogo) => renderCardJogo(jogo))}
+          <div className="space-y-3">
+            {/* Título de seção: COPA RIO DE JANEIRO (3) • 2 com escalação pendente */}
+            {(() => {
+              const pendentes = jogosFiltrados.filter((j) => {
+                if (j.realizado) return false;
+                const escalacao = j.escalacao || {};
+                const titulares = Object.values(escalacao).filter((e) => e.titular).length;
+                return titulares < 11;
+              }).length;
+
+              return (
+                <div className="flex flex-wrap items-center gap-2 pb-1 border-b border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center gap-1.5">
+                    <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
+                    <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                      {competicaoFiltro} ({jogosFiltrados.length})
+                    </h3>
+                  </div>
+                  <div className="text-xs font-bold">
+                    {pendentes === 0 ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
+                        • Tudo pronto
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 dark:text-amber-400 font-extrabold">
+                        • {pendentes}{' '}
+                        {pendentes === 1
+                          ? 'com escalação pendente'
+                          : 'com escalação pendente'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Cards da competição selecionada */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {jogosFiltrados.map((jogo) => renderCardJogo(jogo))}
+            </div>
           </div>
         )
       )}

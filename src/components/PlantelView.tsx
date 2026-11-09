@@ -19,6 +19,7 @@ import {
   ArrowLeftRight,
   X,
   ChevronDown,
+  ArrowLeft,
 } from 'lucide-react';
 import { Atleta, AvaliacaoJogo, JogoAgenda, POSICOES_JOGO, AtletaEscalado } from '../types';
 import { storageService } from '../services/storage';
@@ -38,6 +39,7 @@ interface PlantelViewProps {
   onSalvarJogo: (jogo: JogoAgenda) => Promise<void> | void;
   jogoSelecionadoId?: string;
   onSelecionarJogoId?: (id: string) => void;
+  onVoltarParaAgenda?: () => void;
 }
 
 export interface SlotPosicaoCampinho {
@@ -156,6 +158,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   onSalvarJogo,
   jogoSelecionadoId,
   onSelecionarJogoId,
+  onVoltarParaAgenda,
 }) => {
   const [busca, setBusca] = useState('');
   const [filtroCategoriaLista, setFiltroCategoriaLista] = useState<string>('TODAS');
@@ -169,20 +172,15 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
     posicaoSlot?: string;
   } | null>(null);
 
-  const [jogoAtivoId, setJogoAtivoId] = useState<string>(() => {
-    if (jogoSelecionadoId) return jogoSelecionadoId;
-    return jogos.length > 0 ? jogos[0].id : '';
-  });
+  const [jogoAtivoId, setJogoAtivoId] = useState<string>(jogoSelecionadoId || '');
 
   // Mapa local de atletas escalados para o jogo ativo: { [atletaId]: AtletaEscalado }
   const [escalacaoMap, setEscalacaoMap] = useState<Record<string, AtletaEscalado>>({});
   const [salvandoFeedback, setSalvandoFeedback] = useState<string | null>(null);
 
-  // Sincroniza quando jogos ou jogoAtivoId mudarem
+  // Sincroniza quando jogos ou jogoSelecionadoId mudarem
   useEffect(() => {
-    if (jogoSelecionadoId && jogoSelecionadoId !== jogoAtivoId) {
-      setJogoAtivoId(jogoSelecionadoId);
-    }
+    setJogoAtivoId(jogoSelecionadoId || '');
   }, [jogoSelecionadoId]);
 
   useEffect(() => {
@@ -196,18 +194,6 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   }, [jogoAtivoId, jogos]);
 
   const jogoAtivo = jogos.find((j) => j.id === jogoAtivoId) || null;
-
-  const handleTrocarJogo = (novoId: string) => {
-    setJogoAtivoId(novoId);
-    if (onSelecionarJogoId) onSelecionarJogoId(novoId);
-    const j = jogos.find((item) => item.id === novoId);
-    if (j) {
-      setEscalacaoMap(j.escalacao || {});
-    } else {
-      setEscalacaoMap({});
-    }
-    setSalvandoFeedback(null);
-  };
 
   // Toggle de convocação do atleta
   const handleToggleConvocacao = (atleta: Atleta) => {
@@ -483,89 +469,118 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
     atletas.filter((a) => a.categoria !== categoriaDoJogo)
   );
 
+  // Se o usuário entrar direto na aba ESCALAÇÃO sem ter selecionado um jogo antes na Agenda:
+  if (!jogoAtivo) {
+    return (
+      <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
+        <div className="p-10 sm:p-14 text-center bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-800 space-y-4 max-w-lg mx-auto my-8 shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center mx-auto shadow-2xs">
+            <Calendar className="w-8 h-8" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+              Selecione um jogo na Agenda para montar a escalação
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+              Abra a aba Jogo, encontre a partida desejada e clique no botão [Escalação] para escalar titulares e reservas.
+            </p>
+          </div>
+          {onVoltarParaAgenda && (
+            <button
+              type="button"
+              onClick={onVoltarParaAgenda}
+              style={{ backgroundColor: '#2563eb' }}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition shadow-xs cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Ir para Agenda</span>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
       {/* ========================================================= */}
-      {/* 1. SELETOR DE JOGO NO TOPO DA ESCALAÇÃO */}
+      {/* 1. CARD FIXO DO JOGO SELECIONADO NO TOPO (SEM SELETOR / DROPDOWN) */}
       {/* ========================================================= */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
-                Escalação da Partida
-              </h2>
+          <div className="space-y-1">
+            {/* vs Magé - SUB-17 - 06/11/2026 às 15:50 - Campo do Batan - Magé - Copa Rio de Janeiro */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                {jogoAtivo.adversario.startsWith('vs') ? jogoAtivo.adversario : `vs ${jogoAtivo.adversario}`}
+              </span>
+              <span className="text-slate-400">·</span>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800">
+                {jogoAtivo.categoria}
+              </span>
+              <span className="text-slate-400">·</span>
+              <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
+                {formatarDataExibicao(jogoAtivo.dataJogo)}{jogoAtivo.hora ? ` às ${jogoAtivo.hora}` : ''}
+              </span>
+              {jogoAtivo.local && (
+                <>
+                  <span className="text-slate-400">·</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {jogoAtivo.local}
+                  </span>
+                </>
+              )}
+              {jogoAtivo.tipo && (
+                <>
+                  <span className="text-slate-400">·</span>
+                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                    {jogoAtivo.tipo}
+                  </span>
+                </>
+              )}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Selecione o jogo na agenda, convoque os titulares e reservas e defina a posição de cada atleta
-            </p>
           </div>
 
-          {/* Botão Salvar Escalação do Jogo */}
-          {jogoAtivo && (
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Botão [Voltar para Agenda] */}
+            {onVoltarParaAgenda && (
+              <button
+                type="button"
+                onClick={onVoltarParaAgenda}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer"
+                title="Voltar para a Agenda de Jogos"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+                <span>Voltar para Agenda</span>
+              </button>
+            )}
+
+            {/* Botão Salvar Escalação do Jogo */}
             <button
+              type="button"
               onClick={handleSalvarEscalacao}
               style={{ backgroundColor: '#2563eb' }}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
+              title="Salvar alterações da escalação"
             >
               <Save className="w-4 h-4 text-amber-300" />
               <span>Salvar Escalação do Jogo</span>
             </button>
-          )}
-        </div>
-
-        {/* Dropdown de Seleção de Jogo */}
-        <div className="pt-2">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-blue-600" />
-            <span>Escolher Jogo para Montar a Escalação:</span>
-          </label>
-
-          <select
-            value={jogoAtivoId}
-            onChange={(e) => handleTrocarJogo(e.target.value)}
-            className="w-full h-11 px-3.5 py-2 text-sm font-bold bg-slate-50 dark:bg-slate-800 border-2 border-blue-500/50 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer shadow-xs"
-          >
-            <option value="">Selecione um jogo...</option>
-            {jogos.map((j) => (
-              <option key={j.id} value={j.id}>
-                {j.adversario} · {formatarDataExibicao(j.dataJogo)} · {j.categoria} ({j.tipo})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Resumo da Escalação do Jogo Selecionado */}
-        {jogoAtivo && (
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-extrabold text-slate-900 dark:text-white">
-                {jogoAtivo.adversario}
-              </span>
-              <span className="text-slate-400">·</span>
-              <span className="text-blue-600 dark:text-blue-400 font-bold">
-                {jogoAtivo.categoria}
-              </span>
-              <span className="text-slate-400">·</span>
-              <span className="text-slate-600 dark:text-slate-300">
-                {formatarDataExibicao(jogoAtivo.dataJogo)} {jogoAtivo.hora ? `às ${jogoAtivo.hora}` : ''}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold border border-blue-200/50">
-                {titularesCount} titulares
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
-                {reservasCount} reservas
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
-                Total: {totalConvocados} convocados
-              </span>
-            </div>
           </div>
-        )}
+        </div>
+
+        {/* Linha 2: Contadores 0 titulares • 0 reservas • Total: 0 convocados */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+          <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold border border-blue-200/50">
+            {titularesCount} titulares
+          </span>
+          <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
+            {reservasCount} reservas
+          </span>
+          <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
+            Total: {totalConvocados} convocados
+          </span>
+        </div>
 
         {/* Feedback de salvamento */}
         {salvandoFeedback && (
@@ -575,63 +590,50 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
           </div>
         )}
 
-        {/* ABAS SUB-ESCALAÇÃO: [ Lista | Campinho ] */}
-        {jogoAtivo && (
-          <div className="flex items-center gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={() => setAbaSubEscalacao('lista')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
-                abaSubEscalacao === 'lista'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              <span>Lista</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setAbaSubEscalacao('campinho')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
-                abaSubEscalacao === 'campinho'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              <span>Campinho</span>
-            </button>
-          </div>
-        )}
+        {/* Linha 3: Botões [Lista] [Campinho] */}
+        <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <button
+            type="button"
+            onClick={() => setAbaSubEscalacao('lista')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+              abaSubEscalacao === 'lista'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Lista</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAbaSubEscalacao('campinho')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+              abaSubEscalacao === 'campinho'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            <span>Campinho</span>
+          </button>
+        </div>
+
+        {/* Linha 4: Busca [Buscar atleta por nome, apelido ou posição...] */}
+        <div className="relative pt-1">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar atleta por nome, apelido ou posição..."
+            className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+          />
+        </div>
       </div>
 
-      {/* ========================================================= */}
-      {/* 2. MENSAGEM SE NENHUM JOGO FOR ESCOLHIDO */}
-      {/* ========================================================= */}
-      {!jogoAtivo ? (
-        <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-800 space-y-3">
-          <Calendar className="w-10 h-10 text-blue-600 mx-auto opacity-70" />
-          <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
-            Escolha um jogo acima para montar a escalação
-          </h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Assim que você selecionar uma partida na caixa acima, você poderá marcar os jogadores convocados, escolher titulares, reservas e a posição tática de cada atleta.
-          </p>
-        </div>
-      ) : abaSubEscalacao === 'lista' ? (
+      {/* Conteúdo: Lista de atletas por categoria ou Campinho */}
+      {abaSubEscalacao === 'lista' ? (
         <>
-          {/* Campo de Busca Rápida de Atleta */}
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar atleta por nome, apelido ou posição..."
-              className="w-full pl-10 pr-4 py-2.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-          </div>
 
           {/* ========================================================= */}
           {/* GRUPO 1: CATEGORIA DO JOGO (Ex: SUB-15 - Categoria do Jogo) */}
