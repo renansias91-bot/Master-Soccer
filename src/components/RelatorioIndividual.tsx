@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   Clock,
@@ -43,8 +43,14 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
   const [buscaJogador, setBuscaJogador] = useState('');
   const [jogoIndexAtivo, setJogoIndexAtivo] = useState<number>(0);
   const [modalApagarEtapa, setModalApagarEtapa] = useState<0 | 1 | 2>(0);
-
   const [legendaAberta, setLegendaAberta] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (atletaSelecionadoInicial?.id) {
+      setAtletaAtivoId(atletaSelecionadoInicial.id);
+      setJogoIndexAtivo(0);
+    }
+  }, [atletaSelecionadoInicial]);
 
   const atletaAtivo = atletas.find((a) => a.id === atletaAtivoId) || atletas[0];
 

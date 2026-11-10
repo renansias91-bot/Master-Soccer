@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Calendar,
   Clock,
@@ -51,7 +51,33 @@ interface AgendaJogosViewProps {
   onSalvarAvaliacao: (avaliacao: AvaliacaoJogo) => void;
   onSelecionarAtleta: (atleta: Atleta) => void;
   onNavegarEscalacao?: (jogoId: string) => void;
+  jogoFocarInfo?: { jogoId?: string; categoria?: string; competicao?: string } | null;
+  onLimparJogoFocar?: () => void;
 }
+
+const getPesoPosicaoOrdenacao = (posicao?: string, posicaoJogo?: string): number => {
+  const p = `${posicaoJogo || ''} ${posicao || ''}`.toUpperCase();
+  if (p.includes('GOL')) return 1;
+  if (p.includes('LD') || p.includes('LATERAL DIR') || p.includes('LATERAL-DIR')) return 2;
+  if (p.includes('ZAG')) return 3;
+  if (p.includes('LE') || p.includes('LATERAL ESQ') || p.includes('LATERAL-ESQ')) return 4;
+  if (p.includes('VOL')) return 5;
+  if (p.includes('MEI') || p.includes('LOSANGO') || p.includes('LINHA DE 2') || p.includes('LINHA DE 3') || p.includes('10')) return 6;
+  if (p.includes('ATA') || p.includes('PONTA') || p.includes('CENTROAVANTE')) return 7;
+  return 8;
+};
+
+const getNomeAmigavelPosicao = (posicao?: string, posicaoJogo?: string): string => {
+  const p = `${posicaoJogo || ''} ${posicao || ''}`.toUpperCase();
+  if (p.includes('GOL')) return 'Goleiro';
+  if (p.includes('LD') || p.includes('LATERAL DIR')) return 'Lateral Direito';
+  if (p.includes('ZAG')) return 'Zagueiro';
+  if (p.includes('LE') || p.includes('LATERAL ESQ')) return 'Lateral Esquerdo';
+  if (p.includes('VOL')) return 'Volante';
+  if (p.includes('MEI') || p.includes('10')) return 'Meia';
+  if (p.includes('ATA') || p.includes('PONTA') || p.includes('CENTROAVANTE')) return 'Atacante';
+  return posicaoJogo || posicao || 'Jogador';
+};
 
 export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   jogos,
@@ -65,12 +91,111 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   onSalvarAvaliacao,
   onSelecionarAtleta,
   onNavegarEscalacao,
+  jogoFocarInfo,
+  onLimparJogoFocar,
 }) => {
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('TODAS');
   const [competicaoFiltro, setCompeticaoFiltro] = useState<string>('TODAS');
   const [buscaAdversario, setBuscaAdversario] = useState<string>('');
   const [jogoSelecionadoParaAvaliar, setJogoSelecionadoParaAvaliar] = useState<JogoAgenda | null>(null);
   const [modoLeitura, setModoLeitura] = useState<boolean>(false);
+
+  // Memória de rolagem interna da aba JOGO
+  const scrollAntesAvaliacaoRef = useRef<number>(0);
+  const ultimoJogoAbertoIdRef = useRef<string | null>(null);
+  const scrollPorFiltroRef = useRef<Record<string, number>>({});
+
+  // Focar em jogo específico vindo de PRÓXIMOS JOGOS no Painel
+  useEffect(() => {
+    if (!jogoFocarInfo) return;
+
+    const { jogoId, categoria, competicao } = jogoFocarInfo;
+    const jogoAlvo = jogoId ? jogos.find((j) => j.id === jogoId) : undefined;
+
+    const catFinal = categoria || jogoAlvo?.categoria;
+    const compFinal = competicao || jogoAlvo?.tipo?.trim();
+
+    if (catFinal) {
+      setCategoriaFiltro(catFinal);
+    }
+    if (compFinal) {
+      setCompeticaoFiltro(compFinal);
+    }
+    setBuscaAdversario('');
+
+    if (jogoId) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`card-jogo-${jogoId}`);
+        if (el) {
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          el.classList.add(
+            'ring-4',
+            'ring-blue-600',
+            'border-blue-600',
+            'bg-blue-50',
+            'dark:bg-blue-950/70',
+            'transition-all',
+            'duration-300'
+          );
+          setTimeout(() => {
+            el.classList.remove(
+              'ring-4',
+              'ring-blue-600',
+              'border-blue-600',
+              'bg-blue-50',
+              'dark:bg-blue-950/70'
+            );
+          }, 2000);
+        }
+        onLimparJogoFocar?.();
+      }, 250);
+
+      return () => clearTimeout(timer);
+    } else {
+      onLimparJogoFocar?.();
+    }
+  }, [jogoFocarInfo, jogos, onLimparJogoFocar]);
+
+  // Transições de filtro com memória de posição
+  const handleTrocarCategoriaFiltro = (novaCat: string) => {
+    if (novaCat === categoriaFiltro) return;
+
+    const chaveAtual = `${categoriaFiltro}__${competicaoFiltro}`;
+    const currentY = window.scrollY || document.documentElement.scrollTop || 0;
+    scrollPorFiltroRef.current[chaveAtual] = currentY;
+
+    const chaveNova = `${novaCat}__${competicaoFiltro}`;
+    const targetY = scrollPorFiltroRef.current[chaveNova] ?? currentY;
+
+    setCategoriaFiltro(novaCat);
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: targetY, left: 0, behavior: 'instant' as ScrollBehavior });
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: targetY, left: 0, behavior: 'instant' as ScrollBehavior });
+      });
+    });
+  };
+
+  const handleTrocarCompeticaoFiltro = (novaComp: string) => {
+    if (novaComp === competicaoFiltro) return;
+
+    const chaveAtual = `${categoriaFiltro}__${competicaoFiltro}`;
+    const currentY = window.scrollY || document.documentElement.scrollTop || 0;
+    scrollPorFiltroRef.current[chaveAtual] = currentY;
+
+    const chaveNova = `${categoriaFiltro}__${novaComp}`;
+    const targetY = scrollPorFiltroRef.current[chaveNova] ?? currentY;
+
+    setCompeticaoFiltro(novaComp);
+
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: targetY, left: 0, behavior: 'instant' as ScrollBehavior });
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: targetY, left: 0, behavior: 'instant' as ScrollBehavior });
+      });
+    });
+  };
 
   // Categorias disponíveis para o Filtro 1 (TODAS + categorias dinâmicas dos jogos e atletas)
   const categoriasFiltroLista = useMemo<string[]>(() => {
@@ -280,6 +405,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   };
 
   const handleAbrirAvaliacaoJogo = (jogo: JogoAgenda, abrirEmModoLeitura = false) => {
+    // Salva a posição exata onde estava na lista de jogos
+    scrollAntesAvaliacaoRef.current = window.scrollY || document.documentElement.scrollTop || 0;
+    ultimoJogoAbertoIdRef.current = jogo.id;
+
     setJogoSelecionadoParaAvaliar(jogo);
     setModoLeitura(abrirEmModoLeitura || Boolean(jogo.realizado));
     setAtletaIndexAtivo(0);
@@ -300,7 +429,26 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     if (primeiroAtletaId) {
       carregarAvaliacaoDoAtleta(primeiroAtletaId, jogo);
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleFecharAvaliacao = () => {
+    const jogoId = ultimoJogoAbertoIdRef.current;
+    const savedY = scrollAntesAvaliacaoRef.current;
+    setJogoSelecionadoParaAvaliar(null);
+    setModoLeitura(false);
+
+    requestAnimationFrame(() => {
+      if (jogoId) {
+        const card = document.getElementById(`card-jogo-${jogoId}`);
+        if (card) {
+          card.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior });
+          return;
+        }
+      }
+      if (savedY !== undefined) {
+        window.scrollTo({ top: savedY, left: 0, behavior: 'instant' as ScrollBehavior });
+      }
+    });
   };
 
   const handleMudarAtletaNaAvaliacao = (novoIndex: number) => {
@@ -400,14 +548,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     const apelidoOuPrimeiro = atletaAtual.apelido || atletaAtual.nome.split(' ')[0];
     setFeedbackSalvo(`✓ Avaliação de ${apelidoOuPrimeiro} salva com sucesso!`);
 
-    // Subir a página automaticamente para o início ao salvar
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
     if (avancarProximo && atletaIndexAtivo + 1 < atletasDoJogo.length) {
       setTimeout(() => {
         handleMudarAtletaNaAvaliacao(atletaIndexAtivo + 1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 500);
+      }, 400);
     }
   };
 
@@ -453,10 +597,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                setJogoSelecionadoParaAvaliar(null);
-                setModoLeitura(false);
-              }}
+              onClick={handleFecharAvaliacao}
               className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -1242,10 +1383,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setJogoSelecionadoParaAvaliar(null);
-                    setModoLeitura(false);
-                  }}
+                  onClick={handleFecharAvaliacao}
                   className="px-4 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition"
                 >
                   Concluir & Fechar
@@ -1312,6 +1450,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
       return (
         <div
+          id={`card-jogo-${jogo.id}`}
           key={jogo.id}
           className="bg-gray-50 dark:bg-slate-850 rounded-2xl border border-slate-300 dark:border-slate-700 p-4 sm:p-5 shadow-xs transition-all flex flex-col justify-between gap-3 group"
         >
@@ -1385,6 +1524,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
     return (
       <div
+        id={`card-jogo-${jogo.id}`}
         key={jogo.id}
         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs hover:border-blue-500/40 transition-all flex flex-col justify-between gap-3 group"
       >
@@ -1427,7 +1567,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => onEditarJogo(jogo)}
+              onClick={() => {
+                ultimoJogoAbertoIdRef.current = jogo.id;
+                onEditarJogo(jogo);
+              }}
               className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1 transition cursor-pointer"
               title="Editar data, hora, adversário e local"
             >
@@ -1438,7 +1581,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             {onNavegarEscalacao && (
               <button
                 type="button"
-                onClick={() => onNavegarEscalacao(jogo.id)}
+                onClick={() => {
+                  ultimoJogoAbertoIdRef.current = jogo.id;
+                  onNavegarEscalacao(jogo.id);
+                }}
                 className="px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/60 dark:border-blue-800 flex items-center gap-1 transition cursor-pointer"
                 title="Montar escalação do jogo"
               >
@@ -1507,7 +1653,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       <div className="grid grid-cols-2 gap-2.5">
         <button
           type="button"
-          onClick={() => setCategoriaFiltro('TODAS')}
+          onClick={() => handleTrocarCategoriaFiltro('TODAS')}
           className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs ${
             categoriaFiltro === 'TODAS'
               ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
@@ -1523,7 +1669,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             <button
               key={cat}
               type="button"
-              onClick={() => setCategoriaFiltro(cat)}
+              onClick={() => handleTrocarCategoriaFiltro(cat)}
               className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs ${
                 ativo
                   ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
@@ -1545,7 +1691,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           {/* Botão [Todas] */}
           <button
             type="button"
-            onClick={() => setCompeticaoFiltro('TODAS')}
+            onClick={() => handleTrocarCompeticaoFiltro('TODAS')}
             className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[46px] ${
               competicaoFiltro === 'TODAS'
                 ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
@@ -1562,7 +1708,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               <button
                 key={comp.nome}
                 type="button"
-                onClick={() => setCompeticaoFiltro(comp.nome)}
+                onClick={() => handleTrocarCompeticaoFiltro(comp.nome)}
                 className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[46px] ${
                   ativo
                     ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'

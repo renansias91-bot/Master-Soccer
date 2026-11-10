@@ -757,13 +757,13 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   }
 
   return (
-    <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
+    <div className="-mt-4 sm:-mt-8 space-y-4 pb-[170px] w-full max-w-full box-border">
       {/* ========================================================= */}
-      {/* CABEÇALHO FIXO NO TOPO - NADA SOME AO ROLAR */}
+      {/* CABEÇALHO FIXO NO TOPO - NADA SOME AO ROLAR, SEM CORTE */}
       {/* ========================================================= */}
-      <div className="sticky top-[72px] z-30 bg-white dark:bg-slate-900 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 border-b-2 border-slate-200 dark:border-slate-800 shadow-md space-y-3">
-        {/* Linha 1: vs [Adversário] - [Categoria] - [Data] às [Hora] - [Local] - [Tipo] + Botões */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="sticky top-[72px] z-30 bg-white dark:bg-slate-900 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 border-b-2 border-slate-200 dark:border-slate-800 shadow-md flex flex-col gap-3">
+        {/* BLOCO 1: vs [Adversário] - [Categoria] - [Data] às [Hora] - [Local] - [Tipo] + Botão [← Voltar] SOZINHO */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
               {jogoAtivo.adversario.startsWith('vs') ? jogoAtivo.adversario : `vs ${jogoAtivo.adversario}`}
@@ -794,58 +794,54 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {onVoltarParaAgenda && (
-              <button
-                type="button"
-                onClick={onVoltarParaAgenda}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer"
-                title="Voltar para a Agenda de Jogos"
-              >
-                <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
-                <span>Voltar</span>
-              </button>
-            )}
-
+          {onVoltarParaAgenda && (
             <button
               type="button"
-              onClick={handleSalvarEscalacao}
-              style={{ backgroundColor: '#2563eb' }}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
-              title="Salvar alterações da escalação"
+              onClick={onVoltarParaAgenda}
+              className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer shrink-0"
+              title="Voltar para a Agenda de Jogos"
             >
-              <Save className="w-4 h-4 text-amber-300" />
-              <span>Salvar Escalação do Jogo</span>
+              <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+              <span>← Voltar</span>
             </button>
-          </div>
+          )}
         </div>
 
-        {/* Linha 2: Busca + Formação Tática + Contadores + Abas [Lista] [Campinho] */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
-          {/* Busca */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar atleta por nome, apelido ou posição..."
-              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
-            />
-          </div>
+        {/* BLOCO 2: Busca com altura confortável */}
+        <div className="relative w-full">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar atleta por nome, apelido ou posição..."
+            className="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+          />
+          {busca && (
+            <button
+              type="button"
+              onClick={() => setBusca('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
 
-          {/* Formação Tática + Contadores + Abas */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {/* Botão FORMAÇÃO TÁTICA com opções: 4-4-2 Losango, 4-2-3-1, 4-3-3, 4-2-4 linhas baixas, 4-1-4-1 */}
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-300 whitespace-nowrap">
+        {/* BLOCO 3: Formação Tática + Contadores + Bloquinho [Lista] [Campinho] */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Esquerda: FORMAÇÃO TÁTICA + Contadores */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Botão FORMAÇÃO TÁTICA */}
+            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="text-xs font-black uppercase text-slate-600 dark:text-slate-300 whitespace-nowrap">
                 FORMAÇÃO TÁTICA:
               </span>
               <div className="relative">
                 <select
                   value={formacao}
                   onChange={(e) => setFormacao(e.target.value)}
-                  className="appearance-none pl-2.5 pr-7 py-1 text-xs font-black bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                  className="appearance-none pl-3 pr-8 py-1.5 text-xs sm:text-sm font-black bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
                 >
                   <option value="4-4-2 Losango">4-4-2 Losango</option>
                   <option value="4-2-3-1">4-2-3-1</option>
@@ -853,56 +849,77 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                   <option value="4-2-4 linhas baixas">4-2-4 linhas baixas</option>
                   <option value="4-1-4-1">4-1-4-1</option>
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 text-blue-600 pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
+                <ChevronDown className="w-4 h-4 text-blue-600 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
               </div>
             </div>
 
             {/* Contadores: X titulares | Y reservas | Total: Z */}
             <div className="flex items-center gap-1.5 text-xs font-bold">
-              <span className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
+              <span className="px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
                 {titularesCount} titulares
               </span>
-              <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              <span className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                 {reservasCount} reservas
               </span>
-              <span className="px-2 py-1 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
+              <span className="px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
                 Total: {totalConvocados}
               </span>
             </div>
+          </div>
 
-            {/* Abas Lista e Campinho */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setAbaSubEscalacao('lista')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                  abaSubEscalacao === 'lista'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900'
-                }`}
+          {/* Direita: Bloquinho [Lista] [Campinho] - Altura 48px, texto 17px negrito, padding lateral 20px, ícone de 20px */}
+          <div className="flex items-center gap-2">
+            {/* Botão [Lista] */}
+            <button
+              type="button"
+              onClick={() => setAbaSubEscalacao('lista')}
+              style={abaSubEscalacao === 'lista' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+              className={`h-12 px-5 rounded-xl text-[17px] font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xs whitespace-nowrap ${
+                abaSubEscalacao === 'lista'
+                  ? 'bg-blue-600 text-white border-2 border-blue-600'
+                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Users className="w-5 h-5 shrink-0" />
+              <span>Lista</span>
+            </button>
+
+            {/* Botão [Campinho] com ícone de prancheta/campo tático de 20px com linhas e bolinhas de tática */}
+            <button
+              type="button"
+              onClick={() => setAbaSubEscalacao('campinho')}
+              style={abaSubEscalacao === 'campinho' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+              className={`h-12 px-5 rounded-xl text-[17px] font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xs whitespace-nowrap ${
+                abaSubEscalacao === 'campinho'
+                  ? 'bg-blue-600 text-white border-2 border-blue-600'
+                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <svg
+                className="w-5 h-5 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <Users className="w-3.5 h-3.5" />
-                <span>Lista</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setAbaSubEscalacao('campinho')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                  abaSubEscalacao === 'campinho'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900'
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5" />
-                <span>Campinho</span>
-              </button>
-            </div>
+                <rect x="2" y="3" width="20" height="18" rx="2" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <circle cx="12" cy="12" r="3.5" />
+                <circle cx="6" cy="7.5" r="1" fill="currentColor" />
+                <circle cx="18" cy="7.5" r="1" fill="currentColor" />
+                <circle cx="8" cy="16.5" r="1" fill="currentColor" />
+                <circle cx="16" cy="16.5" r="1" fill="currentColor" />
+              </svg>
+              <span>Campinho</span>
+            </button>
           </div>
         </div>
 
-        {/* Linha 3: Barra Grudada ESCOLHA A VAGA com Bloquinhos da Formação */}
+        {/* BLOCO 4: Barra Grudada ESCOLHA A VAGA com Bloquinhos da Formação */}
         <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 overflow-x-auto pb-1 no-scrollbar">
-          <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
+          <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
             ESCOLHA A VAGA:
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -954,15 +971,15 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                 return (
                   <div
                     key={atleta.id}
-                    className={`rounded-2xl p-4 transition-all border ${
+                    className={`rounded-2xl p-4 transition-all border min-h-[72px] flex flex-col justify-center ${
                       estaConvocado
                         ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-500 shadow-xs'
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      {/* Checkbox de Convocação + Avatar com sigla do APELIDO + Dados do Atleta */}
-                      <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center justify-between gap-3">
+                      {/* Checkbox de Convocação (26px) + Avatar com sigla do APELIDO + Dados do Atleta */}
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
                         <button
                           type="button"
                           onClick={() => handleToggleConvocacao(atleta)}
@@ -970,14 +987,14 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                           title={estaConvocado ? 'Desmarcar da partida' : 'Convocar para partida'}
                         >
                           {estaConvocado ? (
-                            <CheckSquare className="w-6 h-6 text-blue-600 fill-blue-100 dark:fill-blue-950" />
+                            <CheckSquare className="w-[26px] h-[26px] text-blue-600 fill-blue-100 dark:fill-blue-950" />
                           ) : (
-                            <Square className="w-6 h-6 text-slate-400 hover:text-slate-600" />
+                            <Square className="w-[26px] h-[26px] text-slate-400 hover:text-slate-600" />
                           )}
                         </button>
 
                         {/* Foto / Iniciais do APELIDO */}
-                        <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 overflow-hidden flex items-center justify-center font-black text-sm text-slate-700 dark:text-slate-300">
+                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 overflow-hidden flex items-center justify-center font-black text-sm text-slate-700 dark:text-slate-300">
                           {atleta.fotoUrl ? (
                             <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
                           ) : (
@@ -985,32 +1002,28 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                           )}
                         </div>
 
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight leading-tight truncate">
+                            <h4 className="text-[17px] font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-snug truncate">
                               {atleta.apelido || atleta.nome.split(' ')[0]}
                             </h4>
-                            {/* Selo da categoria SOMENTE se o atleta for de outra categoria */}
                             {ehOutraCategoria && (
                               <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
                                 {atleta.categoria}
                               </span>
                             )}
                           </div>
-                          <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
-                            {atleta.nome}
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Posição: <strong className="text-slate-800 dark:text-slate-200 font-bold">{atleta.posicao}</strong> · Pé: {formatarPe(atleta.pernaDominante)}
+                          <p className="text-[14px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
+                            Posição: <strong className="text-slate-900 dark:text-slate-100 font-bold">{atleta.posicao}</strong> · Pé: <span className="font-semibold">{formatarPe(atleta.pernaDominante)}</span>
                           </p>
                         </div>
                       </div>
 
-                      {/* Botão Ficha */}
+                      {/* Botão Ficha maior e clicável */}
                       <button
                         type="button"
                         onClick={() => onSelecionarAtleta(atleta)}
-                        className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shrink-0 cursor-pointer shadow-2xs"
+                        className="px-4 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl transition shrink-0 cursor-pointer shadow-xs min-w-[72px] text-center"
                       >
                         Ficha
                       </button>
@@ -1018,14 +1031,14 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
                     {/* Configurações de Convocação: APENAS Status: [ Titular ] [ Reserva ], sem selo de Titular */}
                     {estaConvocado && (
-                      <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex items-center gap-2 text-xs animate-in fade-in">
-                        <span className="font-bold text-slate-700 dark:text-slate-300 mr-1">
+                      <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex items-center gap-2 text-xs sm:text-sm animate-in fade-in">
+                        <span className="font-bold text-slate-700 dark:text-slate-300 mr-1 text-sm">
                           Status:
                         </span>
                         <button
                           type="button"
                           onClick={() => handleSetTitular(atleta.id, true)}
-                          className={`px-3 py-1.5 rounded-lg font-black transition-all cursor-pointer ${
+                          className={`px-3.5 py-1.5 rounded-lg font-black transition-all cursor-pointer text-xs sm:text-sm ${
                             titular
                               ? 'bg-blue-600 text-white shadow-xs'
                               : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
@@ -1036,7 +1049,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                         <button
                           type="button"
                           onClick={() => handleSetTitular(atleta.id, false)}
-                          className={`px-3 py-1.5 rounded-lg font-black transition-all cursor-pointer ${
+                          className={`px-3.5 py-1.5 rounded-lg font-black transition-all cursor-pointer text-xs sm:text-sm ${
                             !titular
                               ? 'bg-amber-500 text-white shadow-xs'
                               : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
@@ -1051,25 +1064,13 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
               })}
             </div>
           )}
-
-          {/* Botão Inferior Salvar Escalação do Jogo */}
-          <div className="pt-4 flex justify-end">
-            <button
-              onClick={handleSalvarEscalacao}
-              style={{ backgroundColor: '#2563eb' }}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-md transition-all cursor-pointer"
-            >
-              <Save className="w-4 h-4 text-amber-300" />
-              <span>Salvar Escalação do Jogo ({totalConvocados} convocados)</span>
-            </button>
-          </div>
         </>
       ) : (
         /* ========================================================= */
         /* ABA 2: CAMPINHO TÁTICO VERTICAL COM 11 TITULARES */
         /* ========================================================= */
         <div className="space-y-6">
-          {/* Topo do Campinho: Seletor de Formação e Botão Salvar */}
+          {/* Topo do Campinho: Seletor de Formação e Contador */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -1099,15 +1100,6 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                 {titularesCount} / 11 Titulares
               </span>
             </div>
-
-            <button
-              onClick={handleSalvarEscalacao}
-              style={{ backgroundColor: '#2563eb' }}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all shrink-0"
-            >
-              <Save className="w-4 h-4 text-amber-300" />
-              <span>Salvar Escalação do Jogo</span>
-            </button>
           </div>
 
           {/* O Campo de Futebol Vertical */}
@@ -1231,7 +1223,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
             return (
               <div className="space-y-6">
-                <div className="relative w-full max-w-xl mx-auto rounded-3xl overflow-hidden shadow-2xl border-4 border-emerald-950 bg-emerald-800 text-white select-none h-[620px] sm:h-[680px]">
+                <div className="relative w-full max-w-2xl sm:max-w-3xl mx-auto rounded-3xl overflow-hidden shadow-2xl border-4 border-emerald-950 bg-emerald-800 text-white select-none h-[720px] sm:h-[800px] md:h-[880px]">
                   {/* Gramado listrado em tons de verde */}
                   <div className="absolute inset-0 opacity-15 pointer-events-none flex flex-col">
                     {[...Array(8)].map((_, i) => (
@@ -1347,23 +1339,29 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                     </div>
                   )}
                 </div>
-
-                {/* Botão Inferior Salvar Escalação do Jogo no Campinho */}
-                <div className="pt-2 flex justify-end">
-                  <button
-                    onClick={handleSalvarEscalacao}
-                    style={{ backgroundColor: '#2563eb' }}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-md transition-all"
-                  >
-                    <Save className="w-4 h-4 text-amber-300" />
-                    <span>Salvar Escalação do Jogo ({totalConvocados} convocados)</span>
-                  </button>
-                </div>
               </div>
             );
           })()}
         </div>
       )}
+
+      {/* ========================================================= */}
+      {/* BOTÃO ÚNICO SALVAR ESCALAÇÃO DO JOGO - FIXO NO RODAPÉ */}
+      {/* Fixo acima das abas PAINEL / JOGO / ESCALAÇÃO / TROFÉUS */}
+      {/* ========================================================= */}
+      <div className="fixed bottom-20 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t-2 border-slate-200/90 dark:border-slate-800 p-2.5 sm:p-3 shadow-2xl">
+        <div className="max-w-md sm:max-w-xl mx-auto">
+          <button
+            type="button"
+            onClick={handleSalvarEscalacao}
+            style={{ backgroundColor: '#2563eb' }}
+            className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-base sm:text-lg font-black text-white hover:bg-blue-700 active:scale-98 rounded-2xl shadow-lg transition-all cursor-pointer"
+          >
+            <Save className="w-5 h-5 text-amber-300 shrink-0" />
+            <span>Salvar Escalação do Jogo ({totalConvocados} convocados)</span>
+          </button>
+        </div>
+      </div>
 
       {/* ========================================================= */}
       {/* MODAL DE TROCA / SUBSTITUIÇÃO RÁPIDA ENTRE TITULAR E RESERVA */}

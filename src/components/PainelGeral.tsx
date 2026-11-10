@@ -38,7 +38,7 @@ interface PainelGeralProps {
   onSelecionarAtleta: (atleta: Atleta) => void;
   onNovaAvaliacao: () => void;
   onNovoAtleta: () => void;
-  onNavegarJogo?: () => void;
+  onNavegarJogo?: (jogoId?: string, categoria?: string, competicao?: string) => void;
 }
 
 /**
@@ -1255,7 +1255,15 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
           </div>
 
           <button
-            onClick={onNavegarJogo || onNovaAvaliacao}
+            onClick={() => {
+              if (onNavegarJogo) {
+                const primeiro = proximosJogos[0];
+                const cat = categoriaAtiva !== 'GERAL' ? categoriaAtiva : primeiro?.categoria;
+                onNavegarJogo(primeiro?.id, cat, primeiro?.tipo);
+              } else {
+                onNovaAvaliacao();
+              }
+            }}
             className="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition self-start sm:self-auto cursor-pointer"
           >
             <span>Ver Agenda Completa</span>
@@ -1290,7 +1298,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
               return (
                 <div
                   key={jogo.id}
-                  onClick={onNavegarJogo || onNovaAvaliacao}
+                  onClick={() => (onNavegarJogo ? onNavegarJogo(jogo.id, jogo.categoria, jogo.tipo) : onNovaAvaliacao())}
                   className="p-5 rounded-2xl bg-slate-50/90 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border-2 border-slate-200/90 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-600 transition-all cursor-pointer flex flex-col justify-between space-y-3.5 shadow-2xs group"
                 >
                   <div className="space-y-2.5">

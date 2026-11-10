@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Shield,
   Users,
@@ -56,6 +56,27 @@ type AbaNavegacao =
   | 'relatorio'
   | 'testefisico';
 
+const getChaveScrollAba = (aba: AbaNavegacao): string => {
+  switch (aba) {
+    case 'painel':
+      return 'scroll_PAINEL';
+    case 'jogo':
+      return 'scroll_JOGO';
+    case 'escalacao':
+      return 'scroll_ESCALAÇÃO';
+    case 'trofeus':
+      return 'scroll_TROFÉUS';
+    case 'financeiro':
+      return 'scroll_FINANCEIRO';
+    case 'relatorio':
+      return 'scroll_RELATÓRIO';
+    case 'testefisico':
+      return 'scroll_TESTEFISICO';
+    default:
+      return `scroll_${String(aba).toUpperCase()}`;
+  }
+};
+
 export default function App() {
   const isOnline = useOnlineStatus();
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
@@ -72,6 +93,24 @@ export default function App() {
   // Navegação: Menu de Baixo (PAINEL, JOGO, ESCALAÇÃO, TROFÉUS) + Telas do Menu ☰ (Financeiro, Relatório, Teste Físico)
   const [abaAtiva, setAbaAtiva] = useState<AbaNavegacao>('painel');
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>('TODAS');
+  const [jogoFocarInfo, setJogoFocarInfo] = useState<{
+    jogoId?: string;
+    categoria?: string;
+    competicao?: string;
+  } | null>(null);
+
+  // Memória de rolagem independente por aba (sessionStorage + refs)
+  const scrollTabsRef = useRef<Record<string, number>>({
+    painel: Number(sessionStorage.getItem('scroll_PAINEL') || 0),
+    jogo: Number(sessionStorage.getItem('scroll_JOGO') || 0),
+    escalacao: Number(sessionStorage.getItem('scroll_ESCALAÇÃO') || 0),
+    trofeus: Number(sessionStorage.getItem('scroll_TROFÉUS') || 0),
+    financeiro: Number(sessionStorage.getItem('scroll_FINANCEIRO') || 0),
+    relatorio: Number(sessionStorage.getItem('scroll_RELATÓRIO') || 0),
+    testefisico: Number(sessionStorage.getItem('scroll_TESTEFISICO') || 0),
+  });
+  const isRestoringScrollRef = useRef(false);
+  const wrapperRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Módulo Financeiro
   const [competicoes, setCompeticoes] = useState<ItemCompeticaoTaxa[]>(() =>
@@ -387,23 +426,86 @@ export default function App() {
     }
   };
 
+  // Monitorar e salvar posição de rolagem contínua da aba atual
+  useEffect(() => {
+    const onScroll = () => {
+      if (isRestoringScrollRef.current) return;
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      const chave = getChaveScrollAba(abaAtiva);
+      try {
+        sessionStorage.setItem(chave, String(y));
+      } catch {}
+      scrollTabsRef.current[abaAtiva] = y;
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [abaAtiva]);
+
+  // Transição de aba com memória de rolagem (sem window.scrollTo(0, 0))
+  const mudarAbaComMemoriaScroll = (novaAba: AbaNavegacao) => {
+    if (novaAba === abaAtiva) return;
+
+    // 1. Salvar rolagem da aba atual que está saindo
+    const currentY = window.scrollY || document.documentElement.scrollTop || 0;
+    const chaveAtual = getChaveScrollAba(abaAtiva);
+    try {
+      sessionStorage.setItem(chaveAtual, String(currentY));
+    } catch {}
+    scrollTabsRef.current[abaAtiva] = currentY;
+
+    // 2. Buscar posição salva da nova aba
+    const chaveNova = getChaveScrollAba(novaAba);
+    const savedYStr = sessionStorage.getItem(chaveNova);
+    const targetY = savedYStr !== null ? Number(savedYStr) : (scrollTabsRef.current[novaAba] || 0);
+
+    // Bloquear listener de scroll para evitar salvar 0 intermediário
+    isRestoringScrollRef.current = true;
+
+    // Garantir temporariamente minHeight se targetY for grande, para evitar corte antes de layout renderizado
+    const targetWrapper = wrapperRefs.current[novaAba];
+    if (targetWrapper && targetY > 0) {
+      targetWrapper.style.minHeight = `${targetY + window.innerHeight + 100}px`;
+    }
+
+    setAbaAtiva(novaAba);
+
+    // Restaurar a posição exata sem animação brusca
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: targetY, left: 0, behavior: 'instant' as ScrollBehavior });
+      if (targetWrapper) {
+        targetWrapper.style.minHeight = '';
+      }
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: targetY, left: 0, behavior: 'instant' as ScrollBehavior });
+        setTimeout(() => {
+          isRestoringScrollRef.current = false;
+        }, 50);
+      });
+    });
+  };
+
+  const handleNavegarJogoDoPainel = (jogoId?: string, categoria?: string, competicao?: string) => {
+    if (jogoId || categoria || competicao) {
+      setJogoFocarInfo({ jogoId, categoria, competicao });
+    }
+    mudarAbaComMemoriaScroll('jogo');
+  };
+
   // Navegações
   const handleAbrirRelatorioAtleta = (atleta: Atleta) => {
     setAtletaSelecionado(atleta);
-    setAbaAtiva('relatorio');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    mudarAbaComMemoriaScroll('relatorio');
   };
 
   const handleNavegarPlantel = (categoria?: string) => {
     if (categoria) setCategoriaAtiva(categoria);
-    setAbaAtiva('escalacao');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    mudarAbaComMemoriaScroll('escalacao');
   };
 
   const handleNavegarMenuTopo = (aba: AbaNavegacao) => {
-    setAbaAtiva(aba);
     setMenuDrawerOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    mudarAbaComMemoriaScroll(aba);
   };
 
   return (
@@ -423,7 +525,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-3 w-full max-w-full box-border">
           {/* Logo & Marca Master Soccer */}
           <div
-            onClick={() => setAbaAtiva('painel')}
+            onClick={() => mudarAbaComMemoriaScroll('painel')}
             className="flex items-center gap-3 cursor-pointer whitespace-nowrap shrink-0 group select-none"
           >
             <MasterSoccerEscudo
@@ -684,7 +786,12 @@ export default function App() {
       {/* ========================================================= */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-[120px] max-w-[100vw] overflow-x-hidden box-border">
         {/* ABA 1: PAINEL (Visão Geral de agora) */}
-        {abaAtiva === 'painel' && (
+        <div
+          ref={(el) => {
+            wrapperRefs.current['painel'] = el;
+          }}
+          style={{ display: abaAtiva === 'painel' ? 'block' : 'none' }}
+        >
           <PainelGeral
             atletas={atletas}
             avaliacoes={avaliacoes}
@@ -692,22 +799,29 @@ export default function App() {
             jogos={jogos}
             onNavegarPlantel={handleNavegarPlantel}
             onSelecionarAtleta={handleAbrirRelatorioAtleta}
-            onNavegarJogo={() => setAbaAtiva('jogo')}
+            onNavegarJogo={handleNavegarJogoDoPainel}
             onNovaAvaliacao={() => {
-              setAbaAtiva('jogo');
               handleAbrirNovoJogo();
+              mudarAbaComMemoriaScroll('jogo');
             }}
             onNovoAtleta={handleAbrirNovoAtleta}
           />
-        )}
+        </div>
 
         {/* ABA 2: JOGO (Agenda de Jogos com avaliação dentro do jogo) */}
-        {abaAtiva === 'jogo' && (
+        <div
+          ref={(el) => {
+            wrapperRefs.current['jogo'] = el;
+          }}
+          style={{ display: abaAtiva === 'jogo' ? 'block' : 'none' }}
+        >
           <AgendaJogosView
             jogos={jogos}
             atletas={atletas}
             avaliacoes={avaliacoes}
             categorias={categorias}
+            jogoFocarInfo={jogoFocarInfo}
+            onLimparJogoFocar={() => setJogoFocarInfo(null)}
             onNovoJogo={handleAbrirNovoJogo}
             onEditarJogo={handleAbrirEditarJogo}
             onExcluirJogo={handleExcluirJogo}
@@ -716,13 +830,18 @@ export default function App() {
             onSelecionarAtleta={handleAbrirRelatorioAtleta}
             onNavegarEscalacao={(jogoId) => {
               setJogoSelecionadoParaEscalacaoId(jogoId);
-              setAbaAtiva('escalacao');
+              mudarAbaComMemoriaScroll('escalacao');
             }}
           />
-        )}
+        </div>
 
         {/* ABA 3: ESCALAÇÃO (onde monta o time / convocação do jogo) */}
-        {abaAtiva === 'escalacao' && (
+        <div
+          ref={(el) => {
+            wrapperRefs.current['escalacao'] = el;
+          }}
+          style={{ display: abaAtiva === 'escalacao' ? 'block' : 'none' }}
+        >
           <PlantelView
             atletas={atletas}
             avaliacoes={avaliacoes}
@@ -736,15 +855,27 @@ export default function App() {
             onSalvarJogo={handleSalvarJogo}
             jogoSelecionadoId={jogoSelecionadoParaEscalacaoId}
             onSelecionarJogoId={setJogoSelecionadoParaEscalacaoId}
-            onVoltarParaAgenda={() => setAbaAtiva('jogo')}
+            onVoltarParaAgenda={() => mudarAbaComMemoriaScroll('jogo')}
           />
-        )}
+        </div>
 
         {/* ABA 4: TROFÉUS */}
-        {abaAtiva === 'trofeus' && <AbaTrofeus />}
+        <div
+          ref={(el) => {
+            wrapperRefs.current['trofeus'] = el;
+          }}
+          style={{ display: abaAtiva === 'trofeus' ? 'block' : 'none' }}
+        >
+          <AbaTrofeus />
+        </div>
 
         {/* TELAS DO MENU ☰ */}
-        {abaAtiva === 'financeiro' && (
+        <div
+          ref={(el) => {
+            wrapperRefs.current['financeiro'] = el;
+          }}
+          style={{ display: abaAtiva === 'financeiro' ? 'block' : 'none' }}
+        >
           <FinanceiroView
             atletas={atletas}
             categorias={categorias}
@@ -759,21 +890,31 @@ export default function App() {
             }
             onExibirToast={exibirToast}
           />
-        )}
+        </div>
 
-        {abaAtiva === 'relatorio' && (
+        <div
+          ref={(el) => {
+            wrapperRefs.current['relatorio'] = el;
+          }}
+          style={{ display: abaAtiva === 'relatorio' ? 'block' : 'none' }}
+        >
           <RelatorioIndividual
             atletas={atletas}
             atletaSelecionadoInicial={atletaSelecionado}
             avaliacoes={avaliacoes}
-            onVoltar={() => setAbaAtiva('painel')}
-            onNovaAvaliacao={() => setAbaAtiva('jogo')}
+            onVoltar={() => mudarAbaComMemoriaScroll('painel')}
+            onNovaAvaliacao={() => mudarAbaComMemoriaScroll('jogo')}
             onEditarAtleta={handleAbrirEditarAtleta}
             onExcluirAvaliacao={handleExcluirAvaliacaoDireto}
           />
-        )}
+        </div>
 
-        {abaAtiva === 'testefisico' && (
+        <div
+          ref={(el) => {
+            wrapperRefs.current['testefisico'] = el;
+          }}
+          style={{ display: abaAtiva === 'testefisico' ? 'block' : 'none' }}
+        >
           <TesteFisicoView
             atletas={atletas}
             testesFisicos={testesFisicos}
@@ -781,7 +922,7 @@ export default function App() {
             onSalvarTeste={handleSalvarTesteFisico}
             onExcluirTeste={handleExcluirTesteFisico}
           />
-        )}
+        </div>
       </main>
 
       {/* ========================================================= */}
@@ -793,7 +934,7 @@ export default function App() {
         <div className="max-w-md mx-auto grid grid-cols-4 items-center h-20 px-2">
           {/* 1. PAINEL */}
           <button
-            onClick={() => setAbaAtiva('painel')}
+            onClick={() => mudarAbaComMemoriaScroll('painel')}
             className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all ${
               abaAtiva === 'painel'
                 ? 'font-black bg-blue-50/90 dark:bg-blue-950/50 shadow-2xs'
@@ -807,7 +948,7 @@ export default function App() {
 
           {/* 2. JOGO */}
           <button
-            onClick={() => setAbaAtiva('jogo')}
+            onClick={() => mudarAbaComMemoriaScroll('jogo')}
             className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all ${
               abaAtiva === 'jogo'
                 ? 'font-black bg-blue-50/90 dark:bg-blue-950/50 shadow-2xs'
@@ -821,7 +962,7 @@ export default function App() {
 
           {/* 3. ESCALAÇÃO */}
           <button
-            onClick={() => setAbaAtiva('escalacao')}
+            onClick={() => mudarAbaComMemoriaScroll('escalacao')}
             className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all ${
               abaAtiva === 'escalacao'
                 ? 'font-black bg-blue-50/90 dark:bg-blue-950/50 shadow-2xs'
@@ -835,7 +976,7 @@ export default function App() {
 
           {/* 4. TROFÉUS */}
           <button
-            onClick={() => setAbaAtiva('trofeus')}
+            onClick={() => mudarAbaComMemoriaScroll('trofeus')}
             className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all ${
               abaAtiva === 'trofeus'
                 ? 'font-black bg-blue-50/90 dark:bg-blue-950/50 shadow-2xs'
