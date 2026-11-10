@@ -85,30 +85,11 @@ function extrairResultadoPartida(texto?: string): {
 }
 
 /**
- * Gera um caminho SVG cúbico suave (Catmull-Rom para Bézier) passando pelos pontos exatos
+ * Gera um caminho SVG linear passando pelos pontos exatos
  */
-function gerarCaminhoSuave(pontos: Array<{ x: number; y: number }>): string {
+function gerarCaminhoLinhas(pontos: Array<{ x: number; y: number }>): string {
   if (pontos.length === 0) return '';
-  if (pontos.length === 1) return `M ${pontos[0].x.toFixed(1)} ${pontos[0].y.toFixed(1)}`;
-  if (pontos.length === 2) {
-    return `M ${pontos[0].x.toFixed(1)} ${pontos[0].y.toFixed(1)} L ${pontos[1].x.toFixed(1)} ${pontos[1].y.toFixed(1)}`;
-  }
-
-  let d = `M ${pontos[0].x.toFixed(1)} ${pontos[0].y.toFixed(1)}`;
-  for (let i = 0; i < pontos.length - 1; i++) {
-    const p0 = pontos[i === 0 ? i : i - 1];
-    const p1 = pontos[i];
-    const p2 = pontos[i + 1];
-    const p3 = pontos[i + 2 < pontos.length ? i + 2 : i + 1];
-
-    const cp1x = p1.x + (p2.x - p0.x) / 6;
-    const cp1y = p1.y + (p2.y - p0.y) / 6;
-    const cp2x = p2.x - (p3.x - p1.x) / 6;
-    const cp2y = p2.y - (p3.y - p1.y) / 6;
-
-    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
-  }
-  return d;
+  return pontos.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
 }
 
 export const PainelGeral: React.FC<PainelGeralProps> = ({
@@ -167,9 +148,15 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
     return ['GERAL', ...arr];
   }, [categorias, atletas, listaJogos, avaliacoes]);
 
-  // Lista dinâmica de competições existentes
+  // Lista de competições existentes (com competições padrão e dinâmicas)
   const todasCompeticoes = useMemo(() => {
-    const compSet = new Set<string>();
+    const compSet = new Set<string>([
+      'Amistoso',
+      'Campeonato',
+      'Copa do Mundo',
+      'Copa Rio de Janeiro',
+      'Torneio',
+    ]);
     listaJogos.forEach((j) => {
       if (j.tipo && j.tipo.trim()) compSet.add(j.tipo.trim());
     });
@@ -254,9 +241,15 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
       return a.adversario.localeCompare(b.adversario);
     });
 
-    // Geração dos dados de evolução (Pontos Acumulados + Média de Nota da Equipe)
+    // Geração dos dados de evolução (Vitórias, Empates e Derrotas Acumuladas)
+    let acumV = 0;
+    let acumE = 0;
+    let acumD = 0;
     let acumuladorPts = 0;
     const partidasEvolucao = partidasFiltradas.map((p) => {
+      acumV += p.v;
+      acumE += p.e;
+      acumD += p.d;
       const pontosJogo = p.v === 1 ? 3 : p.e === 1 ? 1 : 0;
       acumuladorPts += pontosJogo;
 
@@ -279,6 +272,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
         notaMediaEquipe = p.v === 1 ? 8.5 : p.e === 1 ? 7.2 : 6.0;
       }
 
+      const resultadoExtenso = p.v === 1 ? 'Vitória' : p.e === 1 ? 'Empate' : 'Derrota';
       const resultadoTipo: 'V' | 'E' | 'D' = p.v === 1 ? 'V' : p.e === 1 ? 'E' : 'D';
       const dataFormatada = formatarDataExibicao(p.dataJogo).slice(0, 5) || '—';
       const adversarioLimpo = p.adversario.trim();
@@ -296,9 +290,13 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
         dataJogo: p.dataJogo,
         dataFormatada,
         resultadoTipo,
+        resultadoExtenso,
         placarLimpo,
         pontosJogo,
         pontosAcumulados: acumuladorPts,
+        vitoriasAcumuladas: acumV,
+        empatesAcumulados: acumE,
+        derrotasAcumuladas: acumD,
         notaMediaEquipe,
         totalAvaliacoes: avsDestaPartida.length,
       };
@@ -443,8 +441,9 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
     const atletasComStats = atletasFiltrados.map((atleta) => {
       const avs = avaliacoes.filter((av) => {
         if (av.atletaId !== atleta.id) return false;
-        if (categoriaAtiva === 'GERAL') return true;
-        return av.categoria === categoriaAtiva;
+        const matchCat = categoriaAtiva === 'GERAL' || av.categoria === categoriaAtiva;
+        const matchComp = competicaoAtiva === 'Todas' || av.competicao === competicaoAtiva;
+        return matchCat && matchComp;
       });
 
       const totalJogos = avs.length;
@@ -488,7 +487,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
     });
 
     return atletasComStats;
-  }, [categoriaAtiva, atletas, avaliacoes]);
+  }, [categoriaAtiva, competicaoAtiva, atletas, avaliacoes]);
 
   const getCorNota = (nota: number) => {
     if (nota >= 8.5)
@@ -548,62 +547,82 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
       {/* ========================================================= */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
         {/* Topo da Seção: Título e Abas de Filtro GERAL | SUB-15 | SUB-16 | SUB-17 ... */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div>
-            <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                Desempenho da Equipe
-              </h3>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-              Resultados, aproveitamento e média dos 5 pilares das partidas avaliadas
-            </p>
-          </div>
-
-          {/* Abas de Filtro de Categoria e Competição */}
-          <div className="flex flex-wrap items-center gap-2">
-            {todasCategorias.map((cat) => {
-              const ativo = categoriaAtiva === cat;
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategoriaAtiva(cat)}
-                  className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer shadow-xs active:scale-98 ${
-                    ativo
-                      ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/50'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                  }`}
-                  style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-                >
-                  {cat}
-                </button>
-              );
-            })}
-
-            {/* Filtro de Competição */}
-            {todasCompeticoes.length > 1 && (
-              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs">
-                <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                <select
-                  value={competicaoAtiva}
-                  onChange={(e) => setCompeticaoAtiva(e.target.value)}
-                  className="bg-transparent text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-extrabold focus:outline-none cursor-pointer"
-                  title="Filtrar por competição"
-                >
-                  <option value="Todas">Todas as Competições</option>
-                  {todasCompeticoes
-                    .filter((c) => c !== 'Todas')
-                    .map((comp) => (
-                      <option key={comp} value={comp} className="text-slate-900 bg-white">
-                        {comp}
-                      </option>
-                    ))}
-                </select>
+        <div className="flex flex-col gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Activity className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  Desempenho da Equipe
+                </h3>
               </div>
-            )}
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                Resultados, aproveitamento e média dos 5 pilares das partidas avaliadas
+              </p>
+            </div>
+
+            {/* Abas de Filtro de Categoria */}
+            <div className="flex flex-wrap items-center gap-2">
+              {todasCategorias.map((cat) => {
+                const ativo = categoriaAtiva === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      setCategoriaAtiva(cat);
+                      setPontoAtivoIndex(null);
+                    }}
+                    className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer shadow-xs active:scale-98 ${
+                      ativo
+                        ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/50'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                    }`}
+                    style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Filtro de Competição - BOTÕES IGUAIS AOS DE CATEGORIA */}
+          {todasCompeticoes.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/60">
+              <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>COMPETIÇÃO:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {todasCompeticoes.map((comp) => {
+                  const ativo = competicaoAtiva === comp;
+                  return (
+                    <button
+                      key={comp}
+                      type="button"
+                      onClick={() => {
+                        setCompeticaoAtiva(comp);
+                        setPontoAtivoIndex(null);
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-xs active:scale-98 ${
+                        ativo
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-400/40'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                      }`}
+                      style={
+                        ativo
+                          ? { backgroundColor: '#2563eb', color: '#ffffff', borderColor: '#2563eb' }
+                          : {}
+                      }
+                    >
+                      {comp}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ========================================================= */}
@@ -654,7 +673,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
               </div>
             </div>
 
-            {/* GRÁFICO DE EVOLUÇÃO (V / E / D) - LINHAS DE PONTOS ACUMULADOS & MÉDIA DE NOTA */}
+            {/* GRÁFICO DE EVOLUÇÃO (V / E / D) - LINHAS: VITÓRIAS, EMPATES E DERROTAS ACUMULADAS */}
             <div className="p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-4 shadow-2xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -665,20 +684,24 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                   </span>
                 </h4>
 
-                {/* Legenda em cima do gráfico: [— Pontos Acumulados] [-- Média Nota] */}
+                {/* Legenda em cima do gráfico: [— Vitórias] [-- Empates] [-- Derrotas] */}
                 <div className="flex items-center gap-3 text-xs font-bold shrink-0">
-                  <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
-                    <span className="w-3.5 h-1 bg-blue-600 dark:bg-blue-400 inline-block rounded-full" />
-                    <span>Pontos Acumulados</span>
-                  </div>
                   <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                    <span className="w-3.5 border-t-2 border-dashed border-emerald-600 dark:border-emerald-400 inline-block" />
-                    <span>Média Nota</span>
+                    <span className="w-3.5 h-1 bg-emerald-600 dark:bg-emerald-400 inline-block rounded-full" />
+                    <span>Vitórias</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-amber-500 dark:text-amber-400">
+                    <span className="w-3.5 border-t-2 border-dashed border-amber-500 dark:border-amber-400 inline-block" />
+                    <span>Empates</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
+                    <span className="w-3.5 border-t-2 border-dashed border-rose-600 dark:border-rose-400 inline-block" />
+                    <span>Derrotas</span>
                   </div>
                 </div>
               </div>
 
-              {/* Informação / Tooltip da partida selecionada ou ativa */}
+              {/* Informação / Tooltip da partida selecionada ou ativa: vs Brescia • Vitória 2x0 • Vitórias: 1 • Empates: 0 • Derrotas: 0 */}
               <div className="min-h-[38px] flex items-center">
                 {pontoAtivo ? (
                   <div className="w-full flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-blue-50/90 dark:bg-slate-800/90 border border-blue-200 dark:border-slate-700 text-xs font-extrabold text-slate-800 dark:text-slate-200 shadow-2xs">
@@ -686,12 +709,8 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                       {pontoAtivo.adversarioComVs}
                     </span>
                     <span className="text-slate-400">•</span>
-                    <span className="font-mono text-slate-600 dark:text-slate-300">
-                      {pontoAtivo.dataFormatada}
-                    </span>
-                    <span className="text-slate-400">•</span>
                     <span
-                      className={`px-1.5 py-0.2 rounded font-black text-[11px] ${
+                      className={`px-1.5 py-0.5 rounded font-black text-[11px] ${
                         pontoAtivo.resultadoTipo === 'V'
                           ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
                           : pontoAtivo.resultadoTipo === 'E'
@@ -699,19 +718,19 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                           : 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
                       }`}
                     >
-                      {pontoAtivo.resultadoTipo} {pontoAtivo.placarLimpo}
+                      {pontoAtivo.resultadoExtenso} {pontoAtivo.placarLimpo}
                     </span>
                     <span className="text-slate-400">•</span>
-                    <span className="text-slate-700 dark:text-slate-300">
-                      {pontoAtivo.pontosJogo} pts
+                    <span className="text-emerald-700 dark:text-emerald-400 font-black">
+                      Vitórias: {pontoAtivo.vitoriasAcumuladas}
                     </span>
                     <span className="text-slate-400">•</span>
-                    <span className="text-blue-600 dark:text-blue-400 font-black">
-                      Acumulado: {pontoAtivo.pontosAcumulados} pts
+                    <span className="text-amber-600 dark:text-amber-400 font-black">
+                      Empates: {pontoAtivo.empatesAcumulados}
                     </span>
                     <span className="text-slate-400">•</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-black">
-                      Nota média da equipe: {pontoAtivo.notaMediaEquipe.toFixed(1)}
+                    <span className="text-rose-600 dark:text-rose-400 font-black">
+                      Derrotas: {pontoAtivo.derrotasAcumuladas}
                     </span>
                   </div>
                 ) : (
@@ -721,57 +740,62 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 )}
               </div>
 
-              {/* GRÁFICO DE LINHAS 220px OU EMPTY STATE */}
+              {/* GRÁFICO DE LINHAS 230px OU EMPTY STATE */}
               {estatisticasDesempenho.partidasEvolucao.length === 0 ? (
-                <div className="h-[220px] flex flex-col items-center justify-center p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
+                <div className="h-[230px] flex flex-col items-center justify-center p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
                   <HelpCircle className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-2" />
                   <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
-                    Sem jogos avaliados neste filtro
+                    Sem jogos avaliados neste filtro.
                   </p>
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                    Cadastre partidas na Agenda ou avalie atletas nesta categoria para visualizar o gráfico.
+                    Cadastre partidas na Agenda ou avalie atletas nesta categoria / competição para visualizar o gráfico.
                   </p>
                 </div>
               ) : (
-                <div className="relative w-full h-[220px] overflow-hidden select-none bg-slate-50/50 dark:bg-slate-900/30 rounded-xl p-1 border border-slate-100 dark:border-slate-800/80">
+                <div className="relative w-full h-[230px] overflow-hidden select-none bg-slate-50/50 dark:bg-slate-900/30 rounded-xl p-1 border border-slate-100 dark:border-slate-800/80">
                   {(() => {
                     const partidas = estatisticasDesempenho.partidasEvolucao;
                     const N = partidas.length;
-                    const maxPtsVal = Math.max(3, partidas[N - 1]?.pontosAcumulados || 3);
-                    const maxPts = Math.ceil(maxPtsVal / 3) * 3;
+                    // Eixo Y: 0 até total de jogos, só números inteiros, sem %
+                    const maxY = Math.max(1, N);
 
-                    const width = 520;
-                    const height = 220;
-                    const plotLeft = 46;
-                    const plotRight = 478;
-                    const plotTop = 24;
-                    const plotBottom = 160;
+                    const width = 560;
+                    const height = 230;
+                    const plotLeft = 40;
+                    const plotRight = 520;
+                    const plotTop = 20;
+                    const plotBottom = 165;
                     const plotWidth = plotRight - plotLeft;
                     const plotHeight = plotBottom - plotTop;
 
                     const pontosPlot = partidas.map((p, i) => {
                       const x = N === 1 ? (plotLeft + plotRight) / 2 : plotLeft + (i / (N - 1)) * plotWidth;
-                      const yPontos = plotBottom - (p.pontosAcumulados / maxPts) * plotHeight;
-                      const yNota = plotBottom - (Math.max(0, Math.min(10, p.notaMediaEquipe)) / 10) * plotHeight;
+                      const yVit = plotBottom - (p.vitoriasAcumuladas / maxY) * plotHeight;
+                      const yEmp = plotBottom - (p.empatesAcumulados / maxY) * plotHeight;
+                      const yDer = plotBottom - (p.derrotasAcumuladas / maxY) * plotHeight;
                       return {
                         ...p,
                         index: i,
                         x,
-                        yPontos,
-                        yNota,
+                        yVit,
+                        yEmp,
+                        yDer,
                       };
                     });
 
-                    const caminhoPontos = gerarCaminhoSuave(pontosPlot.map((pt) => ({ x: pt.x, y: pt.yPontos })));
-                    const caminhoNota = gerarCaminhoSuave(pontosPlot.map((pt) => ({ x: pt.x, y: pt.yNota })));
+                    const caminhoVit = gerarCaminhoLinhas(pontosPlot.map((pt) => ({ x: pt.x, y: pt.yVit })));
+                    const caminhoEmp = gerarCaminhoLinhas(pontosPlot.map((pt) => ({ x: pt.x, y: pt.yEmp })));
+                    const caminhoDer = gerarCaminhoLinhas(pontosPlot.map((pt) => ({ x: pt.x, y: pt.yDer })));
 
-                    const areaSombra =
-                      N > 1
-                        ? `${caminhoPontos} L ${pontosPlot[N - 1].x.toFixed(1)} ${plotBottom} L ${pontosPlot[0].x.toFixed(1)} ${plotBottom} Z`
-                        : '';
-
-                    // Grid com 4 níveis (0%, 33.3%, 66.6%, 100%)
-                    const niveisGrid = [0, 0.333, 0.666, 1];
+                    // Ticks inteiros de 0 até maxY (sem % e sem decimais)
+                    const ticksY: number[] = [];
+                    if (maxY <= 6) {
+                      for (let v = 0; v <= maxY; v++) ticksY.push(v);
+                    } else {
+                      const step = Math.ceil(maxY / 5);
+                      for (let v = 0; v <= maxY; v += step) ticksY.push(v);
+                      if (ticksY[ticksY.length - 1] !== maxY) ticksY.push(maxY);
+                    }
 
                     return (
                       <svg
@@ -779,21 +803,11 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                         className="w-full h-full overflow-visible"
                         preserveAspectRatio="none"
                       >
-                        <defs>
-                          {/* Área levemente sombreada em azul claro abaixo da linha de Pontos Acumulados */}
-                          <linearGradient id="areaAzulSombra" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" />
-                            <stop offset="100%" stopColor="#2563eb" stopOpacity="0.02" />
-                          </linearGradient>
-                        </defs>
-
-                        {/* Linhas de Grade Horizontais e Escalas */}
-                        {niveisGrid.map((frac, idx) => {
-                          const y = plotBottom - frac * plotHeight;
-                          const valPts = Math.round(frac * maxPts);
-                          const valNota = (frac * 10).toFixed(0);
+                        {/* Linhas de Grade Horizontais e Escalas Eixo Y (Apenas Números Inteiros) */}
+                        {ticksY.map((val) => {
+                          const y = plotBottom - (val / maxY) * plotHeight;
                           return (
-                            <g key={idx}>
+                            <g key={val}>
                               <line
                                 x1={plotLeft}
                                 y1={y}
@@ -804,23 +818,14 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                                 strokeDasharray="3 3"
                                 strokeWidth="1"
                               />
-                              {/* Rótulo Eixo Y Esquerdo: Pontos Acumulados */}
+                              {/* Rótulo Eixo Y: Apenas número inteiro */}
                               <text
                                 x={plotLeft - 6}
-                                y={y + 3}
+                                y={y + 3.5}
                                 textAnchor="end"
-                                className="text-[9.5px] font-bold fill-blue-600 dark:fill-blue-400 select-none"
+                                className="text-[10px] font-bold fill-slate-500 dark:fill-slate-400 select-none"
                               >
-                                {valPts}p
-                              </text>
-                              {/* Rótulo Eixo Y Direito: Nota 0 a 10 */}
-                              <text
-                                x={plotRight + 6}
-                                y={y + 3}
-                                textAnchor="start"
-                                className="text-[9.5px] font-bold fill-emerald-600 dark:fill-emerald-400 select-none"
-                              >
-                                {valNota}
+                                {val}
                               </text>
                             </g>
                           );
@@ -840,24 +845,32 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                           />
                         )}
 
-                        {/* Área sombreada em azul claro abaixo da linha de Pontos Acumulados */}
-                        {areaSombra && <path d={areaSombra} fill="url(#areaAzulSombra)" />}
-
-                        {/* Linha 1 - Azul #2563eb: Pontos Acumulados (grossa e suave) */}
+                        {/* Linha 1 - Verde #16a34a grossa: Vitórias Acumuladas */}
                         <path
-                          d={caminhoPontos}
+                          d={caminhoVit}
                           fill="none"
-                          stroke="#2563eb"
+                          stroke="#16a34a"
                           strokeWidth="3.5"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
 
-                        {/* Linha 2 - Verde #16a34a, tracejada: Média de Nota da Equipe */}
+                        {/* Linha 2 - Laranja #f59e0b tracejada: Empates Acumulados */}
                         <path
-                          d={caminhoNota}
+                          d={caminhoEmp}
                           fill="none"
-                          stroke="#16a34a"
+                          stroke="#f59e0b"
+                          strokeWidth="2.5"
+                          strokeDasharray="5 4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+
+                        {/* Linha 3 - Vermelha #dc2626 tracejada: Derrotas Acumuladas */}
+                        <path
+                          d={caminhoDer}
+                          fill="none"
+                          stroke="#dc2626"
                           strokeWidth="2.5"
                           strokeDasharray="5 4"
                           strokeLinecap="round"
@@ -869,37 +882,48 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                           const isAtivo = pontoAtivo?.id === pt.id;
                           return (
                             <g key={pt.id}>
-                              {/* Bolinha da Nota (Verde, menor) */}
+                              {/* Bolinha Derrotas (Vermelha) */}
                               <circle
                                 cx={pt.x}
-                                cy={pt.yNota}
-                                r={isAtivo ? 5 : 3.5}
-                                fill="#16a34a"
+                                cy={pt.yDer}
+                                r={isAtivo ? 5.5 : 4}
+                                fill="#dc2626"
                                 stroke="#ffffff"
                                 strokeWidth={isAtivo ? 2 : 1.5}
                                 className="transition-all duration-150 pointer-events-none"
                               />
 
-                              {/* Bolinha dos Pontos Acumulados (Azul, principal) */}
+                              {/* Bolinha Empates (Laranja) */}
                               <circle
                                 cx={pt.x}
-                                cy={pt.yPontos}
-                                r={isAtivo ? 7.5 : 5.5}
-                                fill="#2563eb"
+                                cy={pt.yEmp}
+                                r={isAtivo ? 5.5 : 4}
+                                fill="#f59e0b"
                                 stroke="#ffffff"
-                                strokeWidth={isAtivo ? 3 : 2.5}
-                                className="transition-all duration-150 pointer-events-none drop-shadow-sm"
+                                strokeWidth={isAtivo ? 2 : 1.5}
+                                className="transition-all duration-150 pointer-events-none"
                               />
 
-                              {/* Eixo X: Abaixo de cada ponto mostrar adversário e data */}
+                              {/* Bolinha Vitórias (Verde, principal) */}
+                              <circle
+                                cx={pt.x}
+                                cy={pt.yVit}
+                                r={isAtivo ? 7 : 5.5}
+                                fill="#16a34a"
+                                stroke="#ffffff"
+                                strokeWidth={isAtivo ? 2.5 : 2}
+                                className="transition-all duration-150 pointer-events-none drop-shadow-xs"
+                              />
+
+                              {/* Eixo X: vs [Adversário] (linha 1) e [Placar] (linha 2) */}
                               <text
                                 x={pt.x}
-                                y={plotBottom + 18}
+                                y={plotBottom + 16}
                                 textAnchor="middle"
                                 className={`text-[10px] font-black select-none pointer-events-none ${
                                   isAtivo
                                     ? 'fill-blue-600 dark:fill-blue-400'
-                                    : 'fill-slate-700 dark:fill-slate-300'
+                                    : 'fill-slate-800 dark:fill-slate-200'
                                 }`}
                               >
                                 {pt.adversarioComVs.length > 13
@@ -908,29 +932,31 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                               </text>
                               <text
                                 x={pt.x}
-                                y={plotBottom + 32}
+                                y={plotBottom + 29}
                                 textAnchor="middle"
-                                className={`text-[9.5px] font-bold select-none pointer-events-none ${
+                                className={`text-[10px] font-bold select-none pointer-events-none ${
                                   isAtivo
                                     ? 'fill-blue-600 dark:fill-blue-400'
-                                    : 'fill-slate-500 dark:fill-slate-400'
+                                    : 'fill-slate-600 dark:fill-slate-400'
                                 }`}
                               >
-                                {pt.dataFormatada}
+                                {pt.placarLimpo}
                               </text>
 
-                              {/* Hitbox invisível para clique e toque com o dedo no celular */}
+                              {/* Hitbox para clique e toque com o dedo */}
                               <rect
                                 x={pt.x - 22}
                                 y={plotTop - 10}
                                 width={44}
-                                height={plotHeight + 45}
+                                height={plotHeight + 46}
                                 fill="transparent"
                                 className="cursor-pointer"
                                 onClick={() => setPontoAtivoIndex(pt.index)}
                                 onMouseEnter={() => setPontoAtivoIndex(pt.index)}
                                 onTouchStart={() => setPontoAtivoIndex(pt.index)}
-                              />
+                              >
+                                <title>{`${pt.adversarioComVs} • ${pt.resultadoExtenso} ${pt.placarLimpo} • Vitórias: ${pt.vitoriasAcumuladas} • Empates: ${pt.empatesAcumulados} • Derrotas: ${pt.derrotasAcumuladas}`}</title>
+                              </rect>
                             </g>
                           );
                         })}
@@ -1049,9 +1075,13 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
               </div>
             </div>
 
-            {/* GRID DE NÚMEROS: Nº Jogos, Vitórias, Empates, Derrotas, Gols Feitos, Gols Sofridos, Aproveitamento */}
+            {/* GRID DE NÚMEROS:
+                1ª linha: Nº DE JOGOS | VITÓRIAS | GOLS FEITOS | SALDO DE GOL
+                2ª linha: EMPATES | GOLS SOFRIDOS | DERROTAS | APROVEITAMENTO (azul destacado)
+            */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* Nº de Jogos */}
+              {/* LINHA 1 */}
+              {/* 1. Nº de Jogos */}
               <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 shadow-2xs">
                 <span className="text-[10px] font-extrabold uppercase text-slate-400 block tracking-wider">
                   Nº de Jogos
@@ -1061,7 +1091,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 </span>
               </div>
 
-              {/* Vitórias */}
+              {/* 2. Vitórias */}
               <div className="p-3.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/60 shadow-2xs">
                 <span className="text-[10px] font-extrabold uppercase text-emerald-800 dark:text-emerald-300 block tracking-wider">
                   Vitórias
@@ -1071,27 +1101,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 </span>
               </div>
 
-              {/* Empates */}
-              <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 shadow-2xs">
-                <span className="text-[10px] font-extrabold uppercase text-amber-800 dark:text-amber-300 block tracking-wider">
-                  Empates
-                </span>
-                <span className="text-2xl font-black font-mono text-amber-700 dark:text-amber-400 tabular-nums">
-                  {estatisticasDesempenho.empates}
-                </span>
-              </div>
-
-              {/* Derrotas */}
-              <div className="p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/60 shadow-2xs">
-                <span className="text-[10px] font-extrabold uppercase text-rose-800 dark:text-rose-300 block tracking-wider">
-                  Derrotas
-                </span>
-                <span className="text-2xl font-black font-mono text-rose-700 dark:text-rose-400 tabular-nums">
-                  {estatisticasDesempenho.derrotas}
-                </span>
-              </div>
-
-              {/* Gols Feitos */}
+              {/* 3. Gols Feitos */}
               <div className="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/60 shadow-2xs">
                 <span className="text-[10px] font-extrabold uppercase text-blue-800 dark:text-blue-300 block tracking-wider">
                   Gols Feitos
@@ -1101,20 +1111,10 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 </span>
               </div>
 
-              {/* Gols Sofridos */}
-              <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs">
-                <span className="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block tracking-wider">
-                  Gols Sofridos
-                </span>
-                <span className="text-2xl font-black font-mono text-slate-800 dark:text-slate-200 tabular-nums">
-                  {estatisticasDesempenho.golsSofridos}
-                </span>
-              </div>
-
-              {/* Saldo de Gols */}
+              {/* 4. Saldo de Gol */}
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 shadow-2xs">
                 <span className="text-[10px] font-extrabold uppercase text-slate-500 block tracking-wider">
-                  Saldo de Gols
+                  Saldo de Gol
                 </span>
                 <span
                   className={`text-2xl font-black font-mono tabular-nums ${
@@ -1131,7 +1131,38 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 </span>
               </div>
 
-              {/* Aproveitamento % */}
+              {/* LINHA 2 */}
+              {/* 5. Empates */}
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-amber-800 dark:text-amber-300 block tracking-wider">
+                  Empates
+                </span>
+                <span className="text-2xl font-black font-mono text-amber-700 dark:text-amber-400 tabular-nums">
+                  {estatisticasDesempenho.empates}
+                </span>
+              </div>
+
+              {/* 6. Gols Sofridos */}
+              <div className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block tracking-wider">
+                  Gols Sofridos
+                </span>
+                <span className="text-2xl font-black font-mono text-slate-800 dark:text-slate-200 tabular-nums">
+                  {estatisticasDesempenho.golsSofridos}
+                </span>
+              </div>
+
+              {/* 7. Derrotas */}
+              <div className="p-3.5 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/60 shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-rose-800 dark:text-rose-300 block tracking-wider">
+                  Derrotas
+                </span>
+                <span className="text-2xl font-black font-mono text-rose-700 dark:text-rose-400 tabular-nums">
+                  {estatisticasDesempenho.derrotas}
+                </span>
+              </div>
+
+              {/* 8. Aproveitamento (destacado em azul) */}
               <div className="p-3.5 rounded-2xl bg-blue-600 text-white shadow-xs">
                 <span className="text-[10px] font-extrabold uppercase text-blue-100 block tracking-wider">
                   Aproveitamento

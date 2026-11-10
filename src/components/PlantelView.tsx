@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   Filter,
@@ -56,80 +56,317 @@ export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
   '4-4-2 Losango': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
     { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
-    { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
-    { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
+    { id: 'ZAG1', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG2', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
     { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
     { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 58 },
-    { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 22, top: 42 },
-    { id: 'MEI_D', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 78, top: 42 },
-    { id: 'MEI_C', label: 'MEI', nomeCompleto: 'Meio-Campo Central', linha: 'mei', left: 50, top: 32 },
-    { id: 'ATA_E', label: 'ATA', nomeCompleto: 'Atacante Esquerdo', linha: 'ata', left: 35, top: 14 },
-    { id: 'ATA_D', label: 'ATA', nomeCompleto: 'Atacante Direito', linha: 'ata', left: 65, top: 14 },
-  ],
-
-  // FORMAÇÃO 4-3-3
-  '4-3-3': [
-    { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
-    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
-    { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
-    { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
-    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
-    { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 58 },
-    { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 30, top: 42 },
-    { id: 'MEI_D', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 70, top: 42 },
-    { id: 'ATA_E', label: 'ATA', nomeCompleto: 'Ponta Esquerda', linha: 'ata', left: 20, top: 16 },
-    { id: 'ATA_C', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 12 },
-    { id: 'ATA_D', label: 'ATA', nomeCompleto: 'Ponta Direita', linha: 'ata', left: 80, top: 16 },
-  ],
-
-  // FORMAÇÃO 4-2-4 - 4 DA FRENTE BAIXOS, PROXIMOS DO MEIO
-  '4-2-4': [
-    { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
-    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
-    { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
-    { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
-    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
-    { id: 'VOL1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei', left: 35, top: 56 },
-    { id: 'VOL2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei', left: 65, top: 56 },
-    { id: 'PE_E', label: 'PE', nomeCompleto: 'Ponta Esquerda', linha: 'ata', left: 14, top: 36 },
-    { id: 'ATA_E', label: 'ATA', nomeCompleto: 'Atacante Esquerdo', linha: 'ata', left: 38, top: 30 },
-    { id: 'ATA_D', label: 'ATA', nomeCompleto: 'Atacante Direito', linha: 'ata', left: 62, top: 30 },
-    { id: 'PE_D', label: 'PD', nomeCompleto: 'Ponta Direita', linha: 'ata', left: 86, top: 36 },
+    { id: 'MEI_E', label: 'MEI-E', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 22, top: 42 },
+    { id: 'MEI_C', label: 'MEI-C / 10', nomeCompleto: 'Meio-Campo Central (10)', linha: 'mei', left: 50, top: 32 },
+    { id: 'MEI_D', label: 'MEI-D', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 78, top: 42 },
+    { id: 'ATA_E', label: 'ATA-E', nomeCompleto: 'Atacante Esquerdo', linha: 'ata', left: 35, top: 14 },
+    { id: 'ATA_D', label: 'ATA-D', nomeCompleto: 'Atacante Direito', linha: 'ata', left: 65, top: 14 },
   ],
 
   // FORMAÇÃO 4-2-3-1
   '4-2-3-1': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
     { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
-    { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
-    { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
+    { id: 'ZAG1', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG2', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
     { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
-    { id: 'VOL1', label: 'VOL', nomeCompleto: 'Volante 1', linha: 'mei', left: 38, top: 58 },
-    { id: 'VOL2', label: 'VOL', nomeCompleto: 'Volante 2', linha: 'mei', left: 62, top: 58 },
-    { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 20, top: 38 },
-    { id: 'MEI_C', label: 'MEI', nomeCompleto: 'Meio-Campo Central', linha: 'mei', left: 50, top: 34 },
-    { id: 'MEI_D', label: 'MEI', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 80, top: 38 },
+    { id: 'VOL1', label: 'VOL-E', nomeCompleto: 'Volante Esquerdo', linha: 'mei', left: 38, top: 58 },
+    { id: 'VOL2', label: 'VOL-D', nomeCompleto: 'Volante Direito', linha: 'mei', left: 62, top: 58 },
+    { id: 'MEI_E', label: 'MEI-E', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 20, top: 38 },
+    { id: 'MEI_C', label: 'MEI-C / 10', nomeCompleto: 'Meio-Campo Central (10)', linha: 'mei', left: 50, top: 34 },
+    { id: 'MEI_D', label: 'MEI-D', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 80, top: 38 },
     { id: 'ATA', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 12 },
+  ],
+
+  // FORMAÇÃO 4-3-3
+  '4-3-3': [
+    { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
+    { id: 'ZAG1', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG2', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
+    { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 58 },
+    { id: 'MEI_E', label: 'MEI-E', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 30, top: 42 },
+    { id: 'MEI_D', label: 'MEI-D', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 70, top: 42 },
+    { id: 'ATA_E', label: 'ATA-E', nomeCompleto: 'Ponta Esquerda', linha: 'ata', left: 20, top: 16 },
+    { id: 'ATA_C', label: 'ATA-C', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 12 },
+    { id: 'ATA_D', label: 'ATA-D', nomeCompleto: 'Ponta Direita', linha: 'ata', left: 80, top: 16 },
+  ],
+
+  // FORMAÇÃO 4-2-4 LINHAS BAIXAS
+  '4-2-4 linhas baixas': [
+    { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
+    { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
+    { id: 'ZAG1', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG2', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
+    { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
+    { id: 'VOL1', label: 'VOL-E', nomeCompleto: 'Volante Esquerdo', linha: 'mei', left: 35, top: 56 },
+    { id: 'VOL2', label: 'VOL-D', nomeCompleto: 'Volante Direito', linha: 'mei', left: 65, top: 56 },
+    { id: 'MEI_E', label: 'MEI-E', nomeCompleto: 'Meia Esquerdo', linha: 'mei', left: 16, top: 36 },
+    { id: 'MEI_D', label: 'MEI-D', nomeCompleto: 'Meia Direito', linha: 'mei', left: 84, top: 36 },
+    { id: 'ATA_E', label: 'ATA-E', nomeCompleto: 'Atacante Esquerdo', linha: 'ata', left: 38, top: 30 },
+    { id: 'ATA_D', label: 'ATA-D', nomeCompleto: 'Atacante Direito', linha: 'ata', left: 62, top: 30 },
   ],
 
   // FORMAÇÃO 4-1-4-1
   '4-1-4-1': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
     { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
-    { id: 'ZAG1', label: 'ZAG', nomeCompleto: 'Zagueiro 1', linha: 'def', left: 38, top: 76 },
-    { id: 'ZAG2', label: 'ZAG', nomeCompleto: 'Zagueiro 2', linha: 'def', left: 62, top: 76 },
+    { id: 'ZAG1', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG2', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
     { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
     { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 60 },
-    { id: 'MEI_E', label: 'MEI', nomeCompleto: 'Meio-Campista Esquerdo', linha: 'mei', left: 16, top: 40 },
-    { id: 'MEI_C1', label: 'MEI', nomeCompleto: 'Meio-Campista Central 1', linha: 'mei', left: 38, top: 42 },
-    { id: 'MEI_C2', label: 'MEI', nomeCompleto: 'Meio-Campista Central 2', linha: 'mei', left: 62, top: 42 },
-    { id: 'MEI_D', label: 'MEI', nomeCompleto: 'Meio-Campista Direito', linha: 'mei', left: 84, top: 40 },
+    { id: 'MEI_E', label: 'MEI-E', nomeCompleto: 'Meio-Campista Esquerdo', linha: 'mei', left: 16, top: 40 },
+    { id: 'MEI_CE', label: 'MEI-CE', nomeCompleto: 'Meio-Campista Central Esquerdo', linha: 'mei', left: 38, top: 42 },
+    { id: 'MEI_CD', label: 'MEI-CD', nomeCompleto: 'Meio-Campista Central Direito', linha: 'mei', left: 62, top: 42 },
+    { id: 'MEI_D', label: 'MEI-D', nomeCompleto: 'Meio-Campista Direito', linha: 'mei', left: 84, top: 40 },
     { id: 'ATA', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 14 },
   ],
 };
 
 // Aliases para compatibilidade
 FORMACOES_CAMPINHO['4-4-2'] = FORMACOES_CAMPINHO['4-4-2 Losango'];
+FORMACOES_CAMPINHO['4-2-4'] = FORMACOES_CAMPINHO['4-2-4 linhas baixas'];
+
+/**
+ * Bloquinhos de vagas gerados conforme a formação tática
+ */
+export const BLOQUINHOS_FORMACAO: Record<string, Array<{ id: string; label: string }>> = {
+  '4-4-2 Losango': [
+    { id: 'TODOS', label: 'TODOS' },
+    { id: 'GOL', label: 'GOL' },
+    { id: 'LE', label: 'LE' },
+    { id: 'ZAG-E', label: 'ZAG-E' },
+    { id: 'ZAG-D', label: 'ZAG-D' },
+    { id: 'LD', label: 'LD' },
+    { id: 'VOL', label: 'VOL' },
+    { id: 'MEI-E', label: 'MEI-E' },
+    { id: 'MEI-C / 10', label: 'MEI-C / 10' },
+    { id: 'MEI-D', label: 'MEI-D' },
+    { id: 'ATA-E', label: 'ATA-E' },
+    { id: 'ATA-D', label: 'ATA-D' },
+  ],
+  '4-2-3-1': [
+    { id: 'TODOS', label: 'TODOS' },
+    { id: 'GOL', label: 'GOL' },
+    { id: 'LE', label: 'LE' },
+    { id: 'ZAG-E', label: 'ZAG-E' },
+    { id: 'ZAG-D', label: 'ZAG-D' },
+    { id: 'LD', label: 'LD' },
+    { id: 'VOL-E', label: 'VOL-E' },
+    { id: 'VOL-D', label: 'VOL-D' },
+    { id: 'MEI-E', label: 'MEI-E' },
+    { id: 'MEI-C / 10', label: 'MEI-C / 10' },
+    { id: 'MEI-D', label: 'MEI-D' },
+    { id: 'ATA', label: 'ATA' },
+  ],
+  '4-3-3': [
+    { id: 'TODOS', label: 'TODOS' },
+    { id: 'GOL', label: 'GOL' },
+    { id: 'LE', label: 'LE' },
+    { id: 'ZAG-E', label: 'ZAG-E' },
+    { id: 'ZAG-D', label: 'ZAG-D' },
+    { id: 'LD', label: 'LD' },
+    { id: 'VOL', label: 'VOL' },
+    { id: 'MEI-E', label: 'MEI-E' },
+    { id: 'MEI-D', label: 'MEI-D' },
+    { id: 'ATA-E', label: 'ATA-E' },
+    { id: 'ATA-C', label: 'ATA-C' },
+    { id: 'ATA-D', label: 'ATA-D' },
+  ],
+  '4-2-4 linhas baixas': [
+    { id: 'TODOS', label: 'TODOS' },
+    { id: 'GOL', label: 'GOL' },
+    { id: 'LE', label: 'LE' },
+    { id: 'ZAG-E', label: 'ZAG-E' },
+    { id: 'ZAG-D', label: 'ZAG-D' },
+    { id: 'LD', label: 'LD' },
+    { id: 'VOL-E', label: 'VOL-E' },
+    { id: 'VOL-D', label: 'VOL-D' },
+    { id: 'MEI-E', label: 'MEI-E' },
+    { id: 'MEI-D', label: 'MEI-D' },
+    { id: 'ATA-E', label: 'ATA-E' },
+    { id: 'ATA-D', label: 'ATA-D' },
+  ],
+  '4-1-4-1': [
+    { id: 'TODOS', label: 'TODOS' },
+    { id: 'GOL', label: 'GOL' },
+    { id: 'LE', label: 'LE' },
+    { id: 'ZAG-E', label: 'ZAG-E' },
+    { id: 'ZAG-D', label: 'ZAG-D' },
+    { id: 'LD', label: 'LD' },
+    { id: 'VOL', label: 'VOL' },
+    { id: 'MEI-E', label: 'MEI-E' },
+    { id: 'MEI-CE', label: 'MEI-CE' },
+    { id: 'MEI-CD', label: 'MEI-CD' },
+    { id: 'ATA', label: 'ATA' },
+  ],
+};
+BLOQUINHOS_FORMACAO['4-4-2'] = BLOQUINHOS_FORMACAO['4-4-2 Losango'];
+BLOQUINHOS_FORMACAO['4-2-4'] = BLOQUINHOS_FORMACAO['4-2-4 linhas baixas'];
+
+/**
+ * Funções auxiliares para pé e posições
+ */
+function isPeEsquerdo(perna?: string): boolean {
+  if (!perna) return false;
+  const p = perna.toLowerCase();
+  return p.includes('canhoto') || p.includes('esquerd') || p.includes('ambidestr');
+}
+
+function isPeDireito(perna?: string): boolean {
+  if (!perna) return false;
+  const p = perna.toLowerCase();
+  return p.includes('destro') || p.includes('direit') || p.includes('ambidestr');
+}
+
+function formatarPe(perna?: string): string {
+  if (!perna) return 'Direito';
+  const p = perna.toLowerCase();
+  if (p.includes('ambidestr')) return 'Ambidestro';
+  if (p.includes('canhoto') || p.includes('esquerd')) return 'Esquerdo';
+  return 'Direito';
+}
+
+/**
+ * Calcula score numérico de priorização do atleta para a vaga selecionada (menor número = maior prioridade).
+ * Dentro de cada tier de pontuação, desempata em ordem alfabética A-Z.
+ * Ambidestro conta como prioritário tanto para pé esquerdo quanto direito.
+ */
+function calcularScoreAtleta(atleta: Atleta, vaga: string, categoriaJogo: string): number {
+  const mesmaCat = atleta.categoria === categoriaJogo;
+  const catPenalty = mesmaCat ? 0 : 1000;
+  const pos = (atleta.posicao || '').toLowerCase();
+  const peEsq = isPeEsquerdo(atleta.pernaDominante);
+  const peDir = isPeDireito(atleta.pernaDominante);
+
+  const isGol = pos.includes('gol');
+  const isLE = pos.includes('lateral') && (pos.includes('esquerd') || pos.includes('le'));
+  const isLD = pos.includes('lateral') && (pos.includes('direit') || pos.includes('ld'));
+  const isZag = pos.includes('zag') || pos.includes('def');
+  const isVol = pos.includes('vol');
+  const isMei = pos.includes('mei') || pos.includes('meio');
+  const isAta = pos.includes('ata') || pos.includes('pon') || pos.includes('cent') || pos.includes('ext');
+
+  switch (vaga) {
+    case 'ZAG-E':
+      // 1º Zagueiros SUB-15 pé esquerdo, 2º Zagueiros SUB-15 pé direito, 3º Outras posições SUB-15, 4º Outras categorias
+      if (isZag && peEsq) return catPenalty + 10;
+      if (isZag && peDir) return catPenalty + 20;
+      if (isZag) return catPenalty + 25;
+      return catPenalty + 50;
+
+    case 'ZAG-D':
+      if (isZag && peDir) return catPenalty + 10;
+      if (isZag && peEsq) return catPenalty + 20;
+      if (isZag) return catPenalty + 25;
+      return catPenalty + 50;
+
+    case 'LE':
+      // 1º LE pé esquerdo, 2º LE pé direito, 3º LD, 4º Outras posições, 5º Outras categorias
+      if (isLE && peEsq) return catPenalty + 10;
+      if (isLE && peDir) return catPenalty + 20;
+      if (isLE) return catPenalty + 25;
+      if (isLD) return catPenalty + 30;
+      return catPenalty + 50;
+
+    case 'LD':
+      if (isLD && peDir) return catPenalty + 10;
+      if (isLD && peEsq) return catPenalty + 20;
+      if (isLD) return catPenalty + 25;
+      if (isLE) return catPenalty + 30;
+      return catPenalty + 50;
+
+    case 'GOL':
+      if (isGol) return catPenalty + 10;
+      return catPenalty + 50;
+
+    case 'VOL':
+      if (isVol) return catPenalty + 10;
+      if (isMei) return catPenalty + 20;
+      return catPenalty + 50;
+
+    case 'VOL-E':
+      if (isVol && peEsq) return catPenalty + 10;
+      if (isVol && peDir) return catPenalty + 20;
+      if (isVol) return catPenalty + 25;
+      if (isMei) return catPenalty + 30;
+      return catPenalty + 50;
+
+    case 'VOL-D':
+      if (isVol && peDir) return catPenalty + 10;
+      if (isVol && peEsq) return catPenalty + 20;
+      if (isVol) return catPenalty + 25;
+      if (isMei) return catPenalty + 30;
+      return catPenalty + 50;
+
+    case 'MEI-E':
+      if (isMei && peEsq) return catPenalty + 10;
+      if (isMei && peDir) return catPenalty + 20;
+      if (isMei) return catPenalty + 25;
+      if (isVol || isAta) return catPenalty + 35;
+      return catPenalty + 50;
+
+    case 'MEI-D':
+      if (isMei && peDir) return catPenalty + 10;
+      if (isMei && peEsq) return catPenalty + 20;
+      if (isMei) return catPenalty + 25;
+      if (isVol || isAta) return catPenalty + 35;
+      return catPenalty + 50;
+
+    case 'MEI-C / 10':
+    case 'MEI-CE':
+    case 'MEI-CD':
+      if (isMei) return catPenalty + 10;
+      if (isVol || isAta) return catPenalty + 25;
+      return catPenalty + 50;
+
+    case 'ATA-E':
+      if (isAta && peEsq) return catPenalty + 10;
+      if (isAta && peDir) return catPenalty + 20;
+      if (isAta) return catPenalty + 25;
+      if (isMei) return catPenalty + 35;
+      return catPenalty + 50;
+
+    case 'ATA-D':
+      if (isAta && peDir) return catPenalty + 10;
+      if (isAta && peEsq) return catPenalty + 20;
+      if (isAta) return catPenalty + 25;
+      if (isMei) return catPenalty + 35;
+      return catPenalty + 50;
+
+    case 'ATA':
+    case 'ATA-C':
+      if (isAta) return catPenalty + 10;
+      if (isMei) return catPenalty + 25;
+      return catPenalty + 50;
+
+    case 'TODOS':
+    default:
+      // Ordem ao tocar em [TODOS]: GOL, LE, ZAG-E, ZAG-D, LD, VOL, MEI-E, MEI-C / 10, MEI-D, ATA-E, ATA-D
+      if (isGol) return catPenalty + 10;
+      if (isLE) return catPenalty + (peEsq ? 20 : 25);
+      if (isZag) return catPenalty + (peEsq ? 30 : 35);
+      if (isLD) return catPenalty + (peDir ? 40 : 45);
+      if (isVol) return catPenalty + 50;
+      if (isMei) {
+        if (peEsq) return catPenalty + 60;
+        if (peDir) return catPenalty + 70;
+        return catPenalty + 65;
+      }
+      if (isAta) {
+        if (peEsq) return catPenalty + 80;
+        if (pos.includes('cent')) return catPenalty + 85;
+        if (peDir) return catPenalty + 90;
+        return catPenalty + 88;
+      }
+      return catPenalty + 99;
+  }
+}
 
 // Mapeia posição original do atleta para uma das 10 posições oficiais do jogo
 function inferirPosicaoJogoPadrao(posicaoOriginal?: string): string {
@@ -164,6 +401,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   const [filtroCategoriaLista, setFiltroCategoriaLista] = useState<string>('TODAS');
   const [abaSubEscalacao, setAbaSubEscalacao] = useState<'lista' | 'campinho'>('lista');
   const [formacao, setFormacao] = useState<string>('4-4-2 Losango');
+  const [vagaSelecionada, setVagaSelecionada] = useState<string>('TODOS');
   const [modalTrocaAberto, setModalTrocaAberto] = useState<boolean>(false);
   const [slotSelecionado, setSlotSelecionado] = useState<string | null>(null);
   const [atletaParaTroca, setAtletaParaTroca] = useState<{
@@ -445,29 +683,46 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   const titularesCount = Object.values(escalacaoMap).filter((e) => e.titular).length;
   const reservasCount = totalConvocados - titularesCount;
 
-  // Filtragem dos atletas para montagem
-  const filtrarAtletas = (lista: Atleta[]) => {
-    return lista.filter((a) => {
-      if (!busca.trim()) return true;
-      const b = busca.toLowerCase();
-      return (
-        a.nome.toLowerCase().includes(b) ||
-        (a.apelido && a.apelido.toLowerCase().includes(b)) ||
-        a.posicao.toLowerCase().includes(b)
-      );
-    });
-  };
-
-  // Divisão em dois grupos conforme instrução do usuário:
-  // 1. Primeiro Grupo: Categoria do Jogo (ex: SUB-15)
-  // 2. Segundo Grupo: Outras Categorias (SUB-16, SUB-17, etc.)
   const categoriaDoJogo = jogoAtivo?.categoria || 'SUB-15';
-  const atletasCategoriaJogo = filtrarAtletas(
-    atletas.filter((a) => a.categoria === categoriaDoJogo)
-  );
-  const atletasOutrasCategorias = filtrarAtletas(
-    atletas.filter((a) => a.categoria !== categoriaDoJogo)
-  );
+
+  const bloquinhosAtuais = useMemo(() => {
+    return BLOQUINHOS_FORMACAO[formacao] || BLOQUINHOS_FORMACAO['4-4-2 Losango'];
+  }, [formacao]);
+
+  // Se a formação mudar e a vaga selecionada não existir mais na formação, reseta para TODOS
+  useEffect(() => {
+    if (vagaSelecionada !== 'TODOS') {
+      const existe = bloquinhosAtuais.some((b) => b.id === vagaSelecionada);
+      if (!existe) {
+        setVagaSelecionada('TODOS');
+      }
+    }
+  }, [bloquinhosAtuais, vagaSelecionada]);
+
+  // Lista ordenada por prioridade da vaga/posição/pé/categoria, SEM CABEÇALHOS DE GRUPO
+  const atletasOrdenados = useMemo(() => {
+    let lista = atletas;
+    if (busca.trim()) {
+      const b = busca.toLowerCase();
+      lista = lista.filter(
+        (a) =>
+          a.nome.toLowerCase().includes(b) ||
+          (a.apelido && a.apelido.toLowerCase().includes(b)) ||
+          a.posicao.toLowerCase().includes(b)
+      );
+    }
+
+    return [...lista].sort((a, b) => {
+      const scoreA = calcularScoreAtleta(a, vagaSelecionada, categoriaDoJogo);
+      const scoreB = calcularScoreAtleta(b, vagaSelecionada, categoriaDoJogo);
+      if (scoreA !== scoreB) {
+        return scoreA - scoreB;
+      }
+      const nomeA = a.apelido || a.nome;
+      const nomeB = b.apelido || b.nome;
+      return nomeA.localeCompare(nomeB, 'pt-BR');
+    });
+  }, [atletas, busca, vagaSelecionada, categoriaDoJogo]);
 
   // Se o usuário entrar direto na aba ESCALAÇÃO sem ter selecionado um jogo antes na Agenda:
   if (!jogoAtivo) {
@@ -504,58 +759,54 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   return (
     <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
       {/* ========================================================= */}
-      {/* 1. CARD FIXO DO JOGO SELECIONADO NO TOPO (SEM SELETOR / DROPDOWN) */}
+      {/* CABEÇALHO FIXO NO TOPO - NADA SOME AO ROLAR */}
       {/* ========================================================= */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
+      <div className="sticky top-[72px] z-30 bg-white dark:bg-slate-900 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 border-b-2 border-slate-200 dark:border-slate-800 shadow-md space-y-3">
+        {/* Linha 1: vs [Adversário] - [Categoria] - [Data] às [Hora] - [Local] - [Tipo] + Botões */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            {/* vs Magé - SUB-17 - 06/11/2026 às 15:50 - Campo do Batan - Magé - Copa Rio de Janeiro */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                {jogoAtivo.adversario.startsWith('vs') ? jogoAtivo.adversario : `vs ${jogoAtivo.adversario}`}
-              </span>
-              <span className="text-slate-400">·</span>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800">
-                {jogoAtivo.categoria}
-              </span>
-              <span className="text-slate-400">·</span>
-              <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
-                {formatarDataExibicao(jogoAtivo.dataJogo)}{jogoAtivo.hora ? ` às ${jogoAtivo.hora}` : ''}
-              </span>
-              {jogoAtivo.local && (
-                <>
-                  <span className="text-slate-400">·</span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
-                    {jogoAtivo.local}
-                  </span>
-                </>
-              )}
-              {jogoAtivo.tipo && (
-                <>
-                  <span className="text-slate-400">·</span>
-                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                    {jogoAtivo.tipo}
-                  </span>
-                </>
-              )}
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+              {jogoAtivo.adversario.startsWith('vs') ? jogoAtivo.adversario : `vs ${jogoAtivo.adversario}`}
+            </span>
+            <span className="text-slate-400">·</span>
+            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800">
+              {jogoAtivo.categoria}
+            </span>
+            <span className="text-slate-400">·</span>
+            <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
+              {formatarDataExibicao(jogoAtivo.dataJogo)}{jogoAtivo.hora ? ` às ${jogoAtivo.hora}` : ''}
+            </span>
+            {jogoAtivo.local && (
+              <>
+                <span className="text-slate-400">·</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {jogoAtivo.local}
+                </span>
+              </>
+            )}
+            {jogoAtivo.tipo && (
+              <>
+                <span className="text-slate-400">·</span>
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                  {jogoAtivo.tipo}
+                </span>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Botão [Voltar para Agenda] */}
             {onVoltarParaAgenda && (
               <button
                 type="button"
                 onClick={onVoltarParaAgenda}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer"
                 title="Voltar para a Agenda de Jogos"
               >
                 <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
-                <span>Voltar para Agenda</span>
+                <span>Voltar</span>
               </button>
             )}
 
-            {/* Botão Salvar Escalação do Jogo */}
             <button
               type="button"
               onClick={handleSalvarEscalacao}
@@ -569,345 +820,244 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
           </div>
         </div>
 
-        {/* Linha 2: Contadores 0 titulares • 0 reservas • Total: 0 convocados */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
-          <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold border border-blue-200/50">
-            {titularesCount} titulares
+        {/* Linha 2: Busca + Formação Tática + Contadores + Abas [Lista] [Campinho] */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
+          {/* Busca */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar atleta por nome, apelido ou posição..."
+              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+            />
+          </div>
+
+          {/* Formação Tática + Contadores + Abas */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {/* Botão FORMAÇÃO TÁTICA com opções: 4-4-2 Losango, 4-2-3-1, 4-3-3, 4-2-4 linhas baixas, 4-1-4-1 */}
+            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                FORMAÇÃO TÁTICA:
+              </span>
+              <div className="relative">
+                <select
+                  value={formacao}
+                  onChange={(e) => setFormacao(e.target.value)}
+                  className="appearance-none pl-2.5 pr-7 py-1 text-xs font-black bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+                >
+                  <option value="4-4-2 Losango">4-4-2 Losango</option>
+                  <option value="4-2-3-1">4-2-3-1</option>
+                  <option value="4-3-3">4-3-3</option>
+                  <option value="4-2-4 linhas baixas">4-2-4 linhas baixas</option>
+                  <option value="4-1-4-1">4-1-4-1</option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-blue-600 pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
+              </div>
+            </div>
+
+            {/* Contadores: X titulares | Y reservas | Total: Z */}
+            <div className="flex items-center gap-1.5 text-xs font-bold">
+              <span className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
+                {titularesCount} titulares
+              </span>
+              <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                {reservasCount} reservas
+              </span>
+              <span className="px-2 py-1 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
+                Total: {totalConvocados}
+              </span>
+            </div>
+
+            {/* Abas Lista e Campinho */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setAbaSubEscalacao('lista')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  abaSubEscalacao === 'lista'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Lista</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAbaSubEscalacao('campinho')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                  abaSubEscalacao === 'campinho'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-900'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Campinho</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Linha 3: Barra Grudada ESCOLHA A VAGA com Bloquinhos da Formação */}
+        <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 overflow-x-auto pb-1 no-scrollbar">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
+            ESCOLHA A VAGA:
           </span>
-          <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold">
-            {reservasCount} reservas
-          </span>
-          <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
-            Total: {totalConvocados} convocados
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {bloquinhosAtuais.map((b) => {
+              const ativo = vagaSelecionada === b.id;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setVagaSelecionada(b.id)}
+                  style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
+                    ativo
+                      ? 'shadow-xs border border-blue-600'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700'
+                  }`}
+                >
+                  {b.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Feedback de salvamento */}
         {salvandoFeedback && (
-          <div className="p-3 text-xs text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 rounded-xl flex items-center gap-2 animate-in fade-in">
+          <div className="p-2.5 text-xs text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 rounded-xl flex items-center gap-2 animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span className="font-bold">{salvandoFeedback}</span>
           </div>
         )}
-
-        {/* Linha 3: Botões [Lista] [Campinho] */}
-        <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <button
-            type="button"
-            onClick={() => setAbaSubEscalacao('lista')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-              abaSubEscalacao === 'lista'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Lista</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setAbaSubEscalacao('campinho')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-              abaSubEscalacao === 'campinho'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
-            }`}
-          >
-            <Shield className="w-4 h-4" />
-            <span>Campinho</span>
-          </button>
-        </div>
-
-        {/* Linha 4: Busca [Buscar atleta por nome, apelido ou posição...] */}
-        <div className="relative pt-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar atleta por nome, apelido ou posição..."
-            className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
-          />
-        </div>
       </div>
 
-      {/* Conteúdo: Lista de atletas por categoria ou Campinho */}
+      {/* Conteúdo: Lista única ordenada de atletas ou Campinho */}
       {abaSubEscalacao === 'lista' ? (
         <>
-
-          {/* ========================================================= */}
-          {/* GRUPO 1: CATEGORIA DO JOGO (Ex: SUB-15 - Categoria do Jogo) */}
-          {/* ========================================================= */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between pb-1">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-                <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">
-                  {categoriaDoJogo} - Categoria do Jogo
-                </h3>
-              </div>
-              <span className="text-xs text-slate-500 font-semibold">
-                {atletasCategoriaJogo.length} atletas disponíveis
-              </span>
+          {atletasOrdenados.length === 0 ? (
+            <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-sm text-slate-400">
+              Nenhum atleta encontrado para os critérios pesquisados.
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {atletasOrdenados.map((atleta) => {
+                const escalado = escalacaoMap[atleta.id];
+                const estaConvocado = Boolean(escalado);
+                const titular = escalado ? escalado.titular : false;
+                const ehOutraCategoria = atleta.categoria !== categoriaDoJogo;
 
-            {atletasCategoriaJogo.length === 0 ? (
-              <div className="p-6 text-center bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400">
-                Nenhum atleta encontrado nesta categoria.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {atletasCategoriaJogo.map((atleta) => {
-                  const escalado = escalacaoMap[atleta.id];
-                  const estaConvocado = Boolean(escalado);
-                  const titular = escalado ? escalado.titular : false;
-                  const posicaoAtual = escalado
-                    ? escalado.posicaoJogo
-                    : inferirPosicaoJogoPadrao(atleta.posicao);
+                return (
+                  <div
+                    key={atleta.id}
+                    className={`rounded-2xl p-4 transition-all border ${
+                      estaConvocado
+                        ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-500 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      {/* Checkbox de Convocação + Avatar com sigla do APELIDO + Dados do Atleta */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleConvocacao(atleta)}
+                          className="cursor-pointer p-0.5 text-blue-600 focus:outline-none shrink-0"
+                          title={estaConvocado ? 'Desmarcar da partida' : 'Convocar para partida'}
+                        >
+                          {estaConvocado ? (
+                            <CheckSquare className="w-6 h-6 text-blue-600 fill-blue-100 dark:fill-blue-950" />
+                          ) : (
+                            <Square className="w-6 h-6 text-slate-400 hover:text-slate-600" />
+                          )}
+                        </button>
 
-                  return (
-                    <div
-                      key={atleta.id}
-                      className={`rounded-2xl p-4 transition-all border ${
-                        estaConvocado
-                          ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-500 shadow-xs'
-                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        {/* Checkbox de Convocação + Dados do Atleta */}
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleConvocacao(atleta)}
-                            className="cursor-pointer p-0.5 text-blue-600 focus:outline-none"
-                            title={estaConvocado ? 'Desmarcar da partida' : 'Convocar para partida'}
-                          >
-                            {estaConvocado ? (
-                              <CheckSquare className="w-5 h-5 text-blue-600 fill-blue-100 dark:fill-blue-950" />
-                            ) : (
-                              <Square className="w-5 h-5 text-slate-400 hover:text-slate-600" />
-                            )}
-                          </button>
+                        {/* Foto / Iniciais do APELIDO */}
+                        <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 overflow-hidden flex items-center justify-center font-black text-sm text-slate-700 dark:text-slate-300">
+                          {atleta.fotoUrl ? (
+                            <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
+                          ) : (
+                            <span>{obterIniciaisApelido(atleta)}</span>
+                          )}
+                        </div>
 
-                          {/* Foto / Iniciais */}
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 overflow-hidden flex items-center justify-center font-bold text-xs text-slate-700 dark:text-slate-300">
-                            {atleta.fotoUrl ? (
-                              <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
-                            ) : (
-                              <span>
-                                {atleta.nome
-                                  .split(' ')
-                                  .slice(0, 2)
-                                  .map((n) => n[0])
-                                  .join('')
-                                  .toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-
-                          <div>
-                            <h4 className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight leading-tight">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight leading-tight truncate">
                               {atleta.apelido || atleta.nome.split(' ')[0]}
                             </h4>
-                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {atleta.nome}
-                            </p>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              Posição: <strong className="text-slate-700 dark:text-slate-300">{atleta.posicao}</strong> · Pé: {atleta.pernaDominante}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Botão Ficha */}
-                        <button
-                          type="button"
-                          onClick={() => onSelecionarAtleta(atleta)}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shrink-0"
-                        >
-                          Ficha
-                        </button>
-                      </div>
-
-                      {/* Configurações de Convocação se marcado: APENAS Status: [ Titular ] [ Reserva ] */}
-                      {estaConvocado && (
-                        <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex items-center gap-2 text-xs animate-in fade-in">
-                          <span className="font-semibold text-slate-700 dark:text-slate-300 mr-1">
-                            Status:
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleSetTitular(atleta.id, true)}
-                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                              titular
-                                ? 'bg-blue-600 text-white shadow-xs'
-                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
-                            }`}
-                          >
-                            Titular
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSetTitular(atleta.id, false)}
-                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                              !titular
-                                ? 'bg-amber-500 text-white shadow-xs'
-                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
-                            }`}
-                          >
-                            Reserva
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* ========================================================= */}
-          {/* GRUPO 2: OUTRAS CATEGORIAS - PODE CONVOCAR */}
-          {/* ========================================================= */}
-          <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-            <div className="flex items-center justify-between pb-1">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">
-                  Outras Categorias - Pode convocar
-                </h3>
-              </div>
-              <span className="text-xs text-slate-500 font-semibold">
-                {atletasOutrasCategorias.length} atletas de outras categorias
-              </span>
-            </div>
-
-            {atletasOutrasCategorias.length === 0 ? (
-              <div className="p-6 text-center bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400">
-                Nenhum atleta de outras categorias cadastrado.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {atletasOutrasCategorias.map((atleta) => {
-                  const escalado = escalacaoMap[atleta.id];
-                  const estaConvocado = Boolean(escalado);
-                  const titular = escalado ? escalado.titular : false;
-                  const posicaoAtual = escalado
-                    ? escalado.posicaoJogo
-                    : inferirPosicaoJogoPadrao(atleta.posicao);
-
-                  return (
-                    <div
-                      key={atleta.id}
-                      className={`rounded-2xl p-4 transition-all border ${
-                        estaConvocado
-                          ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-500 shadow-xs'
-                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        {/* Checkbox de Convocação + Dados do Atleta */}
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleConvocacao(atleta)}
-                            className="cursor-pointer p-0.5 text-blue-600 focus:outline-none"
-                            title={estaConvocado ? 'Desmarcar da partida' : 'Convocar para partida'}
-                          >
-                            {estaConvocado ? (
-                              <CheckSquare className="w-5 h-5 text-blue-600 fill-blue-100 dark:fill-blue-950" />
-                            ) : (
-                              <Square className="w-5 h-5 text-slate-400 hover:text-slate-600" />
-                            )}
-                          </button>
-
-                          {/* Foto / Iniciais */}
-                          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 overflow-hidden flex items-center justify-center font-bold text-xs text-slate-700 dark:text-slate-300">
-                            {atleta.fotoUrl ? (
-                              <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
-                            ) : (
-                              <span>
-                                {atleta.nome
-                                  .split(' ')
-                                  .slice(0, 2)
-                                  .map((n) => n[0])
-                                  .join('')
-                                  .toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                            {/* Selo da categoria SOMENTE se o atleta for de outra categoria */}
+                            {ehOutraCategoria && (
+                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
                                 {atleta.categoria}
                               </span>
-                              <h4 className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight leading-tight">
-                                {atleta.apelido || atleta.nome.split(' ')[0]}
-                              </h4>
-                            </div>
-                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                              {atleta.nome}
-                            </p>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              Posição: <strong className="text-slate-700 dark:text-slate-300">{atleta.posicao}</strong> · Pé: {atleta.pernaDominante}
-                            </p>
+                            )}
                           </div>
+                          <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                            {atleta.nome}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Posição: <strong className="text-slate-800 dark:text-slate-200 font-bold">{atleta.posicao}</strong> · Pé: {formatarPe(atleta.pernaDominante)}
+                          </p>
                         </div>
-
-                        {/* Botão Ficha */}
-                        <button
-                          type="button"
-                          onClick={() => onSelecionarAtleta(atleta)}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition shrink-0"
-                        >
-                          Ficha
-                        </button>
                       </div>
 
-                      {/* Configurações de Convocação se marcado: APENAS Status: [ Titular ] [ Reserva ] */}
-                      {estaConvocado && (
-                        <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex items-center gap-2 text-xs animate-in fade-in">
-                          <span className="font-semibold text-slate-700 dark:text-slate-300 mr-1">
-                            Status:
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleSetTitular(atleta.id, true)}
-                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                              titular
-                                ? 'bg-blue-600 text-white shadow-xs'
-                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
-                            }`}
-                          >
-                            Titular
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSetTitular(atleta.id, false)}
-                            className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                              !titular
-                                ? 'bg-amber-500 text-white shadow-xs'
-                                : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
-                            }`}
-                          >
-                            Reserva
-                          </button>
-                        </div>
-                      )}
+                      {/* Botão Ficha */}
+                      <button
+                        type="button"
+                        onClick={() => onSelecionarAtleta(atleta)}
+                        className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shrink-0 cursor-pointer shadow-2xs"
+                      >
+                        Ficha
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+
+                    {/* Configurações de Convocação: APENAS Status: [ Titular ] [ Reserva ], sem selo de Titular */}
+                    {estaConvocado && (
+                      <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex items-center gap-2 text-xs animate-in fade-in">
+                        <span className="font-bold text-slate-700 dark:text-slate-300 mr-1">
+                          Status:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSetTitular(atleta.id, true)}
+                          className={`px-3 py-1.5 rounded-lg font-black transition-all cursor-pointer ${
+                            titular
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                          }`}
+                        >
+                          Titular
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetTitular(atleta.id, false)}
+                          className={`px-3 py-1.5 rounded-lg font-black transition-all cursor-pointer ${
+                            !titular
+                              ? 'bg-amber-500 text-white shadow-xs'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                          }`}
+                        >
+                          Reserva
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Botão Inferior Salvar Escalação do Jogo */}
           <div className="pt-4 flex justify-end">
             <button
               onClick={handleSalvarEscalacao}
               style={{ backgroundColor: '#2563eb' }}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-md transition-all"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-md transition-all cursor-pointer"
             >
               <Save className="w-4 h-4 text-amber-300" />
               <span>Salvar Escalação do Jogo ({totalConvocados} convocados)</span>
@@ -932,9 +1082,9 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                   className="appearance-none pl-4 pr-9 py-2 text-sm font-black bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-2 border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer shadow-xs"
                 >
                   <option value="4-4-2 Losango">4-4-2 Losango</option>
-                  <option value="4-3-3">4-3-3</option>
-                  <option value="4-2-4">4-2-4</option>
                   <option value="4-2-3-1">4-2-3-1</option>
+                  <option value="4-3-3">4-3-3</option>
+                  <option value="4-2-4 linhas baixas">4-2-4 linhas baixas</option>
                   <option value="4-1-4-1">4-1-4-1</option>
                 </select>
                 <ChevronDown className="w-4 h-4 text-blue-600 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
