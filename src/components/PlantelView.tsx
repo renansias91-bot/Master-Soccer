@@ -12,8 +12,7 @@ import {
   Users,
   CheckCircle2,
   Save,
-  CheckSquare,
-  Square,
+  Check,
   AlertCircle,
   Trophy,
   ArrowLeftRight,
@@ -43,12 +42,31 @@ interface PlantelViewProps {
 }
 
 export interface SlotPosicaoCampinho {
-  id: string;
-  label: 'GOL' | 'LE' | 'ZAG' | 'LD' | 'VOL' | 'MEI' | 'ATA' | 'PE' | 'PD' | string;
-  nomeCompleto: string;
-  linha: 'ata' | 'mei' | 'def' | 'gol';
+  id: string; // Ex: 'GOL', 'LE', 'ZAG-E', 'ZAG-D', 'LD', 'VOL', 'MEI-E', 'MEI-C', etc.
+  label: string; // Ex: 'GOL', 'LE', 'ZAG-E', 'MEI-C / 10', etc.
+  nomeCompleto: string; // Ex: 'Goleiro', 'Lateral Esquerdo', etc.
+  linha: 'gol' | 'def' | 'mei' | 'ata';
   left: number; // % (0 a 100)
   top: number;  // % (0 a 100)
+}
+
+/**
+ * Normaliza qualquer chave de vaga ou slot para a chave fixa canônica
+ */
+export function normalizarSlotId(id?: string): string {
+  if (!id) return '';
+  const clean = id.trim();
+  if (clean === 'MEI-C / 10' || clean === 'MEI_C' || clean === 'MEI (10)' || clean === 'MEI-C') return 'MEI-C';
+  if (clean === 'ZAG1') return 'ZAG-E';
+  if (clean === 'ZAG2') return 'ZAG-D';
+  if (clean === 'VOL1') return 'VOL-E';
+  if (clean === 'VOL2') return 'VOL-D';
+  if (clean === 'MEI_E') return 'MEI-E';
+  if (clean === 'MEI_D') return 'MEI-D';
+  if (clean === 'ATA_E') return 'ATA-E';
+  if (clean === 'ATA_D') return 'ATA-D';
+  if (clean === 'ATA_C') return 'ATA-C';
+  return clean;
 }
 
 export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
@@ -56,29 +74,29 @@ export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
   '4-4-2 Losango': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
     { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
-    { id: 'ZAG1', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
-    { id: 'ZAG2', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
+    { id: 'ZAG-E', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG-D', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
     { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
     { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 58 },
-    { id: 'MEI_E', label: 'MEI-E', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 22, top: 42 },
-    { id: 'MEI_C', label: 'MEI-C / 10', nomeCompleto: 'Meio-Campo Central (10)', linha: 'mei', left: 50, top: 32 },
-    { id: 'MEI_D', label: 'MEI-D', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 78, top: 42 },
-    { id: 'ATA_E', label: 'ATA-E', nomeCompleto: 'Atacante Esquerdo', linha: 'ata', left: 35, top: 14 },
-    { id: 'ATA_D', label: 'ATA-D', nomeCompleto: 'Atacante Direito', linha: 'ata', left: 65, top: 14 },
+    { id: 'MEI-E', label: 'MEI-E', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 22, top: 42 },
+    { id: 'MEI-C', label: 'MEI-C / 10', nomeCompleto: 'Meio-Campo Central (10)', linha: 'mei', left: 50, top: 32 },
+    { id: 'MEI-D', label: 'MEI-D', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 78, top: 42 },
+    { id: 'ATA-E', label: 'ATA-E', nomeCompleto: 'Atacante Esquerdo', linha: 'ata', left: 35, top: 14 },
+    { id: 'ATA-D', label: 'ATA-D', nomeCompleto: 'Atacante Direito', linha: 'ata', left: 65, top: 14 },
   ],
 
   // FORMAÇÃO 4-2-3-1
   '4-2-3-1': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
     { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
-    { id: 'ZAG1', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
-    { id: 'ZAG2', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
+    { id: 'ZAG-E', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG-D', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
     { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
-    { id: 'VOL1', label: 'VOL-E', nomeCompleto: 'Volante Esquerdo', linha: 'mei', left: 38, top: 58 },
-    { id: 'VOL2', label: 'VOL-D', nomeCompleto: 'Volante Direito', linha: 'mei', left: 62, top: 58 },
-    { id: 'MEI_E', label: 'MEI-E', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 20, top: 38 },
-    { id: 'MEI_C', label: 'MEI-C / 10', nomeCompleto: 'Meio-Campo Central (10)', linha: 'mei', left: 50, top: 34 },
-    { id: 'MEI_D', label: 'MEI-D', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 80, top: 38 },
+    { id: 'VOL-E', label: 'VOL-E', nomeCompleto: 'Volante Esquerdo', linha: 'mei', left: 38, top: 58 },
+    { id: 'VOL-D', label: 'VOL-D', nomeCompleto: 'Volante Direito', linha: 'mei', left: 62, top: 58 },
+    { id: 'MEI-E', label: 'MEI-E', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 20, top: 38 },
+    { id: 'MEI-C', label: 'MEI-C / 10', nomeCompleto: 'Meio-Campo Central (10)', linha: 'mei', left: 50, top: 34 },
+    { id: 'MEI-D', label: 'MEI-D', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 80, top: 38 },
     { id: 'ATA', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 12 },
   ],
 
@@ -86,44 +104,44 @@ export const FORMACOES_CAMPINHO: Record<string, SlotPosicaoCampinho[]> = {
   '4-3-3': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
     { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
-    { id: 'ZAG1', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
-    { id: 'ZAG2', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
+    { id: 'ZAG-E', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG-D', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
     { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
     { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 58 },
-    { id: 'MEI_E', label: 'MEI-E', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 30, top: 42 },
-    { id: 'MEI_D', label: 'MEI-D', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 70, top: 42 },
-    { id: 'ATA_E', label: 'ATA-E', nomeCompleto: 'Ponta Esquerda', linha: 'ata', left: 20, top: 16 },
-    { id: 'ATA_C', label: 'ATA-C', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 12 },
-    { id: 'ATA_D', label: 'ATA-D', nomeCompleto: 'Ponta Direita', linha: 'ata', left: 80, top: 16 },
+    { id: 'MEI-E', label: 'MEI-E', nomeCompleto: 'Meio-Campo Esquerdo', linha: 'mei', left: 30, top: 42 },
+    { id: 'MEI-D', label: 'MEI-D', nomeCompleto: 'Meio-Campo Direito', linha: 'mei', left: 70, top: 42 },
+    { id: 'ATA-E', label: 'ATA-E', nomeCompleto: 'Ponta Esquerda', linha: 'ata', left: 20, top: 16 },
+    { id: 'ATA-C', label: 'ATA-C', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 12 },
+    { id: 'ATA-D', label: 'ATA-D', nomeCompleto: 'Ponta Direita', linha: 'ata', left: 80, top: 16 },
   ],
 
   // FORMAÇÃO 4-2-4 LINHAS BAIXAS
   '4-2-4 linhas baixas': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
     { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
-    { id: 'ZAG1', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
-    { id: 'ZAG2', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
+    { id: 'ZAG-E', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG-D', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
     { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
-    { id: 'VOL1', label: 'VOL-E', nomeCompleto: 'Volante Esquerdo', linha: 'mei', left: 35, top: 56 },
-    { id: 'VOL2', label: 'VOL-D', nomeCompleto: 'Volante Direito', linha: 'mei', left: 65, top: 56 },
-    { id: 'MEI_E', label: 'MEI-E', nomeCompleto: 'Meia Esquerdo', linha: 'mei', left: 16, top: 36 },
-    { id: 'MEI_D', label: 'MEI-D', nomeCompleto: 'Meia Direito', linha: 'mei', left: 84, top: 36 },
-    { id: 'ATA_E', label: 'ATA-E', nomeCompleto: 'Atacante Esquerdo', linha: 'ata', left: 38, top: 30 },
-    { id: 'ATA_D', label: 'ATA-D', nomeCompleto: 'Atacante Direito', linha: 'ata', left: 62, top: 30 },
+    { id: 'VOL-E', label: 'VOL-E', nomeCompleto: 'Volante Esquerdo', linha: 'mei', left: 35, top: 56 },
+    { id: 'VOL-D', label: 'VOL-D', nomeCompleto: 'Volante Direito', linha: 'mei', left: 65, top: 56 },
+    { id: 'MEI-E', label: 'MEI-E', nomeCompleto: 'Meia Esquerdo', linha: 'mei', left: 16, top: 36 },
+    { id: 'MEI-D', label: 'MEI-D', nomeCompleto: 'Meia Direito', linha: 'mei', left: 84, top: 36 },
+    { id: 'ATA-E', label: 'ATA-E', nomeCompleto: 'Atacante Esquerdo', linha: 'ata', left: 38, top: 30 },
+    { id: 'ATA-D', label: 'ATA-D', nomeCompleto: 'Atacante Direito', linha: 'ata', left: 62, top: 30 },
   ],
 
   // FORMAÇÃO 4-1-4-1
   '4-1-4-1': [
     { id: 'GOL', label: 'GOL', nomeCompleto: 'Goleiro', linha: 'gol', left: 50, top: 92 },
     { id: 'LE', label: 'LE', nomeCompleto: 'Lateral Esquerdo', linha: 'def', left: 15, top: 72 },
-    { id: 'ZAG1', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
-    { id: 'ZAG2', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
+    { id: 'ZAG-E', label: 'ZAG-E', nomeCompleto: 'Zagueiro Esquerdo', linha: 'def', left: 38, top: 76 },
+    { id: 'ZAG-D', label: 'ZAG-D', nomeCompleto: 'Zagueiro Direito', linha: 'def', left: 62, top: 76 },
     { id: 'LD', label: 'LD', nomeCompleto: 'Lateral Direito', linha: 'def', left: 85, top: 72 },
     { id: 'VOL', label: 'VOL', nomeCompleto: 'Volante', linha: 'mei', left: 50, top: 60 },
-    { id: 'MEI_E', label: 'MEI-E', nomeCompleto: 'Meio-Campista Esquerdo', linha: 'mei', left: 16, top: 40 },
-    { id: 'MEI_CE', label: 'MEI-CE', nomeCompleto: 'Meio-Campista Central Esquerdo', linha: 'mei', left: 38, top: 42 },
-    { id: 'MEI_CD', label: 'MEI-CD', nomeCompleto: 'Meio-Campista Central Direito', linha: 'mei', left: 62, top: 42 },
-    { id: 'MEI_D', label: 'MEI-D', nomeCompleto: 'Meio-Campista Direito', linha: 'mei', left: 84, top: 40 },
+    { id: 'MEI-E', label: 'MEI-E', nomeCompleto: 'Meio-Campista Esquerdo', linha: 'mei', left: 16, top: 40 },
+    { id: 'MEI-CE', label: 'MEI-CE', nomeCompleto: 'Meio-Campista Central Esquerdo', linha: 'mei', left: 38, top: 42 },
+    { id: 'MEI-CD', label: 'MEI-CD', nomeCompleto: 'Meio-Campista Central Direito', linha: 'mei', left: 62, top: 42 },
+    { id: 'MEI-D', label: 'MEI-D', nomeCompleto: 'Meio-Campista Direito', linha: 'mei', left: 84, top: 40 },
     { id: 'ATA', label: 'ATA', nomeCompleto: 'Centroavante', linha: 'ata', left: 50, top: 14 },
   ],
 };
@@ -145,7 +163,7 @@ export const BLOQUINHOS_FORMACAO: Record<string, Array<{ id: string; label: stri
     { id: 'LD', label: 'LD' },
     { id: 'VOL', label: 'VOL' },
     { id: 'MEI-E', label: 'MEI-E' },
-    { id: 'MEI-C / 10', label: 'MEI-C / 10' },
+    { id: 'MEI-C', label: 'MEI-C / 10' },
     { id: 'MEI-D', label: 'MEI-D' },
     { id: 'ATA-E', label: 'ATA-E' },
     { id: 'ATA-D', label: 'ATA-D' },
@@ -160,7 +178,7 @@ export const BLOQUINHOS_FORMACAO: Record<string, Array<{ id: string; label: stri
     { id: 'VOL-E', label: 'VOL-E' },
     { id: 'VOL-D', label: 'VOL-D' },
     { id: 'MEI-E', label: 'MEI-E' },
-    { id: 'MEI-C / 10', label: 'MEI-C / 10' },
+    { id: 'MEI-C', label: 'MEI-C / 10' },
     { id: 'MEI-D', label: 'MEI-D' },
     { id: 'ATA', label: 'ATA' },
   ],
@@ -203,6 +221,7 @@ export const BLOQUINHOS_FORMACAO: Record<string, Array<{ id: string; label: stri
     { id: 'MEI-E', label: 'MEI-E' },
     { id: 'MEI-CE', label: 'MEI-CE' },
     { id: 'MEI-CD', label: 'MEI-CD' },
+    { id: 'MEI-D', label: 'MEI-D' },
     { id: 'ATA', label: 'ATA' },
   ],
 };
@@ -318,6 +337,7 @@ function calcularScoreAtleta(atleta: Atleta, vaga: string, categoriaJogo: string
       if (isVol || isAta) return catPenalty + 35;
       return catPenalty + 50;
 
+    case 'MEI-C':
     case 'MEI-C / 10':
     case 'MEI-CE':
     case 'MEI-CD':
@@ -442,129 +462,184 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
   const jogoAtivo = jogos.find((j) => j.id === jogoAtivoId) || null;
 
-  // Toggle de convocação do atleta
-  const handleToggleConvocacao = (atleta: Atleta) => {
+  // Encontra o melhor slot vago da formação quando o usuário está no filtro [TODOS]
+  const encontrarMelhorSlotVazio = (
+    atleta: Atleta,
+    formacaoAtual: string,
+    escalacaoAtual: Record<string, AtletaEscalado>
+  ): string => {
+    const slots = FORMACOES_CAMPINHO[formacaoAtual] || FORMACOES_CAMPINHO['4-4-2 Losango'];
+    const slotsOcupados = new Set<string>();
+
+    for (const id in escalacaoAtual) {
+      const item = escalacaoAtual[id];
+      if (item?.titular && item.posicaoSlot && id !== atleta.id) {
+        slotsOcupados.add(normalizarSlotId(item.posicaoSlot));
+      }
+    }
+
+    const slotsVazios = slots.filter((s) => !slotsOcupados.has(normalizarSlotId(s.id)));
+    if (slotsVazios.length === 0) {
+      return normalizarSlotId(slots[0]?.id || 'GOL');
+    }
+
+    const pos = (atleta.posicao || '').toLowerCase();
+    const peEsq = isPeEsquerdo(atleta.pernaDominante);
+
+    if (pos.includes('gol')) {
+      const s = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'GOL');
+      if (s) return normalizarSlotId(s.id);
+    }
+
+    if (pos.includes('lateral')) {
+      if (pos.includes('esquerd') || peEsq) {
+        const s = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'LE');
+        if (s) return normalizarSlotId(s.id);
+      }
+      const sLD = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'LD');
+      if (sLD) return normalizarSlotId(sLD.id);
+      const sLE = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'LE');
+      if (sLE) return normalizarSlotId(sLE.id);
+    }
+
+    if (pos.includes('zag') || pos.includes('def')) {
+      if (peEsq) {
+        const s = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'ZAG-E');
+        if (s) return normalizarSlotId(s.id);
+      }
+      const sD = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'ZAG-D');
+      if (sD) return normalizarSlotId(sD.id);
+      const sE = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'ZAG-E');
+      if (sE) return normalizarSlotId(sE.id);
+    }
+
+    if (pos.includes('vol')) {
+      const s = slotsVazios.find(
+        (sv) =>
+          normalizarSlotId(sv.id) === 'VOL' ||
+          normalizarSlotId(sv.id) === 'VOL-E' ||
+          normalizarSlotId(sv.id) === 'VOL-D'
+      );
+      if (s) return normalizarSlotId(s.id);
+    }
+
+    if (pos.includes('mei') || pos.includes('meio')) {
+      const s = slotsVazios.find((sv) => sv.linha === 'mei');
+      if (s) return normalizarSlotId(s.id);
+    }
+
+    if (pos.includes('ata') || pos.includes('pon') || pos.includes('cent') || pos.includes('ext')) {
+      const s = slotsVazios.find((sv) => sv.linha === 'ata');
+      if (s) return normalizarSlotId(s.id);
+    }
+
+    return normalizarSlotId(slotsVazios[0].id);
+  };
+
+  // 1 CLIQUE JÁ CONVOCA / DESCONVOCA: [Titular]
+  const handleToggleTitular = (atleta: Atleta) => {
+    const escaladoAtual = escalacaoMap[atleta.id];
+
+    if (escaladoAtual && escaladoAtual.titular) {
+      // Clicou de novo no botão que já estava marcado -> DESCONVOCA o atleta
+      setEscalacaoMap((prev) => {
+        const copy = { ...prev };
+        delete copy[atleta.id];
+        return copy;
+      });
+      return;
+    }
+
+    // 1º Identifica a vaga: se escolheu no filtro ESCOLHA A VAGA, vai EXATAMENTE para ela
+    const targetSlotId =
+      vagaSelecionada !== 'TODOS'
+        ? normalizarSlotId(vagaSelecionada)
+        : encontrarMelhorSlotVazio(atleta, formacao, escalacaoMap);
+
+    const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
+    const slotObj = slots.find((s) => normalizarSlotId(s.id) === targetSlotId);
+    const nomePosicao = slotObj?.nomeCompleto || slotObj?.label || targetSlotId;
+
     setEscalacaoMap((prev) => {
       const copy = { ...prev };
-      if (copy[atleta.id]) {
-        delete copy[atleta.id];
-      } else {
-        copy[atleta.id] = {
-          atletaId: atleta.id,
-          titular: true,
-          posicaoJogo: inferirPosicaoJogoPadrao(atleta.posicao),
-        };
+
+      // Se uma vaga já estiver ocupada e colocar outro atleta, ele SUBSTITUI só aquela vaga.
+      for (const id in copy) {
+        if (id !== atleta.id && copy[id]?.titular && normalizarSlotId(copy[id].posicaoSlot || '') === targetSlotId) {
+          delete copy[id];
+        }
       }
+
+      copy[atleta.id] = {
+        atletaId: atleta.id,
+        titular: true,
+        posicaoJogo: nomePosicao,
+        posicaoSlot: targetSlotId,
+      };
+
       return copy;
     });
   };
 
-  // Alterar titular/reserva
-  const handleSetTitular = (atletaId: string, titular: boolean) => {
+  // 1 CLIQUE JÁ CONVOCA / DESCONVOCA: [Reserva]
+  const handleToggleReserva = (atleta: Atleta) => {
+    const escaladoAtual = escalacaoMap[atleta.id];
+
+    if (escaladoAtual && !escaladoAtual.titular) {
+      // Clicou de novo no botão que já estava marcado -> DESCONVOCA o atleta
+      setEscalacaoMap((prev) => {
+        const copy = { ...prev };
+        delete copy[atleta.id];
+        return copy;
+      });
+      return;
+    }
+
+    // Convocado como reserva: vai direto para o Banco de Reservas e libera qualquer vaga de campo
     setEscalacaoMap((prev) => {
-      const atual = prev[atletaId];
-      if (!atual) return prev;
-      return {
-        ...prev,
-        [atletaId]: {
-          ...atual,
-          titular,
-        },
+      const copy = { ...prev };
+      copy[atleta.id] = {
+        atletaId: atleta.id,
+        titular: false,
+        posicaoJogo: 'Reserva',
+        posicaoSlot: undefined,
       };
+      return copy;
     });
   };
 
-  // Alterar posição no jogo
-  const handleSetPosicaoJogo = (atletaId: string, posicao: string) => {
-    setEscalacaoMap((prev) => {
-      const atual = prev[atletaId];
-      if (!atual) return prev;
-      return {
-        ...prev,
-        [atletaId]: {
-          ...atual,
-          posicaoJogo: posicao,
-        },
-      };
-    });
-  };
-
-  // Atribuição dos titulares aos slots da formação tática, respeitando slotId gravado
+  // Atribuição 100% determinística dos titulares aos slots da formação tática.
+  // Cada vaga do campinho é uma CHAVE FIXA e INDEPENDENTE. Somente a vaga do atleta muda.
   const atribuirTitularesAosSlots = (
     titularesList: Atleta[],
     slots: SlotPosicaoCampinho[]
   ): Array<{ slot: SlotPosicaoCampinho; atleta: Atleta | null }> => {
-    const resultado: Array<{ slot: SlotPosicaoCampinho; atleta: Atleta | null }> = [];
-    const usados = new Set<string>();
+    return slots.map((slot) => {
+      const targetId = normalizarSlotId(slot.id);
+      const atleta =
+        titularesList.find((a) => {
+          const info = escalacaoMap[a.id];
+          return info && info.titular && normalizarSlotId(info.posicaoSlot || '') === targetId;
+        }) || null;
 
-    // 1ª Passagem: Atletas com slotId exato travado
-    const slotsMap: Record<string, Atleta | null> = {};
-    for (const slot of slots) {
-      const matchExato = titularesList.find(
-        (a) => !usados.has(a.id) && escalacaoMap[a.id]?.posicaoSlot === slot.id
-      );
-      if (matchExato) {
-        usados.add(matchExato.id);
-        slotsMap[slot.id] = matchExato;
-      } else {
-        slotsMap[slot.id] = null;
-      }
-    }
-
-    // 2ª Passagem: Titulares restantes sem slotId vinculados por posição tática
-    const titularesLivres = titularesList.filter((a) => !usados.has(a.id));
-    for (const slot of slots) {
-      if (slotsMap[slot.id]) continue;
-      const match = titularesLivres.find((a) => {
-        if (usados.has(a.id)) return false;
-        const pos = (escalacaoMap[a.id]?.posicaoJogo || a.posicao || '').toLowerCase();
-        if (slot.linha === 'gol') return pos.includes('gol');
-        if (slot.linha === 'def') return pos.includes('zag') || pos.includes('lat') || pos.includes('def');
-        if (slot.linha === 'mei') return pos.includes('vol') || pos.includes('mei') || pos.includes('meio');
-        if (slot.linha === 'ata') return pos.includes('ata') || pos.includes('pon') || pos.includes('cent') || pos.includes('ext');
-        return false;
-      });
-
-      if (match) {
-        usados.add(match.id);
-        slotsMap[slot.id] = match;
-      }
-    }
-
-    // 3ª Passagem: Preenche vagas ainda vazias com os titulares que sobraram
-    const restantesFinais = titularesList.filter((a) => !usados.has(a.id));
-    for (const slot of slots) {
-      if (!slotsMap[slot.id] && restantesFinais.length > 0) {
-        const proximo = restantesFinais.shift()!;
-        slotsMap[slot.id] = proximo;
-        usados.add(proximo.id);
-      }
-    }
-
-    for (const slot of slots) {
-      resultado.push({ slot, atleta: slotsMap[slot.id] || null });
-    }
-
-    return resultado;
+      return { slot, atleta };
+    });
   };
 
   // Colocar jogador exatamente no slot selecionado do campinho
   const handleColocarJogadorNoSlot = (atletaId: string, slotId: string) => {
+    const normSlot = normalizarSlotId(slotId);
     const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
-    const slotObj = slots.find((s) => s.id === slotId);
+    const slotObj = slots.find((s) => normalizarSlotId(s.id) === normSlot);
     const nomePosicao = slotObj?.nomeCompleto || slotObj?.label || 'Titular';
 
     setEscalacaoMap((prev) => {
       const copy = { ...prev };
 
-      // Se outro jogador já estava nesse slotId, remove ele desse slot e coloca no banco
+      // Se outro jogador já estava nessa vaga, ele é substituído nesta vaga
       for (const id in copy) {
-        if (copy[id].posicaoSlot === slotId && id !== atletaId) {
-          copy[id] = {
-            ...copy[id],
-            titular: false,
-            posicaoSlot: undefined,
-          };
+        if (id !== atletaId && normalizarSlotId(copy[id].posicaoSlot || '') === normSlot) {
+          delete copy[id];
         }
       }
 
@@ -573,7 +648,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         atletaId,
         titular: true,
         posicaoJogo: nomePosicao,
-        posicaoSlot: slotId,
+        posicaoSlot: normSlot,
       };
 
       return copy;
@@ -646,22 +721,34 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
   // Promover atleta para titular
   const handlePromoverParaTitular = (atletaId: string, posicaoJogo?: string) => {
+    const atleta = atletas.find((a) => a.id === atletaId);
+    if (!atleta) return;
+    const targetSlotId =
+      vagaSelecionada !== 'TODOS'
+        ? normalizarSlotId(vagaSelecionada)
+        : encontrarMelhorSlotVazio(atleta, formacao, escalacaoMap);
+    const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
+    const slotObj = slots.find((s) => normalizarSlotId(s.id) === targetSlotId);
+    const nomePosicao = posicaoJogo || slotObj?.nomeCompleto || slotObj?.label || 'Titular';
+
     setEscalacaoMap((prev) => {
-      const atual = prev[atletaId];
-      const atleta = atletas.find((a) => a.id === atletaId);
-      return {
-        ...prev,
-        [atletaId]: {
-          atletaId,
-          titular: true,
-          posicaoJogo:
-            posicaoJogo ||
-            (atual ? atual.posicaoJogo : atleta ? inferirPosicaoJogoPadrao(atleta.posicao) : 'Atacante'),
-        },
+      const copy = { ...prev };
+      for (const id in copy) {
+        if (id !== atletaId && copy[id]?.titular && normalizarSlotId(copy[id].posicaoSlot || '') === targetSlotId) {
+          delete copy[id];
+        }
+      }
+      copy[atletaId] = {
+        atletaId,
+        titular: true,
+        posicaoJogo: nomePosicao,
+        posicaoSlot: targetSlotId,
       };
+      return copy;
     });
     setModalTrocaAberto(false);
     setAtletaParaTroca(null);
+    setSlotSelecionado(null);
   };
 
   // Salvar Escalação do Jogo
@@ -995,7 +1082,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
             {bloquinhosAtuais.map((b) => {
-              const ativo = vagaSelecionada === b.id;
+              const ativo = normalizarSlotId(vagaSelecionada) === normalizarSlotId(b.id);
               return (
                 <button
                   key={b.id}
@@ -1022,37 +1109,35 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
           {(() => {
             const renderCardAtleta = (atleta: Atleta) => {
               const escalado = escalacaoMap[atleta.id];
-              const estaConvocado = Boolean(escalado);
-              const titular = escalado ? escalado.titular : false;
+              const ehTitular = escalado ? escalado.titular : false;
+              const ehReserva = escalado ? !escalado.titular : false;
+              const slotAtual = escalado?.posicaoSlot ? normalizarSlotId(escalado.posicaoSlot) : null;
               const ehOutraCategoria = atleta.categoria !== categoriaDoJogo;
 
               return (
                 <div
                   key={atleta.id}
-                  className={`rounded-2xl p-4 transition-all border min-h-[72px] flex flex-col justify-center scroll-mt-[260px] ${
-                    estaConvocado
-                      ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-500 shadow-xs'
+                  className={`rounded-2xl p-3 sm:p-4 transition-all border min-h-[72px] flex flex-col justify-center scroll-mt-[260px] ${
+                    ehTitular
+                      ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-500 shadow-xs'
+                      : ehReserva
+                      ? 'bg-amber-50/50 dark:bg-amber-950/30 border-amber-400 shadow-xs'
                       : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    {/* Checkbox de Convocação (26px) + Avatar com sigla do APELIDO + Dados do Atleta */}
+                    {/* Avatar com foto ou iniciais do APELIDO + Dados do Atleta (SEM checkbox!) */}
                     <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleConvocacao(atleta)}
-                        className="cursor-pointer p-0.5 text-blue-600 focus:outline-none shrink-0"
-                        title={estaConvocado ? 'Desmarcar da partida' : 'Convocar para partida'}
-                      >
-                        {estaConvocado ? (
-                          <CheckSquare className="w-[26px] h-[26px] text-blue-600 fill-blue-100 dark:fill-blue-950" />
-                        ) : (
-                          <Square className="w-[26px] h-[26px] text-slate-400 hover:text-slate-600" />
-                        )}
-                      </button>
-
                       {/* Foto / Iniciais do APELIDO */}
-                      <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 overflow-hidden flex items-center justify-center font-black text-sm text-slate-700 dark:text-slate-300">
+                      <div
+                        className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl shrink-0 overflow-hidden flex items-center justify-center font-black text-sm border ${
+                          ehTitular
+                            ? 'bg-blue-600 text-white border-blue-700'
+                            : ehReserva
+                            ? 'bg-amber-500 text-white border-amber-600'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
                         {atleta.fotoUrl ? (
                           <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
                         ) : (
@@ -1062,61 +1147,66 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="text-[17px] font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-snug truncate">
+                          <h4 className="text-[16px] sm:text-[17px] font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-snug truncate">
                             {atleta.apelido || atleta.nome.split(' ')[0]}
                           </h4>
                           {ehOutraCategoria && (
-                            <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
+                            <span className="text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
                               {atleta.categoria}
                             </span>
                           )}
+                          {ehTitular && slotAtual && (
+                            <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-blue-600 text-white shadow-2xs shrink-0">
+                              {slotAtual}
+                            </span>
+                          )}
+                          {ehReserva && (
+                            <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-500 text-white shadow-2xs shrink-0">
+                              Banco
+                            </span>
+                          )}
                         </div>
-                        <p className="text-[14px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
+                        <p className="text-[13px] sm:text-[14px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
                           Posição: <strong className="text-slate-900 dark:text-slate-100 font-bold">{atleta.posicao}</strong> · Pé: <span className="font-semibold">{formatarPe(atleta.pernaDominante)}</span>
                         </p>
                       </div>
                     </div>
 
-                    {/* Botão Ficha maior e clicável */}
-                    <button
-                      type="button"
-                      onClick={() => onSelecionarAtleta(atleta)}
-                      className="px-4 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl transition shrink-0 cursor-pointer shadow-xs min-w-[72px] text-center"
-                    >
-                      Ficha
-                    </button>
-                  </div>
-
-                  {/* Configurações de Convocação: APENAS Status: [ Titular ] [ Reserva ], sem selo de Titular */}
-                  {estaConvocado && (
-                    <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex items-center gap-2 text-xs sm:text-sm animate-in fade-in">
-                      <span className="font-bold text-slate-700 dark:text-slate-300 mr-1 text-sm">
-                        Status:
-                      </span>
+                    {/* DEIXAR SÓ TITULAR / RESERVA DIRETO NO CARD - SEMPRE VISÍVEL (1 CLIQUE JÁ CONVOCA) */}
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={() => handleSetTitular(atleta.id, true)}
-                        className={`px-3.5 py-1.5 rounded-lg font-black transition-all cursor-pointer text-xs sm:text-sm ${
-                          titular
-                            ? 'bg-blue-600 text-white shadow-xs'
-                            : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                        onClick={() => handleToggleTitular(atleta)}
+                        title={
+                          ehTitular
+                            ? 'Clique para desconvocar atleta'
+                            : `Convocar como Titular (${vagaSelecionada !== 'TODOS' ? vagaSelecionada : 'no campinho'})`
+                        }
+                        className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
+                          ehTitular
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700 shadow-sm'
+                            : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
                         }`}
                       >
-                        Titular
+                        {ehTitular && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                        <span>Titular</span>
                       </button>
+
                       <button
                         type="button"
-                        onClick={() => handleSetTitular(atleta.id, false)}
-                        className={`px-3.5 py-1.5 rounded-lg font-black transition-all cursor-pointer text-xs sm:text-sm ${
-                          !titular
-                            ? 'bg-amber-500 text-white shadow-xs'
-                            : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                        onClick={() => handleToggleReserva(atleta)}
+                        title={ehReserva ? 'Clique para desconvocar atleta' : 'Convocar como Reserva (Banco)'}
+                        className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
+                          ehReserva
+                            ? 'bg-amber-500 hover:bg-amber-600 text-white border-2 border-amber-600 shadow-sm'
+                            : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
                         }`}
                       >
-                        Reserva
+                        {ehReserva && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                        <span>Reserva</span>
                       </button>
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             };
