@@ -815,11 +815,11 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   }
 
   return (
-    <div className="space-y-4 pb-[170px] w-full max-w-full box-border">
+    <div className="w-full max-w-full box-border pb-[180px]">
       {/* ========================================================= */}
       {/* CABEÇALHO FIXO NO TOPO - NADA SOME AO ROLAR, SEM CORTE */}
       {/* ========================================================= */}
-      <div className="sticky top-[72px] z-30 bg-white dark:bg-slate-900 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 border-b-2 border-slate-200 dark:border-slate-800 shadow-md flex flex-col gap-3">
+      <div className="sticky top-[72px] z-30 bg-white dark:bg-slate-900 -mx-3 sm:-mx-6 px-3 sm:px-6 pt-3 pb-2.5 border-b-2 border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-2.5">
         {/* BLOCO 1: PAINEL DO JOGO MAIOR (~92px) - TÍTULO EM DESTAQUE (20px), DATA/HORA/LOCAL (15px), BADGE E BOTÃO VOLTAR */}
         <div className="min-h-[88px] sm:min-h-[92px] p-4 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
           <div className="space-y-1.5 flex-1 min-w-0">
@@ -1014,7 +1014,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
       {/* Conteúdo: Lista única de atletas ou Campinho */}
       {abaSubEscalacao === 'lista' ? (
-        <div className="space-y-6 pt-2">
+        <div className="mt-0 pt-3 space-y-3 pb-[180px]" style={{ marginTop: 0 }}>
           {(() => {
             const renderCardAtleta = (atleta: Atleta) => {
               const escalado = escalacaoMap[atleta.id];
@@ -1025,7 +1025,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
               return (
                 <div
                   key={atleta.id}
-                  className={`rounded-2xl p-4 transition-all border min-h-[72px] flex flex-col justify-center ${
+                  className={`rounded-2xl p-4 transition-all border min-h-[72px] flex flex-col justify-center scroll-mt-[260px] ${
                     estaConvocado
                       ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-500 shadow-xs'
                       : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
@@ -1129,7 +1129,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
               <>
                 {/* 1. Atletas da Categoria Principal do Jogo */}
                 {atletasDaCategoria.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {atletasDaCategoria.map(renderCardAtleta)}
                   </div>
                 ) : (
@@ -1140,7 +1140,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
                 {/* 2. Seção OUTRAS CATEGORIAS - PODE CONVOCAR (Apenas categorias inferiores!) */}
                 {atletasOutrasCategorias.length > 0 && (
-                  <div className="pt-4 border-t-2 border-dashed border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="pt-3 border-t-2 border-dashed border-slate-200 dark:border-slate-800 space-y-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/70 px-3 py-1.5 rounded-xl border border-amber-300/80 shadow-2xs">
                         OUTRAS CATEGORIAS - PODE CONVOCAR
@@ -1149,7 +1149,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                         ({atletasOutrasCategorias.length} atletas disponíveis de categorias inferiores)
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {atletasOutrasCategorias.map(renderCardAtleta)}
                     </div>
                   </div>
@@ -1162,7 +1162,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         /* ========================================================= */
         /* ABA 2: CAMPINHO TÁTICO VERTICAL COM 11 TITULARES */
         /* ========================================================= */
-        <div className="space-y-6 pt-2">
+        <div className="mt-0 pt-3 space-y-4 pb-[180px]" style={{ marginTop: 0 }}>
 
           {/* O Campo de Futebol Vertical */}
           {(() => {
