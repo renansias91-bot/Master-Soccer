@@ -843,6 +843,7 @@ export default function App() {
           style={{ display: abaAtiva === 'escalacao' ? 'block' : 'none' }}
         >
           <PlantelView
+            key={jogoSelecionadoParaEscalacaoId || 'plantel-view'}
             atletas={atletas}
             avaliacoes={avaliacoes}
             categorias={categorias}

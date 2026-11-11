@@ -368,6 +368,15 @@ function calcularScoreAtleta(atleta: Atleta, vaga: string, categoriaJogo: string
   }
 }
 
+/**
+ * Extrai o número da categoria (ex: SUB-15 -> 15, SUB-16 -> 16, SUB-17 -> 17)
+ */
+function extrairNumeroCategoria(cat?: string): number {
+  if (!cat) return 999;
+  const match = cat.match(/\d+/);
+  return match ? parseInt(match[0], 10) : 999;
+}
+
 // Mapeia posição original do atleta para uma das 10 posições oficiais do jogo
 function inferirPosicaoJogoPadrao(posicaoOriginal?: string): string {
   if (!posicaoOriginal) return 'Meia (10)';
@@ -699,12 +708,21 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
     }
   }, [bloquinhosAtuais, vagaSelecionada]);
 
-  // Lista ordenada por prioridade da vaga/posição/pé/categoria, SEM CABEÇALHOS DE GRUPO
-  const atletasOrdenados = useMemo(() => {
-    let lista = atletas;
+  const catJogoNum = extrairNumeroCategoria(categoriaDoJogo);
+
+  // Atletas elegíveis para convocação e substituição no modal: apenas mesma categoria ou inferior
+  const atletasElegiveisParaModal = useMemo(() => {
+    return atletas.filter((a) => extrairNumeroCategoria(a.categoria) <= catJogoNum);
+  }, [atletas, catJogoNum]);
+
+  // Separação em: Atletas da Categoria do Jogo e Outras Categorias (apenas inferiores)
+  // ESTRITAMENTE PROIBIDO: mostrar categorias superiores à categoria do jogo!
+  const { atletasDaCategoria, atletasOutrasCategorias } = useMemo(() => {
+    // 1. Filtro de busca de texto
+    let base = atletas;
     if (busca.trim()) {
       const b = busca.toLowerCase();
-      lista = lista.filter(
+      base = base.filter(
         (a) =>
           a.nome.toLowerCase().includes(b) ||
           (a.apelido && a.apelido.toLowerCase().includes(b)) ||
@@ -712,7 +730,25 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
       );
     }
 
-    return [...lista].sort((a, b) => {
+    // 2. Filtro estrito: apenas mesma categoria ou inferior (catNum <= catJogoNum)
+    const elegiveis = base.filter((a) => {
+      const catNum = extrairNumeroCategoria(a.categoria);
+      return catNum <= catJogoNum;
+    });
+
+    const principal: Atleta[] = [];
+    const inferiores: Atleta[] = [];
+
+    for (const atleta of elegiveis) {
+      if (atleta.categoria === categoriaDoJogo) {
+        principal.push(atleta);
+      } else {
+        inferiores.push(atleta);
+      }
+    }
+
+    // 3. Ordena categoria principal por vaga/pé/posição e desempate por nome
+    principal.sort((a, b) => {
       const scoreA = calcularScoreAtleta(a, vagaSelecionada, categoriaDoJogo);
       const scoreB = calcularScoreAtleta(b, vagaSelecionada, categoriaDoJogo);
       if (scoreA !== scoreB) {
@@ -722,7 +758,29 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
       const nomeB = b.apelido || b.nome;
       return nomeA.localeCompare(nomeB, 'pt-BR');
     });
-  }, [atletas, busca, vagaSelecionada, categoriaDoJogo]);
+
+    // 4. Ordena categorias inferiores: categoria decrescente (ex: SUB-16 depois SUB-15) e por vaga/pé
+    inferiores.sort((a, b) => {
+      const numA = extrairNumeroCategoria(a.categoria);
+      const numB = extrairNumeroCategoria(b.categoria);
+      if (numA !== numB) {
+        return numB - numA;
+      }
+      const scoreA = calcularScoreAtleta(a, vagaSelecionada, a.categoria);
+      const scoreB = calcularScoreAtleta(b, vagaSelecionada, b.categoria);
+      if (scoreA !== scoreB) {
+        return scoreA - scoreB;
+      }
+      const nomeA = a.apelido || a.nome;
+      const nomeB = b.apelido || b.nome;
+      return nomeA.localeCompare(nomeB, 'pt-BR');
+    });
+
+    return {
+      atletasDaCategoria: principal,
+      atletasOutrasCategorias: inferiores,
+    };
+  }, [atletas, busca, vagaSelecionada, categoriaDoJogo, catJogoNum]);
 
   // Se o usuário entrar direto na aba ESCALAÇÃO sem ter selecionado um jogo antes na Agenda:
   if (!jogoAtivo) {
@@ -757,51 +815,50 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   }
 
   return (
-    <div className="-mt-4 sm:-mt-8 space-y-4 pb-[170px] w-full max-w-full box-border">
+    <div className="space-y-4 pb-[170px] w-full max-w-full box-border">
       {/* ========================================================= */}
       {/* CABEÇALHO FIXO NO TOPO - NADA SOME AO ROLAR, SEM CORTE */}
       {/* ========================================================= */}
       <div className="sticky top-[72px] z-30 bg-white dark:bg-slate-900 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 border-b-2 border-slate-200 dark:border-slate-800 shadow-md flex flex-col gap-3">
-        {/* BLOCO 1: vs [Adversário] - [Categoria] - [Data] às [Hora] - [Local] - [Tipo] + Botão [← Voltar] SOZINHO */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-              {jogoAtivo.adversario.startsWith('vs') ? jogoAtivo.adversario : `vs ${jogoAtivo.adversario}`}
-            </span>
-            <span className="text-slate-400">·</span>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800">
-              {jogoAtivo.categoria}
-            </span>
-            <span className="text-slate-400">·</span>
-            <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300">
-              {formatarDataExibicao(jogoAtivo.dataJogo)}{jogoAtivo.hora ? ` às ${jogoAtivo.hora}` : ''}
-            </span>
-            {jogoAtivo.local && (
-              <>
-                <span className="text-slate-400">·</span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  {jogoAtivo.local}
-                </span>
-              </>
-            )}
-            {jogoAtivo.tipo && (
-              <>
-                <span className="text-slate-400">·</span>
-                <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+        {/* BLOCO 1: PAINEL DO JOGO MAIOR (~92px) - TÍTULO EM DESTAQUE (20px), DATA/HORA/LOCAL (15px), BADGE E BOTÃO VOLTAR */}
+        <div className="min-h-[88px] sm:min-h-[92px] p-4 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="text-[20px] sm:text-[22px] font-black text-slate-900 dark:text-white leading-tight">
+                {jogoAtivo.adversario.startsWith('vs') ? jogoAtivo.adversario : `vs ${jogoAtivo.adversario}`}
+              </span>
+              <span className="text-[13px] font-extrabold px-3 py-1 rounded-lg bg-blue-600 text-white shadow-xs shrink-0">
+                {jogoAtivo.categoria}
+              </span>
+              {jogoAtivo.tipo && (
+                <span className="text-[13px] font-extrabold px-3 py-1 rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
                   {jogoAtivo.tipo}
                 </span>
-              </>
-            )}
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap text-[14px] sm:text-[15px] font-semibold text-slate-600 dark:text-slate-300">
+              <span className="font-mono text-slate-800 dark:text-slate-200">
+                📅 {formatarDataExibicao(jogoAtivo.dataJogo)}{jogoAtivo.hora ? ` às ${jogoAtivo.hora}` : ''}
+              </span>
+              {jogoAtivo.local && (
+                <>
+                  <span className="text-slate-400">·</span>
+                  <span className="text-slate-600 dark:text-slate-400">
+                    📍 {jogoAtivo.local}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
           {onVoltarParaAgenda && (
             <button
               type="button"
               onClick={onVoltarParaAgenda}
-              className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition flex items-center gap-1.5 cursor-pointer shrink-0"
+              className="self-start sm:self-center px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 border border-slate-300 dark:border-slate-600 transition flex items-center gap-2 cursor-pointer shrink-0 shadow-xs active:scale-95"
               title="Voltar para a Agenda de Jogos"
             >
-              <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+              <ArrowLeft className="w-4 h-4 text-slate-600 dark:text-slate-300" />
               <span>← Voltar</span>
             </button>
           )}
@@ -867,7 +924,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
             </div>
           </div>
 
-          {/* Direita: Bloquinho [Lista] [Campinho] - Altura 48px, texto 17px negrito, padding lateral 20px, ícone de 20px */}
+          {/* Direita: Bloquinho [Lista] [Campinho] */}
           <div className="flex items-center gap-2">
             {/* Botão [Lista] */}
             <button
@@ -884,7 +941,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
               <span>Lista</span>
             </button>
 
-            {/* Botão [Campinho] com ícone de prancheta/campo tático de 20px com linhas e bolinhas de tática */}
+            {/* Botão [Campinho] */}
             <button
               type="button"
               onClick={() => setAbaSubEscalacao('campinho')}
@@ -917,32 +974,34 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
           </div>
         </div>
 
-        {/* BLOCO 4: Barra Grudada ESCOLHA A VAGA com Bloquinhos da Formação */}
-        <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 overflow-x-auto pb-1 no-scrollbar">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
-            ESCOLHA A VAGA:
-          </span>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {bloquinhosAtuais.map((b) => {
-              const ativo = vagaSelecionada === b.id;
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => setVagaSelecionada(b.id)}
-                  style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
-                    ativo
-                      ? 'shadow-xs border border-blue-600'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700'
-                  }`}
-                >
-                  {b.label}
-                </button>
-              );
-            })}
+        {/* BLOCO 4: Barra Grudada ESCOLHA A VAGA com Bloquinhos da Formação - APENAS NA ABA LISTA */}
+        {abaSubEscalacao === 'lista' && (
+          <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 overflow-x-auto pb-1 no-scrollbar animate-in fade-in">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
+              ESCOLHA A VAGA:
+            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {bloquinhosAtuais.map((b) => {
+                const ativo = vagaSelecionada === b.id;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setVagaSelecionada(b.id)}
+                    style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
+                      ativo
+                        ? 'shadow-xs border border-blue-600'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700'
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Feedback de salvamento */}
         {salvandoFeedback && (
@@ -953,154 +1012,157 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         )}
       </div>
 
-      {/* Conteúdo: Lista única ordenada de atletas ou Campinho */}
+      {/* Conteúdo: Lista única de atletas ou Campinho */}
       {abaSubEscalacao === 'lista' ? (
-        <>
-          {atletasOrdenados.length === 0 ? (
-            <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-sm text-slate-400">
-              Nenhum atleta encontrado para os critérios pesquisados.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {atletasOrdenados.map((atleta) => {
-                const escalado = escalacaoMap[atleta.id];
-                const estaConvocado = Boolean(escalado);
-                const titular = escalado ? escalado.titular : false;
-                const ehOutraCategoria = atleta.categoria !== categoriaDoJogo;
+        <div className="space-y-6 pt-2">
+          {(() => {
+            const renderCardAtleta = (atleta: Atleta) => {
+              const escalado = escalacaoMap[atleta.id];
+              const estaConvocado = Boolean(escalado);
+              const titular = escalado ? escalado.titular : false;
+              const ehOutraCategoria = atleta.categoria !== categoriaDoJogo;
 
-                return (
-                  <div
-                    key={atleta.id}
-                    className={`rounded-2xl p-4 transition-all border min-h-[72px] flex flex-col justify-center ${
-                      estaConvocado
-                        ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-500 shadow-xs'
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      {/* Checkbox de Convocação (26px) + Avatar com sigla do APELIDO + Dados do Atleta */}
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleConvocacao(atleta)}
-                          className="cursor-pointer p-0.5 text-blue-600 focus:outline-none shrink-0"
-                          title={estaConvocado ? 'Desmarcar da partida' : 'Convocar para partida'}
-                        >
-                          {estaConvocado ? (
-                            <CheckSquare className="w-[26px] h-[26px] text-blue-600 fill-blue-100 dark:fill-blue-950" />
-                          ) : (
-                            <Square className="w-[26px] h-[26px] text-slate-400 hover:text-slate-600" />
-                          )}
-                        </button>
-
-                        {/* Foto / Iniciais do APELIDO */}
-                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 overflow-hidden flex items-center justify-center font-black text-sm text-slate-700 dark:text-slate-300">
-                          {atleta.fotoUrl ? (
-                            <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
-                          ) : (
-                            <span>{obterIniciaisApelido(atleta)}</span>
-                          )}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="text-[17px] font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-snug truncate">
-                              {atleta.apelido || atleta.nome.split(' ')[0]}
-                            </h4>
-                            {ehOutraCategoria && (
-                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
-                                {atleta.categoria}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[14px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
-                            Posição: <strong className="text-slate-900 dark:text-slate-100 font-bold">{atleta.posicao}</strong> · Pé: <span className="font-semibold">{formatarPe(atleta.pernaDominante)}</span>
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Botão Ficha maior e clicável */}
+              return (
+                <div
+                  key={atleta.id}
+                  className={`rounded-2xl p-4 transition-all border min-h-[72px] flex flex-col justify-center ${
+                    estaConvocado
+                      ? 'bg-blue-50/40 dark:bg-blue-950/20 border-blue-500 shadow-xs'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    {/* Checkbox de Convocação (26px) + Avatar com sigla do APELIDO + Dados do Atleta */}
+                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
                       <button
                         type="button"
-                        onClick={() => onSelecionarAtleta(atleta)}
-                        className="px-4 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl transition shrink-0 cursor-pointer shadow-xs min-w-[72px] text-center"
+                        onClick={() => handleToggleConvocacao(atleta)}
+                        className="cursor-pointer p-0.5 text-blue-600 focus:outline-none shrink-0"
+                        title={estaConvocado ? 'Desmarcar da partida' : 'Convocar para partida'}
                       >
-                        Ficha
+                        {estaConvocado ? (
+                          <CheckSquare className="w-[26px] h-[26px] text-blue-600 fill-blue-100 dark:fill-blue-950" />
+                        ) : (
+                          <Square className="w-[26px] h-[26px] text-slate-400 hover:text-slate-600" />
+                        )}
                       </button>
+
+                      {/* Foto / Iniciais do APELIDO */}
+                      <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0 overflow-hidden flex items-center justify-center font-black text-sm text-slate-700 dark:text-slate-300">
+                        {atleta.fotoUrl ? (
+                          <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
+                        ) : (
+                          <span>{obterIniciaisApelido(atleta)}</span>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-[17px] font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-snug truncate">
+                            {atleta.apelido || atleta.nome.split(' ')[0]}
+                          </h4>
+                          {ehOutraCategoria && (
+                            <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
+                              {atleta.categoria}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[14px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
+                          Posição: <strong className="text-slate-900 dark:text-slate-100 font-bold">{atleta.posicao}</strong> · Pé: <span className="font-semibold">{formatarPe(atleta.pernaDominante)}</span>
+                        </p>
+                      </div>
                     </div>
 
-                    {/* Configurações de Convocação: APENAS Status: [ Titular ] [ Reserva ], sem selo de Titular */}
-                    {estaConvocado && (
-                      <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex items-center gap-2 text-xs sm:text-sm animate-in fade-in">
-                        <span className="font-bold text-slate-700 dark:text-slate-300 mr-1 text-sm">
-                          Status:
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleSetTitular(atleta.id, true)}
-                          className={`px-3.5 py-1.5 rounded-lg font-black transition-all cursor-pointer text-xs sm:text-sm ${
-                            titular
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
-                          }`}
-                        >
-                          Titular
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSetTitular(atleta.id, false)}
-                          className={`px-3.5 py-1.5 rounded-lg font-black transition-all cursor-pointer text-xs sm:text-sm ${
-                            !titular
-                              ? 'bg-amber-500 text-white shadow-xs'
-                              : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
-                          }`}
-                        >
-                          Reserva
-                        </button>
-                      </div>
-                    )}
+                    {/* Botão Ficha maior e clicável */}
+                    <button
+                      type="button"
+                      onClick={() => onSelecionarAtleta(atleta)}
+                      className="px-4 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl transition shrink-0 cursor-pointer shadow-xs min-w-[72px] text-center"
+                    >
+                      Ficha
+                    </button>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+
+                  {/* Configurações de Convocação: APENAS Status: [ Titular ] [ Reserva ], sem selo de Titular */}
+                  {estaConvocado && (
+                    <div className="mt-3 pt-3 border-t border-blue-200/50 dark:border-blue-900/50 flex items-center gap-2 text-xs sm:text-sm animate-in fade-in">
+                      <span className="font-bold text-slate-700 dark:text-slate-300 mr-1 text-sm">
+                        Status:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleSetTitular(atleta.id, true)}
+                        className={`px-3.5 py-1.5 rounded-lg font-black transition-all cursor-pointer text-xs sm:text-sm ${
+                          titular
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                        }`}
+                      >
+                        Titular
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSetTitular(atleta.id, false)}
+                        className={`px-3.5 py-1.5 rounded-lg font-black transition-all cursor-pointer text-xs sm:text-sm ${
+                          !titular
+                            ? 'bg-amber-500 text-white shadow-xs'
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300'
+                        }`}
+                      >
+                        Reserva
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            };
+
+            if (atletasDaCategoria.length === 0 && atletasOutrasCategorias.length === 0) {
+              return (
+                <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-sm text-slate-400">
+                  Nenhum atleta encontrado para os critérios pesquisados.
+                </div>
+              );
+            }
+
+            return (
+              <>
+                {/* 1. Atletas da Categoria Principal do Jogo */}
+                {atletasDaCategoria.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {atletasDaCategoria.map(renderCardAtleta)}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400">
+                    Nenhum atleta da categoria {categoriaDoJogo} encontrado com o filtro atual.
+                  </div>
+                )}
+
+                {/* 2. Seção OUTRAS CATEGORIAS - PODE CONVOCAR (Apenas categorias inferiores!) */}
+                {atletasOutrasCategorias.length > 0 && (
+                  <div className="pt-4 border-t-2 border-dashed border-slate-200 dark:border-slate-800 space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/70 px-3 py-1.5 rounded-xl border border-amber-300/80 shadow-2xs">
+                        OUTRAS CATEGORIAS - PODE CONVOCAR
+                      </span>
+                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        ({atletasOutrasCategorias.length} atletas disponíveis de categorias inferiores)
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                      {atletasOutrasCategorias.map(renderCardAtleta)}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
       ) : (
         /* ========================================================= */
         /* ABA 2: CAMPINHO TÁTICO VERTICAL COM 11 TITULARES */
         /* ========================================================= */
-        <div className="space-y-6">
-          {/* Topo do Campinho: Seletor de Formação e Contador */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Formação Tática:
-              </span>
-              <div className="relative">
-                <select
-                  value={formacao}
-                  onChange={(e) => setFormacao(e.target.value)}
-                  className="appearance-none pl-4 pr-9 py-2 text-sm font-black bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-2 border-blue-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer shadow-xs"
-                >
-                  <option value="4-4-2 Losango">4-4-2 Losango</option>
-                  <option value="4-2-3-1">4-2-3-1</option>
-                  <option value="4-3-3">4-3-3</option>
-                  <option value="4-2-4 linhas baixas">4-2-4 linhas baixas</option>
-                  <option value="4-1-4-1">4-1-4-1</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-blue-600 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" />
-              </div>
-              <span
-                className={`text-xs font-bold px-2.5 py-1 rounded-lg ${
-                  titularesCount === 11
-                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                }`}
-              >
-                {titularesCount} / 11 Titulares
-              </span>
-            </div>
-          </div>
+        <div className="space-y-6 pt-2">
 
           {/* O Campo de Futebol Vertical */}
           {(() => {
@@ -1492,7 +1554,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                       Outros Atletas do Plantel:
                     </h4>
                     <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-                      {atletas
+                      {atletasElegiveisParaModal
                         .filter((a) => !escalacaoMap[a.id])
                         .slice(0, 15)
                         .map((outro) => (
