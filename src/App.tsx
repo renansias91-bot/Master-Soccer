@@ -521,49 +521,50 @@ export default function App() {
       {/* ========================================================= */}
       {/* MENU DE CIMA - SÓ OS 3 RISQUINHOS ☰ NO CANTO DIREITO */}
       {/* ========================================================= */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b-2 border-slate-200/90 dark:border-slate-800 shadow-xs no-print w-full max-w-[100vw] overflow-x-hidden box-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-3 w-full max-w-full box-border">
+      {/* ========================================================= */}
+      {/* MENU DE CIMA - FININHO, COLADO NO TOPO */}
+      {/* ========================================================= */}
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800 shadow-2xs no-print w-full max-w-[100vw] overflow-x-hidden box-border">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-12 flex items-center justify-between gap-2.5 w-full max-w-full box-border">
           {/* Logo & Marca Master Soccer */}
           <div
             onClick={() => mudarAbaComMemoriaScroll('painel')}
-            className="flex items-center gap-3 cursor-pointer whitespace-nowrap shrink-0 group select-none"
+            className="flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 group select-none"
           >
             <MasterSoccerEscudo
-              size={46}
-              className="group-hover:scale-105 transition-transform drop-shadow-sm shrink-0"
+              size={28}
+              className="group-hover:scale-105 transition-transform drop-shadow-2xs shrink-0"
             />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white">
-                  Master <span className="text-blue-600 dark:text-blue-400">Soccer</span>
-                </span>
-                <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/60">
-                  RJ
-                </span>
-              </div>
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Base Sub-15 · Sub-16 · Sub-17
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white">
+                Master <span className="text-blue-600 dark:text-blue-400">Soccer</span>
+              </span>
+              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/60 leading-tight">
+                RJ
+              </span>
+              <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 hidden sm:inline">
+                · Base Sub-15 · 16 · 17
               </span>
             </div>
           </div>
 
-          {/* Zona Direita: Selo de Conexão + Botão Instalar + OS 3 RISQUINHOS ☰ NO CANTO DIREITO */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          {/* Zona Direita: Selo de Conexão + Botão Instalar + ☰ */}
+          <div className="flex items-center gap-2 shrink-0">
             {/* Selinho ONLINE / OFFLINE */}
             {isOnline ? (
               <span
                 title="Conectado à internet. Sincronização em tempo real ativa."
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 shrink-0 shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 shrink-0 shadow-2xs"
               >
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 ONLINE
               </span>
             ) : (
               <span
                 title="Sem conexão. Modo offline com persistência IndexedDB."
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300 shrink-0 animate-pulse shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-950/80 dark:text-orange-300 border border-orange-300 shrink-0 animate-pulse shadow-2xs"
               >
-                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
                 OFFLINE
               </span>
             )}
@@ -572,21 +573,21 @@ export default function App() {
             {!isInstalled && isInstallable && (
               <button
                 onClick={handleInstalarApp}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 rounded-xl border border-emerald-300 transition-all shadow-xs shrink-0"
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 rounded-lg border border-emerald-300 transition-all shadow-xs shrink-0"
               >
-                <Download className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Instalar App</span>
+                <Download className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Instalar</span>
               </button>
             )}
 
             {/* BOTÃO DOS 3 RISQUINHOS ☰ NO CANTO DIREITO */}
             <button
               onClick={() => setMenuDrawerOpen(!menuDrawerOpen)}
-              className="h-11 w-11 flex items-center justify-center rounded-2xl text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border-2 border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 shrink-0 active:scale-95"
+              className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-xl text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 shrink-0 active:scale-95 cursor-pointer"
               aria-label="Abrir menu de opções"
               title="Menu: Financeiro, Histórico / Relatório e Teste Físico"
             >
-              <Menu className="w-6 h-6 text-slate-800 dark:text-white" />
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-slate-800 dark:text-white" />
             </button>
           </div>
         </div>
@@ -782,9 +783,13 @@ export default function App() {
       )}
 
       {/* ========================================================= */}
-      {/* CONTEÚDO PRINCIPAL (COM PADDING-BOTTOM DE 120px) */}
+      {/* CONTEÚDO PRINCIPAL (COM PADDING-BOTTOM DE 96px) */}
       {/* ========================================================= */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-[120px] max-w-[100vw] overflow-x-hidden box-border">
+      <main
+        className={`flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 pb-24 max-w-[100vw] overflow-x-hidden box-border ${
+          abaAtiva === 'escalacao' ? 'pt-1.5 sm:pt-2' : 'py-3 sm:py-6'
+        }`}
+      >
         {/* ABA 1: PAINEL (Visão Geral de agora) */}
         <div
           ref={(el) => {

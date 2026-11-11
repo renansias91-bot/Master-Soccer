@@ -815,206 +815,210 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   }
 
   return (
-    <div className="w-full max-w-full box-border pb-[180px]">
-      {/* ========================================================= */}
-      {/* CABEÇALHO FIXO NO TOPO - NADA SOME AO ROLAR, SEM CORTE */}
-      {/* ========================================================= */}
-      <div className="sticky top-[72px] z-30 bg-white dark:bg-slate-900 -mx-3 sm:-mx-6 px-3 sm:px-6 pt-3 pb-2.5 border-b-2 border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-2.5">
-        {/* BLOCO 1: PAINEL DO JOGO MAIOR (~92px) - TÍTULO EM DESTAQUE (20px), DATA/HORA/LOCAL (15px), BADGE E BOTÃO VOLTAR */}
-        <div className="min-h-[88px] sm:min-h-[92px] p-4 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-          <div className="space-y-1.5 flex-1 min-w-0">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="text-[20px] sm:text-[22px] font-black text-slate-900 dark:text-white leading-tight">
-                {jogoAtivo.adversario.startsWith('vs') ? jogoAtivo.adversario : `vs ${jogoAtivo.adversario}`}
-              </span>
-              <span className="text-[13px] font-extrabold px-3 py-1 rounded-lg bg-blue-600 text-white shadow-xs shrink-0">
-                {jogoAtivo.categoria}
-              </span>
-              {jogoAtivo.tipo && (
-                <span className="text-[13px] font-extrabold px-3 py-1 rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
-                  {jogoAtivo.tipo}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 flex-wrap text-[14px] sm:text-[15px] font-semibold text-slate-600 dark:text-slate-300">
-              <span className="font-mono text-slate-800 dark:text-slate-200">
-                📅 {formatarDataExibicao(jogoAtivo.dataJogo)}{jogoAtivo.hora ? ` às ${jogoAtivo.hora}` : ''}
-              </span>
-              {jogoAtivo.local && (
-                <>
-                  <span className="text-slate-400">·</span>
-                  <span className="text-slate-600 dark:text-slate-400">
-                    📍 {jogoAtivo.local}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {onVoltarParaAgenda && (
-            <button
-              type="button"
-              onClick={onVoltarParaAgenda}
-              className="self-start sm:self-center px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 border border-slate-300 dark:border-slate-600 transition flex items-center gap-2 cursor-pointer shrink-0 shadow-xs active:scale-95"
-              title="Voltar para a Agenda de Jogos"
-            >
-              <ArrowLeft className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-              <span>← Voltar</span>
-            </button>
-          )}
-        </div>
-
-        {/* BLOCO 2: Busca com altura confortável */}
-        <div className="relative w-full">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar atleta por nome, apelido ou posição..."
-            className="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
-          />
-          {busca && (
-            <button
-              type="button"
-              onClick={() => setBusca('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* BLOCO 3: Formação Tática + Contadores + Bloquinho [Lista] [Campinho] */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Esquerda: FORMAÇÃO TÁTICA + Contadores */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Botão FORMAÇÃO TÁTICA */}
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="text-xs font-black uppercase text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                FORMAÇÃO TÁTICA:
-              </span>
-              <div className="relative">
-                <select
-                  value={formacao}
-                  onChange={(e) => setFormacao(e.target.value)}
-                  className="appearance-none pl-3 pr-8 py-1.5 text-xs sm:text-sm font-black bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
-                >
-                  <option value="4-4-2 Losango">4-4-2 Losango</option>
-                  <option value="4-2-3-1">4-2-3-1</option>
-                  <option value="4-3-3">4-3-3</option>
-                  <option value="4-2-4 linhas baixas">4-2-4 linhas baixas</option>
-                  <option value="4-1-4-1">4-1-4-1</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-blue-600 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
-              </div>
-            </div>
-
-            {/* Contadores: X titulares | Y reservas | Total: Z */}
-            <div className="flex items-center gap-1.5 text-xs font-bold">
-              <span className="px-2.5 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
-                {titularesCount} titulares
-              </span>
-              <span className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                {reservasCount} reservas
-              </span>
-              <span className="px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
-                Total: {totalConvocados}
-              </span>
-            </div>
-          </div>
-
-          {/* Direita: Bloquinho [Lista] [Campinho] */}
-          <div className="flex items-center gap-2">
-            {/* Botão [Lista] */}
-            <button
-              type="button"
-              onClick={() => setAbaSubEscalacao('lista')}
-              style={abaSubEscalacao === 'lista' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-              className={`h-12 px-5 rounded-xl text-[17px] font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xs whitespace-nowrap ${
-                abaSubEscalacao === 'lista'
-                  ? 'bg-blue-600 text-white border-2 border-blue-600'
-                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Users className="w-5 h-5 shrink-0" />
-              <span>Lista</span>
-            </button>
-
-            {/* Botão [Campinho] */}
-            <button
-              type="button"
-              onClick={() => setAbaSubEscalacao('campinho')}
-              style={abaSubEscalacao === 'campinho' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-              className={`h-12 px-5 rounded-xl text-[17px] font-bold flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xs whitespace-nowrap ${
-                abaSubEscalacao === 'campinho'
-                  ? 'bg-blue-600 text-white border-2 border-blue-600'
-                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              <svg
-                className="w-5 h-5 shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="2" y="3" width="20" height="18" rx="2" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <circle cx="12" cy="12" r="3.5" />
-                <circle cx="6" cy="7.5" r="1" fill="currentColor" />
-                <circle cx="18" cy="7.5" r="1" fill="currentColor" />
-                <circle cx="8" cy="16.5" r="1" fill="currentColor" />
-                <circle cx="16" cy="16.5" r="1" fill="currentColor" />
-              </svg>
-              <span>Campinho</span>
-            </button>
-          </div>
-        </div>
-
-        {/* BLOCO 4: Barra Grudada ESCOLHA A VAGA com Bloquinhos da Formação - APENAS NA ABA LISTA */}
-        {abaSubEscalacao === 'lista' && (
-          <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 overflow-x-auto pb-1 no-scrollbar animate-in fade-in">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
-              ESCOLHA A VAGA:
+    <div className="w-full max-w-full box-border pb-24 space-y-2.5">
+      {/* 1. BLOCO DO JOGO - COLADO LOGO ABAIXO DO CABEÇALHO FININHO */}
+      <div className="p-3 sm:p-3.5 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-2xs space-y-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
+            {jogoAtivo.adversario.startsWith('vs') ? jogoAtivo.adversario : `vs ${jogoAtivo.adversario}`}
+          </span>
+          <span className="text-xs font-black px-2.5 py-0.5 rounded-lg bg-blue-600 text-white shadow-2xs shrink-0">
+            {jogoAtivo.categoria}
+          </span>
+          {jogoAtivo.tipo && (
+            <span className="text-xs font-black px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
+              {jogoAtivo.tipo}
             </span>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {bloquinhosAtuais.map((b) => {
-                const ativo = vagaSelecionada === b.id;
-                return (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => setVagaSelecionada(b.id)}
-                    style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
-                      ativo
-                        ? 'shadow-xs border border-blue-600'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700'
-                    }`}
-                  >
-                    {b.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap text-xs sm:text-[13px] font-semibold text-slate-600 dark:text-slate-300">
+          <span className="font-mono text-slate-800 dark:text-slate-200">
+            📅 {formatarDataExibicao(jogoAtivo.dataJogo)}{jogoAtivo.hora ? ` às ${jogoAtivo.hora}` : ''}
+          </span>
+          {jogoAtivo.local && (
+            <>
+              <span className="text-slate-400">·</span>
+              <span className="text-slate-600 dark:text-slate-400">
+                📍 {jogoAtivo.local}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* 2. LINHA DE BOTÕES NO TOPO: [← Voltar] [Salvar Escalação do Jogo (X convocados)] */}
+      <div className="flex items-center gap-2 w-full">
+        {onVoltarParaAgenda && (
+          <button
+            type="button"
+            onClick={onVoltarParaAgenda}
+            className="px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs active:scale-95"
+            title="Voltar para a Agenda de Jogos"
+          >
+            <ArrowLeft className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+            <span>← Voltar</span>
+          </button>
         )}
 
-        {/* Feedback de salvamento */}
-        {salvandoFeedback && (
-          <div className="p-2.5 text-xs text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 rounded-xl flex items-center gap-2 animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="font-bold">{salvandoFeedback}</span>
-          </div>
+        <button
+          type="button"
+          onClick={handleSalvarEscalacao}
+          style={{ backgroundColor: '#2563eb' }}
+          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm md:text-base font-black text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap"
+        >
+          <Save className="w-4 h-4 text-amber-300 shrink-0" />
+          <span>Salvar Escalação do Jogo ({totalConvocados} convocados)</span>
+        </button>
+      </div>
+
+      {/* Feedback de salvamento */}
+      {salvandoFeedback && (
+        <div className="p-2.5 text-xs text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 rounded-xl flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span className="font-bold">{salvandoFeedback}</span>
+        </div>
+      )}
+
+      {/* 3. BLOCO: Busca */}
+      <div className="relative w-full">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <input
+          type="text"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar atleta por nome, apelido ou posição..."
+          className="w-full pl-10 pr-9 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+        />
+        {busca && (
+          <button
+            type="button"
+            onClick={() => setBusca('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
+          >
+            <X className="w-4 h-4" />
+          </button>
         )}
       </div>
 
+      {/* 4. BLOCO: Formação Tática + Contadores + Bloquinho [Lista] [Campinho] */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
+        {/* Esquerda: FORMAÇÃO TÁTICA + Contadores */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Botão FORMAÇÃO TÁTICA */}
+          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
+            <span className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-300 whitespace-nowrap">
+              FORMAÇÃO TÁTICA:
+            </span>
+            <div className="relative">
+              <select
+                value={formacao}
+                onChange={(e) => setFormacao(e.target.value)}
+                className="appearance-none pl-2.5 pr-7 py-1 text-xs sm:text-sm font-black bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
+              >
+                <option value="4-4-2 Losango">4-4-2 Losango</option>
+                <option value="4-2-3-1">4-2-3-1</option>
+                <option value="4-3-3">4-3-3</option>
+                <option value="4-2-4 linhas baixas">4-2-4 linhas baixas</option>
+                <option value="4-1-4-1">4-1-4-1</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-blue-600 pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
+            </div>
+          </div>
+
+          {/* Contadores: X titulares | Y reservas | Total: Z */}
+          <div className="flex items-center gap-1 text-[11px] font-bold">
+            <span className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
+              {titularesCount} titulares
+            </span>
+            <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              {reservasCount} reservas
+            </span>
+            <span className="px-2 py-1 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
+              Total: {totalConvocados}
+            </span>
+          </div>
+        </div>
+
+        {/* Direita: Bloquinho [Lista] [Campinho] */}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setAbaSubEscalacao('lista')}
+            style={abaSubEscalacao === 'lista' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+            className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs whitespace-nowrap ${
+              abaSubEscalacao === 'lista'
+                ? 'bg-blue-600 text-white border-2 border-blue-600'
+                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Users className="w-4 h-4 shrink-0" />
+            <span>Lista</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAbaSubEscalacao('campinho')}
+            style={abaSubEscalacao === 'campinho' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+            className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs whitespace-nowrap ${
+              abaSubEscalacao === 'campinho'
+                ? 'bg-blue-600 text-white border-2 border-blue-600'
+                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <svg
+              className="w-4 h-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="2" y="3" width="20" height="18" rx="2" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <circle cx="12" cy="12" r="3.5" />
+              <circle cx="6" cy="7.5" r="1" fill="currentColor" />
+              <circle cx="18" cy="7.5" r="1" fill="currentColor" />
+              <circle cx="8" cy="16.5" r="1" fill="currentColor" />
+              <circle cx="16" cy="16.5" r="1" fill="currentColor" />
+            </svg>
+            <span>Campinho</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 5. BLOCO: Barra ESCOLHA A VAGA - APENAS NA ABA LISTA */}
+      {abaSubEscalacao === 'lista' && (
+        <div className="flex items-center gap-2 py-2 px-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs overflow-x-auto no-scrollbar">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
+            ESCOLHA A VAGA:
+          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {bloquinhosAtuais.map((b) => {
+              const ativo = vagaSelecionada === b.id;
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setVagaSelecionada(b.id)}
+                  style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                  className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
+                    ativo
+                      ? 'shadow-xs border border-blue-600'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700'
+                  }`}
+                >
+                  {b.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Conteúdo: Lista única de atletas ou Campinho */}
       {abaSubEscalacao === 'lista' ? (
-        <div className="mt-0 pt-3 space-y-3 pb-[180px]" style={{ marginTop: 0 }}>
+        <div className="space-y-3">
           {(() => {
             const renderCardAtleta = (atleta: Atleta) => {
               const escalado = escalacaoMap[atleta.id];
@@ -1407,23 +1411,6 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* BOTÃO ÚNICO SALVAR ESCALAÇÃO DO JOGO - FIXO NO RODAPÉ */}
-      {/* Fixo acima das abas PAINEL / JOGO / ESCALAÇÃO / TROFÉUS */}
-      {/* ========================================================= */}
-      <div className="fixed bottom-20 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t-2 border-slate-200/90 dark:border-slate-800 p-2.5 sm:p-3 shadow-2xl">
-        <div className="max-w-md sm:max-w-xl mx-auto">
-          <button
-            type="button"
-            onClick={handleSalvarEscalacao}
-            style={{ backgroundColor: '#2563eb' }}
-            className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-base sm:text-lg font-black text-white hover:bg-blue-700 active:scale-98 rounded-2xl shadow-lg transition-all cursor-pointer"
-          >
-            <Save className="w-5 h-5 text-amber-300 shrink-0" />
-            <span>Salvar Escalação do Jogo ({totalConvocados} convocados)</span>
-          </button>
-        </div>
-      </div>
 
       {/* ========================================================= */}
       {/* MODAL DE TROCA / SUBSTITUIÇÃO RÁPIDA ENTRE TITULAR E RESERVA */}
