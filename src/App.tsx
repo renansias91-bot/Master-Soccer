@@ -34,7 +34,7 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { PainelGeral } from './components/PainelGeral';
 import { PlantelView } from './components/PlantelView';
-import { RelatorioIndividual } from './components/RelatorioIndividual';
+import { GestaoAtletasView } from './components/GestaoAtletasView';
 import { ComparativoView } from './components/ComparativoView';
 import { FinanceiroView } from './components/FinanceiroView';
 import { AgendaJogosView } from './components/AgendaJogosView';
@@ -54,7 +54,8 @@ type AbaNavegacao =
   | 'trofeus'
   | 'financeiro'
   | 'relatorio'
-  | 'testefisico';
+  | 'testefisico'
+  | 'atletas';
 
 const getChaveScrollAba = (aba: AbaNavegacao): string => {
   switch (aba) {
@@ -72,6 +73,8 @@ const getChaveScrollAba = (aba: AbaNavegacao): string => {
       return 'scroll_RELATÓRIO';
     case 'testefisico':
       return 'scroll_TESTEFISICO';
+    case 'atletas':
+      return 'scroll_ATLETAS';
     default:
       return `scroll_${String(aba).toUpperCase()}`;
   }
@@ -90,8 +93,9 @@ export default function App() {
   );
   const [categorias, setCategorias] = useState<string[]>(CATEGORIAS_PADRAO);
 
-  // Navegação: Menu de Baixo (PAINEL, JOGO, ESCALAÇÃO, TROFÉUS) + Telas do Menu ☰ (Financeiro, Relatório, Teste Físico)
+  // Navegação: Menu de Baixo (PAINEL, JOGO, ESCALAÇÃO, TROFÉUS) + Telas do Menu ☰ (Financeiro, Atletas, Teste Físico)
   const [abaAtiva, setAbaAtiva] = useState<AbaNavegacao>('painel');
+  const [subAbaGestaoAtletas, setSubAbaGestaoAtletas] = useState<'lista' | 'cadastro'>('lista');
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>('TODAS');
   const [jogoFocarInfo, setJogoFocarInfo] = useState<{
     jogoId?: string;
@@ -108,6 +112,7 @@ export default function App() {
     financeiro: Number(sessionStorage.getItem('scroll_FINANCEIRO') || 0),
     relatorio: Number(sessionStorage.getItem('scroll_RELATÓRIO') || 0),
     testefisico: Number(sessionStorage.getItem('scroll_TESTEFISICO') || 0),
+    atletas: Number(sessionStorage.getItem('scroll_ATLETAS') || 0),
   });
   const isRestoringScrollRef = useRef(false);
   const wrapperRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -233,20 +238,77 @@ export default function App() {
   // Handlers para Atletas
   const handleSalvarAtleta = async (atleta: Atleta) => {
     try {
-      if (atletaEditando && atleta.id) {
+      if (atleta.id && !atleta.id.startsWith('temp-')) {
         await firebaseService.atualizarAtleta(atleta.id, atleta);
+        const atualizados = atletas.map((a) => (a.id === atleta.id ? atleta : a));
+        setAtletas(atualizados);
+        storageService.salvarAtletas(atualizados);
       } else {
-        await firebaseService.cadastrarAtleta(atleta);
+        const docId = await firebaseService.cadastrarAtleta(atleta);
+        const novoAtleta = { ...atleta, id: docId || atleta.id || `atl-${Date.now()}` };
+        const atualizados = [...atletas, novoAtleta];
+        setAtletas(atualizados);
+        storageService.salvarAtletas(atualizados);
       }
       if (atletaSelecionado && atletaSelecionado.id === atleta.id) {
         setAtletaSelecionado(atleta);
       }
-      exibirToast(`Atleta ${atleta.nome.split(' ')[0]} salvo com sucesso no Firestore!`);
+      exibirToast(`Atleta ${atleta.nome.split(' ')[0]} salvo com sucesso!`);
     } catch (e: any) {
-      console.error('Erro ao salvar atleta no Firestore:', e);
-      alert(e?.message || 'Erro ao salvar atleta no Firestore');
-      throw e;
+      console.error('Erro ao salvar atleta:', e);
+      if (atleta.id) {
+        const atualizados = atletas.map((a) => (a.id === atleta.id ? atleta : a));
+        setAtletas(atualizados);
+        storageService.salvarAtletas(atualizados);
+      } else {
+        const tempAtleta = { ...atleta, id: `atl-${Date.now()}` };
+        const atualizados = [...atletas, tempAtleta];
+        setAtletas(atualizados);
+        storageService.salvarAtletas(atualizados);
+      }
+      exibirToast(`Atleta ${atleta.nome.split(' ')[0]} salvo localmente.`);
     }
+  };
+
+  const handleSalvarAtletasEmLote = async (novosAtletas: Atleta[]) => {
+    try {
+      const novosComId: Atleta[] = [];
+      for (const atl of novosAtletas) {
+        let atletaId = atl.id;
+        try {
+          atletaId = await firebaseService.cadastrarAtleta(atl);
+        } catch (e) {
+          console.warn('Fallback offline para atleta em lote:', e);
+        }
+        novosComId.push({
+          ...atl,
+          id: atletaId || `atl-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        });
+      }
+      const listaFinal = [...atletas, ...novosComId];
+      setAtletas(listaFinal);
+      storageService.salvarAtletas(listaFinal);
+      exibirToast(`${novosAtletas.length} atletas cadastrados com sucesso!`);
+    } catch (err: any) {
+      console.error('Erro ao cadastrar atletas em lote:', err);
+      exibirToast('Erro ao salvar lote de atletas.');
+      throw err;
+    }
+  };
+
+  const handleExcluirAtletaDireto = async (id: string) => {
+    try {
+      await firebaseService.excluirAtleta(id);
+    } catch (e) {
+      console.warn('Erro ao excluir do Firestore:', e);
+    }
+    const atualizados = atletas.filter((a) => a.id !== id);
+    setAtletas(atualizados);
+    storageService.salvarAtletas(atualizados);
+    if (atletaSelecionado && atletaSelecionado.id === id) {
+      setAtletaSelecionado(null);
+    }
+    exibirToast('Atleta removido com sucesso.');
   };
 
   const handleExcluirAtleta = (id: string) => {
@@ -263,9 +325,9 @@ export default function App() {
     setIsAtletaModalOpen(true);
   };
 
-  const handleAbrirNovoAtleta = () => {
-    setAtletaEditando(null);
-    setIsAtletaModalOpen(true);
+  const handleAbrirNovoAtleta = (subAba: 'lista' | 'cadastro' = 'lista') => {
+    setSubAbaGestaoAtletas(subAba);
+    mudarAbaComMemoriaScroll('atletas');
   };
 
   // Handlers para Avaliações
@@ -495,7 +557,8 @@ export default function App() {
   // Navegações
   const handleAbrirRelatorioAtleta = (atleta: Atleta) => {
     setAtletaSelecionado(atleta);
-    mudarAbaComMemoriaScroll('relatorio');
+    setSubAbaGestaoAtletas('lista');
+    mudarAbaComMemoriaScroll('atletas');
   };
 
   const handleNavegarPlantel = (categoria?: string) => {
@@ -633,24 +696,41 @@ export default function App() {
                 <button
                   onClick={() => {
                     setMenuDrawerOpen(false);
-                    handleAbrirNovoAtleta();
+                    handleAbrirNovoAtleta('lista');
                   }}
-                  className="w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all hover:bg-amber-100/80 dark:hover:bg-amber-950/50 text-slate-900 dark:text-slate-100 font-bold border-2 border-amber-300 dark:border-amber-700 bg-amber-50/90 dark:bg-amber-950/30 shadow-xs active:scale-98"
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all border-2 active:scale-98 ${
+                    abaAtiva === 'atletas'
+                      ? 'bg-emerald-600 text-white font-extrabold border-emerald-600 shadow-md'
+                      : 'hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-900 dark:text-slate-100 font-bold border-emerald-300 dark:border-emerald-700 bg-emerald-50/60 dark:bg-emerald-950/20'
+                  }`}
+                  style={abaAtiva === 'atletas' ? { backgroundColor: '#059669', color: '#ffffff' } : {}}
                 >
                   <div className="flex items-center gap-3.5">
-                    <div className="p-2.5 rounded-xl bg-amber-400 text-slate-950 font-black shadow-xs">
-                      <Plus className="w-5 h-5 text-slate-950" />
+                    <div
+                      className={`p-2.5 rounded-xl ${
+                        abaAtiva === 'atletas'
+                          ? 'bg-emerald-700 text-white'
+                          : 'bg-emerald-500 text-white shadow-xs'
+                      }`}
+                    >
+                      <Plus className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <div className="text-base font-extrabold text-slate-950 dark:text-white">
-                        + Cadastrar Atleta
+                      <div className="text-base font-extrabold">
+                        Cadastrar Atleta
                       </div>
-                      <div className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                        Adicionar novo atleta à base
+                      <div
+                        className={`text-xs font-medium ${
+                          abaAtiva === 'atletas' ? 'text-emerald-100' : 'text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        Lista de Atletas & Cadastro por Lote
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-amber-600" />
+                  <ChevronRight
+                    className={`w-5 h-5 ${abaAtiva === 'atletas' ? 'text-white' : 'text-emerald-600'}`}
+                  />
                 </button>
 
                 {/* 1. Financeiro */}
@@ -689,7 +769,10 @@ export default function App() {
 
                 {/* 2. Histórico / Relatório */}
                 <button
-                  onClick={() => handleNavegarMenuTopo('relatorio')}
+                  onClick={() => {
+                    setMenuDrawerOpen(false);
+                    handleAbrirNovoAtleta('lista');
+                  }}
                   className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all border-2 active:scale-98 ${
                     abaAtiva === 'relatorio'
                       ? 'bg-blue-600 text-white font-extrabold border-blue-600 shadow-md'
@@ -714,7 +797,7 @@ export default function App() {
                           abaAtiva === 'relatorio' ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
                         }`}
                       >
-                        Ficha do Atleta com abas de jogos
+                        Ficha do Atleta com estatísticas e jogos
                       </div>
                     </div>
                   </div>
@@ -898,20 +981,23 @@ export default function App() {
           />
         </div>
 
+        {/* ABA: GESTÃO DE ATLETAS (LISTA DE ATLETAS + CADASTRAR NOVO ATLETA / LOTE) */}
         <div
           ref={(el) => {
+            wrapperRefs.current['atletas'] = el;
             wrapperRefs.current['relatorio'] = el;
           }}
-          style={{ display: abaAtiva === 'relatorio' ? 'block' : 'none' }}
+          style={{ display: abaAtiva === 'atletas' || abaAtiva === 'relatorio' ? 'block' : 'none' }}
         >
-          <RelatorioIndividual
+          <GestaoAtletasView
             atletas={atletas}
-            atletaSelecionadoInicial={atletaSelecionado}
             avaliacoes={avaliacoes}
-            onVoltar={() => mudarAbaComMemoriaScroll('painel')}
-            onNovaAvaliacao={() => mudarAbaComMemoriaScroll('jogo')}
-            onEditarAtleta={handleAbrirEditarAtleta}
-            onExcluirAvaliacao={handleExcluirAvaliacaoDireto}
+            categorias={categorias}
+            subAbaInicial={subAbaGestaoAtletas}
+            onSalvarAtleta={handleSalvarAtleta}
+            onSalvarAtletasEmLote={handleSalvarAtletasEmLote}
+            onExcluirAtleta={handleExcluirAtletaDireto}
+            onVoltarParaPainel={() => mudarAbaComMemoriaScroll('painel')}
           />
         </div>
 
