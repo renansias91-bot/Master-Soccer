@@ -330,6 +330,226 @@ export default function App() {
     mudarAbaComMemoriaScroll('atletas');
   };
 
+  // Handlers para Gerenciamento de Categorias, Renomeação e Virada de Temporada
+  const handleRenomearCategoria = async (
+    antiga: string,
+    nova: string,
+    manterAntigaVazia: boolean = false
+  ) => {
+    try {
+      const antigaUpper = antiga.trim().toUpperCase();
+      const novaUpper = nova.trim().toUpperCase();
+      if (!novaUpper || antigaUpper === novaUpper) return;
+
+      // 1. Atualizar lista de categorias
+      let novasCategorias: string[];
+      if (categorias.includes(novaUpper)) {
+        if (manterAntigaVazia) {
+          novasCategorias = [...categorias];
+        } else {
+          novasCategorias = categorias.filter((c) => c !== antigaUpper);
+        }
+      } else {
+        novasCategorias = categorias.map((c) => (c === antigaUpper ? novaUpper : c));
+      }
+      const catsUnicas = Array.from(new Set(novasCategorias));
+      setCategorias(catsUnicas);
+      storageService.salvarCategorias(catsUnicas);
+
+      // 2. Atualizar todos os atletas que estavam na categoria antiga -> nova
+      const atletasAfetados = atletas.filter(
+        (a) => a.categoria?.trim().toUpperCase() === antigaUpper
+      );
+      if (atletasAfetados.length > 0) {
+        const novosAtletas = atletas.map((a) =>
+          a.categoria?.trim().toUpperCase() === antigaUpper ? { ...a, categoria: novaUpper } : a
+        );
+        setAtletas(novosAtletas);
+        storageService.salvarAtletas(novosAtletas);
+
+        for (const atl of atletasAfetados) {
+          firebaseService.atualizarAtleta(atl.id, { categoria: novaUpper }).catch((err) => {
+            console.warn('Erro ao atualizar categoria do atleta no Firestore:', err);
+          });
+        }
+      }
+
+      // 3. Atualizar jogos futuros (não realizados)
+      const jogosAfetados = jogos.filter(
+        (j) => !j.realizado && j.categoria?.trim().toUpperCase() === antigaUpper
+      );
+      if (jogosAfetados.length > 0) {
+        const novosJogos = jogos.map((j) =>
+          !j.realizado && j.categoria?.trim().toUpperCase() === antigaUpper
+            ? { ...j, categoria: novaUpper }
+            : j
+        );
+        setJogos(novosJogos);
+        storageService.salvarJogosAgenda(novosJogos);
+
+        for (const jg of jogosAfetados) {
+          firebaseService.salvarJogo({ ...jg, categoria: novaUpper }).catch((err) => {
+            console.warn('Erro ao atualizar categoria de jogo futuro:', err);
+          });
+        }
+      }
+
+      // 4. Se a categoria ativa filtrada for a antiga, atualizar
+      if (categoriaAtiva === antigaUpper) {
+        setCategoriaAtiva(novaUpper);
+      }
+
+      exibirToast(
+        atletasAfetados.length > 0
+          ? `Categoria alterada para ${novaUpper} (${atletasAfetados.length} atletas atualizados)!`
+          : `Categoria renomeada para ${novaUpper} com sucesso!`
+      );
+    } catch (err: any) {
+      console.error('Erro ao renomear categoria:', err);
+      exibirToast('Erro ao renomear categoria.');
+      throw err;
+    }
+  };
+
+  const handleViradaDeAno = async (
+    plano: { origem: string; destino: string; qtdAtletas: number }[]
+  ) => {
+    try {
+      if (!plano || plano.length === 0) return;
+
+      // 1. Monta mapa de migração (ex: SUB-17 -> SUB-20, SUB-16 -> SUB-17, SUB-15 -> SUB-16)
+      const mapaMigracao: Record<string, string> = {};
+      plano.forEach((p) => {
+        mapaMigracao[p.origem.trim().toUpperCase()] = p.destino.trim().toUpperCase();
+      });
+
+      // 2. Atualiza lista de categorias: adiciona destinos superiores e mantém categorias originais
+      const novasCatsSet = new Set(categorias);
+      plano.forEach((p) => {
+        novasCatsSet.add(p.destino.trim().toUpperCase());
+        novasCatsSet.add(p.origem.trim().toUpperCase());
+      });
+      const novasCats = Array.from(novasCatsSet);
+      setCategorias(novasCats);
+      storageService.salvarCategorias(novasCats);
+
+      // 3. Atualiza atletas (cada um sobe exatamente 1 categoria, sem salto duplo)
+      const novosAtletas = atletas.map((a) => {
+        const catOrig = a.categoria?.trim().toUpperCase();
+        if (mapaMigracao[catOrig]) {
+          return { ...a, categoria: mapaMigracao[catOrig] };
+        }
+        return a;
+      });
+      setAtletas(novosAtletas);
+      storageService.salvarAtletas(novosAtletas);
+
+      for (const atl of atletas) {
+        const catOrig = atl.categoria?.trim().toUpperCase();
+        const novaCat = mapaMigracao[catOrig];
+        if (novaCat) {
+          firebaseService.atualizarAtleta(atl.id, { categoria: novaCat }).catch((err) => {
+            console.warn('Erro ao atualizar atleta no Firestore na virada de ano:', err);
+          });
+        }
+      }
+
+      // 4. Atualiza jogos futuros (não realizados)
+      const novosJogos = jogos.map((j) => {
+        if (!j.realizado) {
+          const catOrig = j.categoria?.trim().toUpperCase();
+          if (mapaMigracao[catOrig]) {
+            return { ...j, categoria: mapaMigracao[catOrig] };
+          }
+        }
+        return j;
+      });
+      setJogos(novosJogos);
+      storageService.salvarJogosAgenda(novosJogos);
+
+      for (const j of jogos) {
+        if (!j.realizado) {
+          const catOrig = j.categoria?.trim().toUpperCase();
+          const novaCat = mapaMigracao[catOrig];
+          if (novaCat) {
+            firebaseService.salvarJogo({ ...j, categoria: novaCat }).catch(() => {});
+          }
+        }
+      }
+
+      exibirToast('Virada de ano aplicada com sucesso! Todos os atletas foram promovidos.');
+    } catch (err: any) {
+      console.error('Erro ao realizar virada de ano:', err);
+      exibirToast('Erro ao realizar virada de ano.');
+      throw err;
+    }
+  };
+
+  const handleExcluirCategoriaComMigracao = async (
+    catExcluir: string,
+    catDestino: string
+  ) => {
+    try {
+      const excluirUpper = catExcluir.trim().toUpperCase();
+      const destinoUpper = catDestino.trim().toUpperCase();
+
+      // 1. Move todos os atletas da categoria excluída para a categoria destino
+      const afetados = atletas.filter(
+        (a) => a.categoria?.trim().toUpperCase() === excluirUpper
+      );
+      if (afetados.length > 0) {
+        const novosAtletas = atletas.map((a) =>
+          a.categoria?.trim().toUpperCase() === excluirUpper
+            ? { ...a, categoria: destinoUpper }
+            : a
+        );
+        setAtletas(novosAtletas);
+        storageService.salvarAtletas(novosAtletas);
+
+        for (const atl of afetados) {
+          firebaseService.atualizarAtleta(atl.id, { categoria: destinoUpper }).catch(() => {});
+        }
+      }
+
+      // 2. Atualiza jogos futuros
+      const jogosAfetados = jogos.filter(
+        (j) => !j.realizado && j.categoria?.trim().toUpperCase() === excluirUpper
+      );
+      if (jogosAfetados.length > 0) {
+        const novosJogos = jogos.map((j) =>
+          !j.realizado && j.categoria?.trim().toUpperCase() === excluirUpper
+            ? { ...j, categoria: destinoUpper }
+            : j
+        );
+        setJogos(novosJogos);
+        storageService.salvarJogosAgenda(novosJogos);
+
+        for (const jg of jogosAfetados) {
+          firebaseService.salvarJogo({ ...jg, categoria: destinoUpper }).catch(() => {});
+        }
+      }
+
+      // 3. Remove a categoria da lista
+      const novasCategorias = categorias.filter((c) => c !== excluirUpper);
+      setCategorias(novasCategorias);
+      storageService.salvarCategorias(novasCategorias);
+
+      if (categoriaAtiva === excluirUpper) {
+        setCategoriaAtiva(destinoUpper);
+      }
+
+      exibirToast(
+        afetados.length > 0
+          ? `${afetados.length} atleta(s) movidos para ${destinoUpper} e categoria ${excluirUpper} removida!`
+          : `Categoria ${excluirUpper} removida com sucesso!`
+      );
+    } catch (err: any) {
+      console.error('Erro ao excluir categoria com migração:', err);
+      exibirToast('Erro ao excluir categoria.');
+      throw err;
+    }
+  };
+
   // Handlers para Avaliações
   const handleSalvarAvaliacao = async (avaliacao: AvaliacaoJogo) => {
     storageService.salvarAvaliacao(avaliacao);
@@ -1122,11 +1342,17 @@ export default function App() {
         isOpen={isCategoriasModalOpen}
         onClose={() => setIsCategoriasModalOpen(false)}
         categorias={categorias}
+        atletas={atletas}
+        jogos={jogos}
         onSalvarCategorias={(novas) => {
           storageService.salvarCategorias(novas);
           setCategorias(novas);
           exibirToast('Categorias atualizadas!');
         }}
+        onRenomearCategoria={handleRenomearCategoria}
+        onViradaDeAno={handleViradaDeAno}
+        onExcluirCategoriaComMigracao={handleExcluirCategoriaComMigracao}
+        onExibirToast={exibirToast}
       />
 
       {/* Modal de Confirmação de Apagar (SIM / NÃO) */}
