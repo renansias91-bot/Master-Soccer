@@ -17,8 +17,11 @@ export type StatusAtleta = 'Ativo' | 'Departamento Médico' | 'Transição' | 'S
 
 export interface Atleta {
   id: string;
-  nome: string;
-  apelido?: string;
+  nome: string; // Nome Completo do atleta
+  nomeCompleto?: string; // Nome civil completo para documentos oficiais / súmula
+  apelido?: string; // Apelido para campinho e estratégia
+  documento?: string; // Identidade / RG / CPF
+  rg?: string; // Sinônimo de documento
   categoria: CategoriaBase;
   posicao: PosicaoAtleta;
   numeroCamisa?: number;
@@ -144,6 +147,7 @@ export interface JogoAgenda {
   observacoesGerais?: string;
   criadoEm?: string;
   escalacao?: Record<string, AtletaEscalado>; // atletaId -> escalação do atleta para este jogo
+  formacao?: string; // ex: '4-4-2 Losango'
 }
 
 export interface TesteFisicoAtleta {
