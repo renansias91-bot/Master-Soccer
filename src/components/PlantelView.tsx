@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Search,
   Filter,
@@ -19,11 +19,17 @@ import {
   X,
   ChevronDown,
   ArrowLeft,
+  Printer,
+  Share2,
+  FileText,
+  RefreshCw,
 } from 'lucide-react';
 import { Atleta, AvaliacaoJogo, JogoAgenda, POSICOES_JOGO, AtletaEscalado } from '../types';
 import { storageService } from '../services/storage';
 import { formatarDataExibicao } from '../utils/dateUtils';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
+import { MasterSoccerEscudo } from './MasterSoccerEscudo';
+import { compartilharDocumentoPdf } from '../utils/pdfShareUtils';
 
 interface PlantelViewProps {
   atletas: Atleta[];
@@ -444,6 +450,11 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   // Mapa local de atletas escalados para o jogo ativo: { [atletaId]: AtletaEscalado }
   const [escalacaoMap, setEscalacaoMap] = useState<Record<string, AtletaEscalado>>({});
   const [salvandoFeedback, setSalvandoFeedback] = useState<string | null>(null);
+
+  // Estados para Modal de Súmula Oficial do Jogo
+  const [modalSumulaAberto, setModalSumulaAberto] = useState(false);
+  const [compartilhandoSumula, setCompartilhandoSumula] = useState(false);
+  const sumulaDocRef = useRef<HTMLDivElement | null>(null);
 
   // Sincroniza quando jogos ou jogoSelecionadoId mudarem
   useEffect(() => {
@@ -869,6 +880,51 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
     };
   }, [atletas, busca, vagaSelecionada, categoriaDoJogo, catJogoNum]);
 
+  // Listas de titulares e reservas para a súmula
+  const { listaTitulares, listaReservas } = useMemo(() => {
+    const titulares: Atleta[] = [];
+    const reservas: Atleta[] = [];
+
+    for (const a of atletas) {
+      const esc = escalacaoMap[a.id];
+      if (esc?.titular) {
+        titulares.push(a);
+      } else if (esc && esc.titular === false) {
+        reservas.push(a);
+      }
+    }
+
+    titulares.sort((a, b) => (a.numeroCamisa || 99) - (b.numeroCamisa || 99));
+    reservas.sort((a, b) => (a.numeroCamisa || 99) - (b.numeroCamisa || 99));
+
+    return { listaTitulares: titulares, listaReservas: reservas };
+  }, [atletas, escalacaoMap]);
+
+  // Compartilhar Súmula Oficial via Web Share API
+  const handleCompartilharSumula = async () => {
+    if (!sumulaDocRef.current || !jogoAtivo) return;
+    setCompartilhandoSumula(true);
+    try {
+      const advLimpo = (jogoAtivo.adversario || 'Jogo')
+        .replace(/^vs\s+/i, '')
+        .replace(/\s+/g, '-')
+        .replace(/[^a-zA-Z0-9-_]/g, '');
+      const dataStr = (jogoAtivo.dataJogo || 'data').replace(/\//g, '-');
+      const nomeArquivo = `Sumula-vs-${advLimpo}-${dataStr}.pdf`;
+
+      await compartilharDocumentoPdf({
+        elemento: sumulaDocRef.current,
+        nomeArquivo,
+        titulo: `Súmula Oficial: Master Soccer vs ${jogoAtivo.adversario.replace(/^vs\s+/i, '')}`,
+        texto: `Súmula Oficial de Jogo - Master Soccer vs ${jogoAtivo.adversario} (${jogoAtivo.categoria})`,
+      });
+    } catch (err: any) {
+      console.error('Erro ao compartilhar súmula:', err);
+    } finally {
+      setCompartilhandoSumula(false);
+    }
+  };
+
   // Se o usuário entrar direto na aba ESCALAÇÃO sem ter selecionado um jogo antes na Agenda:
   if (!jogoAtivo) {
     return (
@@ -933,8 +989,8 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         </div>
       </div>
 
-      {/* 2. LINHA DE BOTÕES NO TOPO: [← Voltar] [Salvar Escalação do Jogo (X convocados)] */}
-      <div className="flex items-center gap-2 w-full">
+      {/* 2. LINHA DE BOTÕES NO TOPO: [← Voltar] [Salvar Escalação do Jogo] [Súmula] */}
+      <div className="flex items-center gap-2 w-full flex-wrap sm:flex-nowrap">
         {onVoltarParaAgenda && (
           <button
             type="button"
@@ -955,6 +1011,16 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         >
           <Save className="w-4 h-4 text-amber-300 shrink-0" />
           <span>Salvar Escalação do Jogo ({totalConvocados} convocados)</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setModalSumulaAberto(true)}
+          className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black text-slate-900 bg-amber-400 hover:bg-amber-300 active:scale-98 transition flex items-center gap-1.5 cursor-pointer shadow-sm shrink-0 border border-amber-300"
+          title="Visualizar e Imprimir Súmula Oficial do Jogo"
+        >
+          <FileText className="w-4 h-4 text-slate-950 shrink-0" />
+          <span>Súmula</span>
         </button>
       </div>
 
@@ -1753,6 +1819,248 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                 className="px-5 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
               >
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL DE SÚMULA OFICIAL DO JOGO (COM COMPARTILHAR E IMPRIMIR) */}
+      {/* ========================================================= */}
+      {modalSumulaAberto && jogoAtivo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
+            {/* Topo do Modal */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 shrink-0">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-blue-600" />
+                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                  Súmula Oficial de Jogo
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalSumulaAberto(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Conteúdo Imprimível com Ref para PDF */}
+            <div
+              ref={sumulaDocRef}
+              id="sumula-printable-doc"
+              className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1 bg-white text-slate-900"
+            >
+              {/* Cabeçalho Oficial */}
+              <div className="flex items-center justify-between border-b-2 border-slate-900 pb-4">
+                <div className="flex items-center gap-3">
+                  <MasterSoccerEscudo size={52} />
+                  <div>
+                    <h2 className="text-xl font-black text-slate-950 uppercase tracking-tight">
+                      MASTER SOCCER RJ
+                    </h2>
+                    <p className="text-xs text-slate-600 font-bold uppercase">
+                      Súmula Oficial de Partida · Base Sub-15 / 16 / 17
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right text-xs text-slate-600">
+                  <div>Data de Emissão: {new Date().toLocaleDateString('pt-BR')}</div>
+                  <div className="font-extrabold text-slate-800">Sistema Base FC</div>
+                </div>
+              </div>
+
+              {/* Informações da Partida */}
+              <div className="bg-slate-50 border border-slate-300 rounded-xl p-4 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div>
+                    <span className="font-bold text-slate-500 uppercase block text-[10px]">Confronto:</span>
+                    <span className="font-black text-slate-900 text-sm">
+                      Master Soccer vs {jogoAtivo.adversario.replace(/^vs\s+/i, '')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-500 uppercase block text-[10px]">Categoria:</span>
+                    <span className="font-black text-blue-700 text-sm">{jogoAtivo.categoria}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-500 uppercase block text-[10px]">Data & Horário:</span>
+                    <span className="font-black text-slate-900 text-sm">
+                      {formatarDataExibicao(jogoAtivo.dataJogo)} {jogoAtivo.hora ? `às ${jogoAtivo.hora}` : ''}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-500 uppercase block text-[10px]">Local:</span>
+                    <span className="font-black text-slate-900 text-xs">{jogoAtivo.local || 'Campo Oficial'}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-500 uppercase block text-[10px]">Competição / Tipo:</span>
+                    <span className="font-black text-slate-900 text-xs">{jogoAtivo.tipo || 'Campeonato'}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-500 uppercase block text-[10px]">Formação Tática:</span>
+                    <span className="font-black text-emerald-700 text-xs">{formacao}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabela de Titulares */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between border-b-2 border-blue-600 pb-1">
+                  <h4 className="text-sm font-black text-slate-950 uppercase tracking-tight">
+                    1. Atletas Titulares ({listaTitulares.length})
+                  </h4>
+                  <span className="text-[11px] font-bold text-blue-700 uppercase">11 em Campo</span>
+                </div>
+                <table className="w-full text-left text-xs border border-slate-300">
+                  <thead className="bg-slate-100 border-b border-slate-300 text-slate-700 font-black text-[11px] uppercase">
+                    <tr>
+                      <th className="p-2 w-10 text-center">Nº</th>
+                      <th className="p-2">Nome Completo</th>
+                      <th className="p-2">Apelido</th>
+                      <th className="p-2">Posição no Jogo</th>
+                      <th className="p-2 w-20 text-center">Pé</th>
+                      <th className="p-2 w-32 text-center">Assinatura</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {listaTitulares.map((atl, idx) => (
+                      <tr key={atl.id} className="hover:bg-slate-50">
+                        <td className="p-2 font-mono font-black text-center text-slate-900">
+                          {atl.numeroCamisa || idx + 1}
+                        </td>
+                        <td className="p-2 font-bold text-slate-900">{atl.nome}</td>
+                        <td className="p-2 text-slate-600 font-semibold">{atl.apelido || '—'}</td>
+                        <td className="p-2 font-bold text-blue-800">
+                          {escalacaoMap[atl.id]?.posicaoJogo || atl.posicao}
+                        </td>
+                        <td className="p-2 text-center text-slate-600">{atl.pernaDominante}</td>
+                        <td className="p-2 text-center border-b border-dotted border-slate-400"></td>
+                      </tr>
+                    ))}
+                    {listaTitulares.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="p-4 text-center text-slate-400 italic">
+                          Nenhum titular escalado para esta partida.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Tabela de Reservas */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between border-b-2 border-amber-500 pb-1">
+                  <h4 className="text-sm font-black text-slate-950 uppercase tracking-tight">
+                    2. Banco de Reservas ({listaReservas.length})
+                  </h4>
+                  <span className="text-[11px] font-bold text-amber-700 uppercase">Suplentes</span>
+                </div>
+                <table className="w-full text-left text-xs border border-slate-300">
+                  <thead className="bg-slate-100 border-b border-slate-300 text-slate-700 font-black text-[11px] uppercase">
+                    <tr>
+                      <th className="p-2 w-10 text-center">Nº</th>
+                      <th className="p-2">Nome Completo</th>
+                      <th className="p-2">Apelido</th>
+                      <th className="p-2">Posição Original</th>
+                      <th className="p-2 w-20 text-center">Pé</th>
+                      <th className="p-2 w-32 text-center">Assinatura</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {listaReservas.map((atl, idx) => (
+                      <tr key={atl.id} className="hover:bg-slate-50">
+                        <td className="p-2 font-mono font-black text-center text-slate-900">
+                          {atl.numeroCamisa || 12 + idx}
+                        </td>
+                        <td className="p-2 font-bold text-slate-900">{atl.nome}</td>
+                        <td className="p-2 text-slate-600 font-semibold">{atl.apelido || '—'}</td>
+                        <td className="p-2 font-bold text-slate-700">{atl.posicao}</td>
+                        <td className="p-2 text-center text-slate-600">{atl.pernaDominante}</td>
+                        <td className="p-2 text-center border-b border-dotted border-slate-400"></td>
+                      </tr>
+                    ))}
+                    {listaReservas.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="p-4 text-center text-slate-400 italic">
+                          Nenhum reserva escalado para esta partida.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Assinaturas da Comissão e Arbitragem */}
+              <div className="pt-6 border-t border-slate-300 grid grid-cols-3 gap-6 text-center text-xs">
+                <div>
+                  <div className="border-b border-slate-900 pb-1 mb-1 font-bold text-slate-800">
+                    Comissão Técnica / Treinador
+                  </div>
+                  <span className="text-[10px] text-slate-500">Master Soccer RJ</span>
+                </div>
+                <div>
+                  <div className="border-b border-slate-900 pb-1 mb-1 font-bold text-slate-800">
+                    Capitão da Equipe
+                  </div>
+                  <span className="text-[10px] text-slate-500">Assinatura</span>
+                </div>
+                <div>
+                  <div className="border-b border-slate-900 pb-1 mb-1 font-bold text-slate-800">
+                    Árbitro da Partida
+                  </div>
+                  <span className="text-[10px] text-slate-500">FERJ / Federação</span>
+                </div>
+              </div>
+
+              {/* Rodapé Oficial */}
+              <div className="pt-4 text-center text-[11px] text-slate-400">
+                Master Soccer RJ · Documento de Súmula Oficial de Jogo gerado pelo Sistema Base FC
+              </div>
+            </div>
+
+            {/* Rodapé com os 3 Botões: Fechar, Compartilhar, Imprimir Agora */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5 bg-slate-50 dark:bg-slate-800/60 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setModalSumulaAberto(false)}
+                className="px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
+              >
+                Fechar
+              </button>
+
+              <button
+                type="button"
+                disabled={compartilhandoSumula}
+                onClick={handleCompartilharSumula}
+                className="px-5 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-md flex items-center gap-2 cursor-pointer transition disabled:opacity-50"
+                style={{ backgroundColor: '#059669' }}
+              >
+                {compartilhandoSumula ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                    <span>Gerando PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-4 h-4 text-white" />
+                    <span>Compartilhar</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-5 py-2.5 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 active:scale-95 shadow-md flex items-center gap-2 cursor-pointer transition"
+                style={{ backgroundColor: '#2563eb' }}
+              >
+                <Printer className="w-4 h-4" />
+                <span>Imprimir Agora</span>
               </button>
             </div>
           </div>

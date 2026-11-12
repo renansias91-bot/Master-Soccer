@@ -23,8 +23,11 @@ import {
   Check,
   X,
   Plus,
+  Share2,
+  RefreshCw,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { compartilharDocumentoPdf } from '../utils/pdfShareUtils';
 import {
   Atleta,
   AvaliacaoJogo,
@@ -178,8 +181,10 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
   const [salvandoLote, setSalvandoLote] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 7. MODAL DE IMPRESSÃO
+  // 7. MODAL DE IMPRESSÃO E COMPARTILHAMENTO
   const [documentoImpressao, setDocumentoImpressao] = useState<DadosDocumentoImpressao | null>(null);
+  const documentoRef = useRef<HTMLDivElement | null>(null);
+  const [compartilhando, setCompartilhando] = useState(false);
 
   // 8. ESTADO DE EDIÇÃO INLINE DO ATLETA (na aba Editar Dados do card expandido)
   const [dadosEdicao, setDadosEdicao] = useState<Record<string, Atleta>>({});
@@ -786,6 +791,59 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
         </div>
       ),
     });
+  };
+
+  // 5. Compartilhar Documento via Web Share API gerando PDF em memória
+  const handleCompartilharDocumento = async () => {
+    if (!documentoRef.current || !documentoImpressao) return;
+    setCompartilhando(true);
+    try {
+      const dataHoje = new Date();
+      const dd = String(dataHoje.getDate()).padStart(2, '0');
+      const mm = String(dataHoje.getMonth() + 1).padStart(2, '0');
+      const yyyy = dataHoje.getFullYear();
+      const dataStr = `${dd}-${mm}-${yyyy}`;
+
+      let nomeArquivo = '';
+      if (documentoImpressao.tipo === 'estatistica_categoria') {
+        const cat = documentoImpressao.categoria || 'GERAL';
+        nomeArquivo = `Relatorio-Estatisticas-${cat}-${dataStr}.pdf`;
+      } else if (documentoImpressao.tipo === 'historico_categoria') {
+        const cat = documentoImpressao.categoria || 'GERAL';
+        nomeArquivo = `Historico-Categoria-${cat}-${dataStr}.pdf`;
+      } else if (documentoImpressao.tipo === 'estatistica_atleta') {
+        const apelidoOuNome = (
+          documentoImpressao.atleta?.apelido ||
+          documentoImpressao.atleta?.nome ||
+          'Atleta'
+        )
+          .trim()
+          .replace(/\s+/g, '-');
+        nomeArquivo = `Estatistica-${apelidoOuNome}-${dataStr}.pdf`;
+      } else if (documentoImpressao.tipo === 'historico_atleta') {
+        const apelidoOuNome = (
+          documentoImpressao.atleta?.apelido ||
+          documentoImpressao.atleta?.nome ||
+          'Atleta'
+        )
+          .trim()
+          .replace(/\s+/g, '-');
+        nomeArquivo = `Historico-${apelidoOuNome}-${dataStr}.pdf`;
+      } else {
+        nomeArquivo = `Documento-MasterSoccer-${dataStr}.pdf`;
+      }
+
+      await compartilharDocumentoPdf({
+        elemento: documentoRef.current,
+        nomeArquivo,
+        titulo: documentoImpressao.titulo,
+        texto: `Documento oficial Master Soccer RJ: ${documentoImpressao.titulo}`,
+      });
+    } catch (err: any) {
+      console.error('Erro ao compartilhar documento:', err);
+    } finally {
+      setCompartilhando(false);
+    }
   };
 
   return (
@@ -2113,6 +2171,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
 
             {/* Conteúdo Imprimível */}
             <div
+              ref={documentoRef}
               id="printable-document"
               className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1 bg-white text-slate-900"
             >
@@ -2157,20 +2216,40 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
               </div>
             </div>
 
-            {/* Rodapé com Botão Imprimir */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3 bg-slate-50 dark:bg-slate-800/60">
+            {/* Rodapé com Botão Fechar, Compartilhar e Imprimir */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5 bg-slate-50 dark:bg-slate-800/60 flex-wrap">
               <button
                 type="button"
                 onClick={() => setDocumentoImpressao(null)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition"
+                className="px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
               >
                 Fechar
               </button>
 
               <button
                 type="button"
+                disabled={compartilhando}
+                onClick={handleCompartilharDocumento}
+                className="px-5 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-md flex items-center gap-2 cursor-pointer transition disabled:opacity-50"
+                style={{ backgroundColor: '#059669' }}
+              >
+                {compartilhando ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                    <span>Gerando PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-4 h-4 text-white" />
+                    <span>Compartilhar</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
                 onClick={() => window.print()}
-                className="px-5 py-2.5 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 active:scale-95 shadow-md flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2.5 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 active:scale-95 shadow-md flex items-center gap-2 cursor-pointer transition"
                 style={{ backgroundColor: '#2563eb' }}
               >
                 <Printer className="w-4 h-4" />

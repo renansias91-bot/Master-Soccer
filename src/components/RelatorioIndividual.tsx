@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Calendar,
   Clock,
@@ -6,6 +6,8 @@ import {
   ArrowLeft,
   Plus,
   Printer,
+  Share2,
+  RefreshCw,
   ChevronRight,
   Users,
   Search,
@@ -16,6 +18,7 @@ import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils
 import { tituloNota } from '../utils/avaliacaoUtils';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
+import { compartilharDocumentoPdf } from '../utils/pdfShareUtils';
 
 interface RelatorioIndividualProps {
   atletas: Atleta[];
@@ -74,8 +77,38 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
     setJogoIndexAtivo(0);
   };
 
+  const relatorioRef = useRef<HTMLDivElement | null>(null);
+  const [compartilhando, setCompartilhando] = useState(false);
+
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleCompartilharFicha = async () => {
+    if (!relatorioRef.current || !atletaAtivo) return;
+    setCompartilhando(true);
+    try {
+      const dataHoje = new Date();
+      const dd = String(dataHoje.getDate()).padStart(2, '0');
+      const mm = String(dataHoje.getMonth() + 1).padStart(2, '0');
+      const yyyy = dataHoje.getFullYear();
+      const dataStr = `${dd}-${mm}-${yyyy}`;
+      const apelidoOuNome = (atletaAtivo.apelido || atletaAtivo.nome || 'Atleta')
+        .trim()
+        .replace(/\s+/g, '-');
+      const nomeArquivo = `Ficha-${apelidoOuNome}-${dataStr}.pdf`;
+
+      await compartilharDocumentoPdf({
+        elemento: relatorioRef.current,
+        nomeArquivo,
+        titulo: `Ficha Técnica: ${atletaAtivo.nome}`,
+        texto: `Ficha Técnica e Histórico Master Soccer RJ - ${atletaAtivo.nome} (${atletaAtivo.categoria})`,
+      });
+    } catch (err: any) {
+      console.error('Erro ao compartilhar ficha:', err);
+    } finally {
+      setCompartilhando(false);
+    }
   };
 
   const getCorNota = (nota: number) => {
@@ -133,6 +166,21 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
             <span>Avaliar Jogo</span>
           </button>
           <button
+            type="button"
+            onClick={handleCompartilharFicha}
+            disabled={compartilhando}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition shadow-xs cursor-pointer disabled:opacity-50"
+            style={{ backgroundColor: '#059669' }}
+          >
+            {compartilhando ? (
+              <RefreshCw className="w-4 h-4 animate-spin text-white" />
+            ) : (
+              <Share2 className="w-4 h-4 text-white" />
+            )}
+            <span className="hidden sm:inline">Compartilhar</span>
+          </button>
+          <button
+            type="button"
             onClick={handlePrint}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-xl border border-amber-300 transition shadow-xs"
           >
@@ -186,7 +234,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
 
       {/* Ficha do Jogador Selecionado (ex: Lucas Silva) */}
       {atletaAtivo ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 sm:p-8 space-y-6">
+        <div ref={relatorioRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 sm:p-8 space-y-6">
           {/* Header do Jogador com Foto e Escudo Master Soccer */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 pb-6 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-4">
