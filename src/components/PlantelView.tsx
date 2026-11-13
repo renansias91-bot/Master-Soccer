@@ -31,6 +31,9 @@ import {
   FORMACOES_CAMPINHO,
   BLOQUINHOS_FORMACAO,
   detectarFormacaoDaEscalacao,
+  GrupoPosicaoFormacao,
+  obterGruposEscalacaoDaFormacao,
+  remapearEscalacaoParaFormacao,
 } from '../utils/formacoesUtils';
 import { ModalSumulaArbitragem, ModalEstrategiaJogo } from './DocumentosJogoModals';
 
@@ -238,28 +241,9 @@ function inferirPosicaoJogoPadrao(posicaoOriginal?: string): string {
   return 'Atacante';
 }
 
-type PosicaoGrupoKey = 'TODOS' | 'GOL' | 'LD' | 'LE' | 'ZAG' | 'VOL' | 'MEI' | 'ATA' | 'PD' | 'PE';
+type PosicaoBaseKey = 'GOL' | 'LD' | 'LE' | 'ZAG' | 'VOL' | 'MEI' | 'ATA' | 'PD' | 'PE';
 
-const GRUPOS_POSICAO_ESCALACAO: Array<{
-  key: PosicaoGrupoKey;
-  sigla: string;
-  titulo: string;
-}> = [
-  { key: 'TODOS', sigla: 'TODOS', titulo: 'TODOS OS ATLETAS' },
-  { key: 'GOL', sigla: 'GOL', titulo: 'GOLEIRO' },
-  { key: 'LD', sigla: 'LD', titulo: 'LATERAL DIREITO' },
-  { key: 'LE', sigla: 'LE', titulo: 'LATERAL ESQUERDO' },
-  { key: 'ZAG', sigla: 'ZAG', titulo: 'ZAGUEIRO' },
-  { key: 'VOL', sigla: 'VOL', titulo: 'VOLANTE' },
-  { key: 'MEI', sigla: 'MEI', titulo: 'MEIO-CAMPISTA' },
-  { key: 'ATA', sigla: 'ATA', titulo: 'ATACANTE' },
-  { key: 'PD', sigla: 'PD', titulo: 'PONTA DIREITA' },
-  { key: 'PE', sigla: 'PE', titulo: 'PONTA ESQUERDA' },
-];
-
-const POSICOES_DUPLAS = new Set<PosicaoGrupoKey>(['ZAG', 'VOL', 'MEI', 'ATA']);
-
-const ORDEM_POSICAO_TODOS: Record<Exclude<PosicaoGrupoKey, 'TODOS'>, number> = {
+const ORDEM_POSICAO_TODOS: Record<PosicaoBaseKey, number> = {
   GOL: 1,
   LD: 2,
   LE: 3,
@@ -271,7 +255,7 @@ const ORDEM_POSICAO_TODOS: Record<Exclude<PosicaoGrupoKey, 'TODOS'>, number> = {
   PE: 9,
 };
 
-function mapearPosicaoParaGrupo(posicao?: string): Exclude<PosicaoGrupoKey, 'TODOS'> {
+function mapearPosicaoParaGrupo(posicao?: string): PosicaoBaseKey {
   const pos = (posicao || '').trim().toLowerCase();
   if (pos.includes('gol')) return 'GOL';
   if (pos.includes('lateral') && (pos.includes('direit') || pos === 'ld')) return 'LD';
@@ -284,6 +268,45 @@ function mapearPosicaoParaGrupo(posicao?: string): Exclude<PosicaoGrupoKey, 'TOD
   if (pos === 'pd' || (pos.includes('ponta') && pos.includes('dir'))) return 'PD';
   if (pos === 'pe' || (pos.includes('ponta') && pos.includes('esq'))) return 'PE';
   return 'ATA';
+}
+
+function atletaCombinaComGrupoFormacao(
+  atleta: Atleta,
+  grupoKey: string,
+  possuiPD: boolean,
+  possuiPE: boolean
+): boolean {
+  const base = mapearPosicaoParaGrupo(atleta.posicao);
+  switch (grupoKey) {
+    case 'GOL':
+      return base === 'GOL';
+    case 'LD':
+      return base === 'LD';
+    case 'LE':
+      return base === 'LE';
+    case 'ZAG':
+      return base === 'ZAG';
+    case 'VOL':
+      return base === 'VOL';
+    case 'MEI':
+    case 'MEI-C':
+      return base === 'MEI';
+    case 'MEI-E':
+      return base === 'MEI' || (!possuiPE && base === 'PE');
+    case 'MEI-D':
+      return base === 'MEI' || (!possuiPD && base === 'PD');
+    case 'PD':
+      return base === 'PD';
+    case 'PE':
+      return base === 'PE';
+    case 'ATA':
+      if (!possuiPD && !possuiPE) {
+        return base === 'ATA' || base === 'PD' || base === 'PE';
+      }
+      return base === 'ATA';
+    default:
+      return false;
+  }
 }
 
 function obterNomePosicaoPorSlot(slotId: string, formacaoAtual: string): string {
@@ -331,7 +354,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   const [filtroCategoriaLista, setFiltroCategoriaLista] = useState<string>('TODAS');
   const [abaSubEscalacao, setAbaSubEscalacao] = useState<'lista' | 'campinho'>('lista');
   const [formacao, setFormacao] = useState<string>('4-4-2 Losango');
-  const [posicaoAberta, setPosicaoAberta] = useState<PosicaoGrupoKey | null>(null);
+  const [posicaoAberta, setPosicaoAberta] = useState<string | null>(null);
   const [modalTrocaAberto, setModalTrocaAberto] = useState<boolean>(false);
   const [slotSelecionado, setSlotSelecionado] = useState<string | null>(null);
   const [atletaParaTroca, setAtletaParaTroca] = useState<{
@@ -358,14 +381,35 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   useEffect(() => {
     const jogo = jogos.find((j) => j.id === jogoAtivoId);
     if (jogo) {
-      setEscalacaoMap(jogo.escalacao || {});
-      setFormacao(detectarFormacaoDaEscalacao(jogo.escalacao, jogo.formacao));
+      const formacaoDetectada = detectarFormacaoDaEscalacao(jogo.escalacao, jogo.formacao);
+      const slotsValidos = new Set(
+        (FORMACOES_CAMPINHO[formacaoDetectada] || FORMACOES_CAMPINHO['4-4-2 Losango']).map((s) =>
+          normalizarSlotId(s.id)
+        )
+      );
+      const escOriginal = jogo.escalacao || {};
+      const precisaRemapear = Object.values(escOriginal).some(
+        (item) => item?.titular && (!item.posicaoSlot || !slotsValidos.has(normalizarSlotId(item.posicaoSlot)))
+      );
+      setFormacao(formacaoDetectada);
+      setEscalacaoMap(
+        precisaRemapear ? remapearEscalacaoParaFormacao(escOriginal, formacaoDetectada) : escOriginal
+      );
     } else {
       setEscalacaoMap({});
       setFormacao('4-4-2 Losango');
     }
     setSalvandoFeedback(null);
   }, [jogoAtivoId, jogos]);
+
+  const handleTrocarFormacao = (novaFormacao: string) => {
+    setFormacao(novaFormacao);
+    setEscalacaoMap((prev) => remapearEscalacaoParaFormacao(prev, novaFormacao));
+    const gruposNovos = obterGruposEscalacaoDaFormacao(novaFormacao);
+    if (posicaoAberta && !gruposNovos.some((g) => g.key === posicaoAberta)) {
+      setPosicaoAberta(null);
+    }
+  };
 
   const jogoAtivo = jogos.find((j) => j.id === jogoAtivoId) || null;
 
@@ -436,94 +480,93 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
     }
 
     if (pos.includes('ata') || pos.includes('pon') || pos.includes('cent') || pos.includes('ext')) {
+      if (pos.includes('direit')) {
+        const sD = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'ATA-D');
+        if (sD) return normalizarSlotId(sD.id);
+      }
+      if (pos.includes('esquerd')) {
+        const sE = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'ATA-E');
+        if (sE) return normalizarSlotId(sE.id);
+      }
       const s = slotsVazios.find((sv) => sv.linha === 'ata');
       if (s) return normalizarSlotId(s.id);
+      // Em formações sem pontas (ex: 4-2-3-1, 4-1-4-1), um ponta pode ir para MEI aberto
+      if (pos.includes('pon')) {
+        const sMei = slotsVazios.find((sv) => sv.linha === 'mei' && normalizarSlotId(sv.id).startsWith('MEI'));
+        if (sMei) return normalizarSlotId(sMei.id);
+      }
     }
 
     return normalizarSlotId(slotsVazios[0].id);
   };
 
   // 1 CLIQUE JÁ CONVOCA / DESCONVOCA: [Titular]
-  // Regra de lados por ordem de marcação:
-  // - Posições duplas (ZAG, VOL, MEI, ATA): 1º marcado = -E (Esquerdo), 2º marcado = -D (Direito)
-  // - Posições únicas (GOL, LD, LE, PD, PE): sem lado (-E/-D)
-  const handleToggleTitular = (atleta: Atleta, grupoForcado?: Exclude<PosicaoGrupoKey, 'TODOS'>) => {
-    const escaladoAtual = escalacaoMap[atleta.id];
-
-    if (escaladoAtual && escaladoAtual.titular) {
-      // Clicou de novo no botão que já estava marcado -> DESCONVOCA o atleta
-      setEscalacaoMap((prev) => {
-        const copy = { ...prev };
-        delete copy[atleta.id];
-        return copy;
-      });
-      return;
-    }
-
-    const grupo =
-      grupoForcado ||
-      (posicaoAberta && posicaoAberta !== 'TODOS'
-        ? posicaoAberta
-        : mapearPosicaoParaGrupo(atleta.posicao));
-
+  // Lista e Campinho usam EXATAMENTE os mesmos slots da formação tática atual.
+  const handleToggleTitular = (atleta: Atleta, grupo?: GrupoPosicaoFormacao) => {
     setEscalacaoMap((prev) => {
       const copy = { ...prev };
-      let targetSlotId: string = grupo;
+      const escaladoAtual = copy[atleta.id];
+      const slotAtual = escaladoAtual?.posicaoSlot
+        ? normalizarSlotId(escaladoAtual.posicaoSlot)
+        : '';
 
-      if (POSICOES_DUPLAS.has(grupo)) {
-        const slotE = `${grupo}-E`;
-        const slotD = `${grupo}-D`;
+      // Se clicou dentro de um grupo específico da formação (não TODOS)
+      if (grupo && grupo.key !== 'TODOS' && grupo.slots.length > 0) {
+        const slotsDoGrupo = grupo.slots.map((s) => normalizarSlotId(s));
 
-        const ocupadoE = Object.entries(copy).some(
-          ([id, info]) =>
-            id !== atleta.id &&
-            info?.titular &&
-            (normalizarSlotId(info.posicaoSlot || '') === slotE ||
-              (grupo === 'VOL' && normalizarSlotId(info.posicaoSlot || '') === 'VOL'))
-        );
-
-        const ocupadoD = Object.entries(copy).some(
-          ([id, info]) =>
-            id !== atleta.id && info?.titular && normalizarSlotId(info.posicaoSlot || '') === slotD
-        );
-
-        if (!ocupadoE) {
-          targetSlotId = slotE;
-        } else if (!ocupadoD) {
-          targetSlotId = slotD;
-        } else if (grupo === 'MEI') {
-          const slotsFormacao = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
-          const extrasMei = slotsFormacao
-            .map((s) => normalizarSlotId(s.id))
-            .filter((sid) => sid === 'MEI-C' || sid === 'MEI-CE' || sid === 'MEI-CD');
-
-          const extraLivre = extrasMei.find(
-            (sid) =>
-              !Object.entries(copy).some(
-                ([id, info]) =>
-                  id !== atleta.id &&
-                  info?.titular &&
-                  normalizarSlotId(info.posicaoSlot || '') === sid
-              )
-          );
-
-          targetSlotId = extraLivre || slotD;
-        } else {
-          targetSlotId = slotD;
+        // Se o atleta já é titular NESTE grupo, desconvoca
+        if (escaladoAtual?.titular && slotsDoGrupo.includes(slotAtual)) {
+          delete copy[atleta.id];
+          return copy;
         }
-      } else {
-        // Posição com 1 vaga: GOL, LD, LE, PD, PE
-        targetSlotId = grupo;
+
+        // Procura a 1ª vaga livre dentro das vagas deste grupo (1º marcado = -E / 1ª vaga; 2º marcado = -D / 2ª vaga)
+        const vagaLivre = slotsDoGrupo.find(
+          (sid) =>
+            !Object.entries(copy).some(
+              ([id, info]) =>
+                id !== atleta.id &&
+                info?.titular &&
+                normalizarSlotId(info.posicaoSlot || '') === sid
+            )
+        );
+
+        const targetSlotId = vagaLivre || slotsDoGrupo[slotsDoGrupo.length - 1];
+
+        // Se todas as vagas desse grupo estavam cheias e estamos substituindo uma vaga específica, remove quem estava nela
+        for (const id in copy) {
+          if (
+            id !== atleta.id &&
+            copy[id]?.titular &&
+            normalizarSlotId(copy[id].posicaoSlot || '') === targetSlotId
+          ) {
+            delete copy[id];
+          }
+        }
+
+        copy[atleta.id] = {
+          atletaId: atleta.id,
+          titular: true,
+          posicaoJogo: obterNomePosicaoPorSlot(targetSlotId, formacao),
+          posicaoSlot: targetSlotId,
+        };
+
+        return copy;
       }
 
-      const normTarget = normalizarSlotId(targetSlotId);
+      // Clicou dentro de TODOS:
+      if (escaladoAtual?.titular) {
+        delete copy[atleta.id];
+        return copy;
+      }
 
-      // Se a vaga escolhida já estava ocupada por outro atleta, substitui apenas essa vaga
+      const targetSlotId = normalizarSlotId(encontrarMelhorSlotVazio(atleta, formacao, copy));
+
       for (const id in copy) {
         if (
           id !== atleta.id &&
           copy[id]?.titular &&
-          normalizarSlotId(copy[id].posicaoSlot || '') === normTarget
+          normalizarSlotId(copy[id].posicaoSlot || '') === targetSlotId
         ) {
           delete copy[id];
         }
@@ -532,8 +575,8 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
       copy[atleta.id] = {
         atletaId: atleta.id,
         titular: true,
-        posicaoJogo: obterNomePosicaoPorSlot(normTarget, formacao),
-        posicaoSlot: normTarget,
+        posicaoJogo: obterNomePosicaoPorSlot(targetSlotId, formacao),
+        posicaoSlot: targetSlotId,
       };
 
       return copy;
@@ -812,18 +855,78 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
     });
   }, [atletas, busca, categoriaDoJogo, catJogoNum]);
 
-  // Agrupamento dos atletas por posição (só exibe posição com >= 1 atleta)
+  // Agrupamento dos atletas seguindo EXATAMENTE as vagas da FORMAÇÃO TÁTICA escolhida
   const gruposPosicaoVisiveis = useMemo(() => {
-    return GRUPOS_POSICAO_ESCALACAO.map((grupo) => {
-      const lista =
-        grupo.key === 'TODOS'
-          ? atletasElegiveisOrdenados
-          : atletasElegiveisOrdenados.filter(
-              (a) => mapearPosicaoParaGrupo(a.posicao) === grupo.key
-            );
-      return { ...grupo, atletas: lista };
-    }).filter((g) => g.atletas.length > 0);
-  }, [atletasElegiveisOrdenados]);
+    const gruposDaFormacao = obterGruposEscalacaoDaFormacao(formacao);
+    const possuiPD = gruposDaFormacao.some((g) => g.key === 'PD');
+    const possuiPE = gruposDaFormacao.some((g) => g.key === 'PE');
+    const temBusca = Boolean(busca.trim());
+
+    return gruposDaFormacao
+      .map((grupo) => {
+        if (grupo.key === 'TODOS') {
+          return {
+            ...grupo,
+            atletas: atletasElegiveisOrdenados,
+            preenchidosCount: Object.values(escalacaoMap).filter((e) => e?.titular).length,
+            totalVagas: 11,
+          };
+        }
+
+        const slotsGrupoNorm = new Set(grupo.slots.map((s) => normalizarSlotId(s)));
+
+        const listaFiltrada = atletasElegiveisOrdenados.filter((a) => {
+          const esc = escalacaoMap[a.id];
+          const slotAtual = esc?.titular && esc.posicaoSlot ? normalizarSlotId(esc.posicaoSlot) : '';
+          const jaEscaladoAqui = Boolean(slotAtual && slotsGrupoNorm.has(slotAtual));
+          return jaEscaladoAqui || atletaCombinaComGrupoFormacao(a, grupo.key, possuiPD, possuiPE);
+        });
+
+        // Ordena colocando primeiro quem já está escalado nesta vaga e depois prioridade de pé para vagas de lado
+        const listaOrdenada = [...listaFiltrada].sort((a, b) => {
+          const slotA = escalacaoMap[a.id]?.titular ? normalizarSlotId(escalacaoMap[a.id].posicaoSlot || '') : '';
+          const slotB = escalacaoMap[b.id]?.titular ? normalizarSlotId(escalacaoMap[b.id].posicaoSlot || '') : '';
+          const aquiA = slotsGrupoNorm.has(slotA) ? 0 : 1;
+          const aquiB = slotsGrupoNorm.has(slotB) ? 0 : 1;
+          if (aquiA !== aquiB) return aquiA - aquiB;
+
+          const mesmaCatA = a.categoria === categoriaDoJogo ? 0 : 1;
+          const mesmaCatB = b.categoria === categoriaDoJogo ? 0 : 1;
+          if (mesmaCatA !== mesmaCatB) return mesmaCatA - mesmaCatB;
+
+          if (grupo.key === 'MEI-E' || grupo.key === 'LE' || grupo.key === 'PE') {
+            const esqA = isPeEsquerdo(a.pernaDominante) ? 0 : 1;
+            const esqB = isPeEsquerdo(b.pernaDominante) ? 0 : 1;
+            if (esqA !== esqB) return esqA - esqB;
+          } else if (grupo.key === 'MEI-D' || grupo.key === 'LD' || grupo.key === 'PD') {
+            const dirA = isPeDireito(a.pernaDominante) ? 0 : 1;
+            const dirB = isPeDireito(b.pernaDominante) ? 0 : 1;
+            if (dirA !== dirB) return dirA - dirB;
+          }
+
+          const nomeA = a.apelido || a.nome;
+          const nomeB = b.apelido || b.nome;
+          return nomeA.localeCompare(nomeB, 'pt-BR');
+        });
+
+        const preenchidosCount = Object.values(escalacaoMap).filter(
+          (e) => e?.titular && e.posicaoSlot && slotsGrupoNorm.has(normalizarSlotId(e.posicaoSlot))
+        ).length;
+
+        return {
+          ...grupo,
+          atletas: listaOrdenada,
+          preenchidosCount,
+          totalVagas: grupo.slots.length,
+        };
+      })
+      .filter((g) => {
+        // Quando há busca digitada, mostra somente os grupos que encontraram resultados
+        if (temBusca) return g.atletas.length > 0;
+        // Sem busca, TODOS e TODAS as posições da formação aparecem na lista (espelho do campinho)
+        return g.key !== 'TODOS' || g.atletas.length > 0;
+      });
+  }, [formacao, atletasElegiveisOrdenados, escalacaoMap, busca, categoriaDoJogo]);
 
 
 
@@ -978,7 +1081,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
             <div className="relative">
               <select
                 value={formacao}
-                onChange={(e) => setFormacao(e.target.value)}
+                onChange={(e) => handleTrocarFormacao(e.target.value)}
                 className="appearance-none pl-2.5 pr-7 py-1 text-xs sm:text-sm font-black bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-400 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 cursor-pointer"
               >
                 <option value="4-4-2 Losango">4-4-2 Losango</option>
@@ -1056,9 +1159,12 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
       {/* Conteúdo: Lista Vertical por Posição (1 posição aberta por vez) ou Campinho */}
       {abaSubEscalacao === 'lista' ? (
         <div className="space-y-2.5">
-          <div className="px-1 pt-1">
+          <div className="px-1 pt-1 flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
-              ESCOLHA A POSIÇÃO:
+              ESCOLHA A POSIÇÃO ({formacao}):
+            </span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+              {titularesCount}/11 vagas preenchidas
             </span>
           </div>
 
@@ -1070,10 +1176,18 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
             <div className="flex flex-col gap-2.5">
               {gruposPosicaoVisiveis.map((grupo) => {
                 const aberto = posicaoAberta === grupo.key;
-                const qtdTexto =
+                const vagasLabel =
                   grupo.key === 'TODOS'
-                    ? `${grupo.sigla} - ${grupo.titulo} (${grupo.atletas.length})`
-                    : `${grupo.sigla} - ${grupo.titulo} (${grupo.atletas.length} ${
+                    ? `${grupo.atletas.length}`
+                    : `${grupo.preenchidosCount}/${grupo.totalVagas} ${
+                        grupo.totalVagas === 1 ? 'vaga' : 'vagas'
+                      }`;
+                const subtitulo =
+                  grupo.key === 'TODOS'
+                    ? `${grupo.sigla} - ${grupo.titulo} (${vagasLabel})`
+                    : `${grupo.sigla} - ${grupo.titulo}${
+                        grupo.subtituloVagas ? ` (${grupo.subtituloVagas})` : ''
+                      } · ${vagasLabel} (${grupo.atletas.length} ${
                         grupo.atletas.length === 1 ? 'atleta' : 'atletas'
                       })`;
 
@@ -1097,7 +1211,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                       }
                       className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left font-black text-xs sm:text-sm uppercase tracking-wide transition-colors cursor-pointer"
                     >
-                      <span className="truncate">{qtdTexto}</span>
+                      <span className="truncate">{subtitulo}</span>
                       <ChevronDown
                         className={`w-5 h-5 shrink-0 transition-transform duration-200 ${
                           aberto ? 'rotate-180 text-white' : 'text-slate-700'
@@ -1108,115 +1222,117 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                     {/* Lista vertical de atletas da posição aberta (um embaixo do outro) */}
                     {aberto && (
                       <div className="p-3 bg-white dark:bg-slate-900 flex flex-col gap-2.5">
-                        {grupo.atletas.map((atleta) => {
-                          const escalado = escalacaoMap[atleta.id];
-                          const ehTitular = escalado ? escalado.titular : false;
-                          const ehReserva = escalado ? !escalado.titular : false;
-                          const slotAtual = escalado?.posicaoSlot
-                            ? normalizarSlotId(escalado.posicaoSlot)
-                            : null;
-                          const ehOutraCategoria = atleta.categoria !== categoriaDoJogo;
-                          const grupoAtribuicao =
-                            grupo.key === 'TODOS'
-                              ? mapearPosicaoParaGrupo(atleta.posicao)
-                              : grupo.key;
+                        {grupo.atletas.length === 0 ? (
+                          <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                            Nenhum atleta cadastrado nessa posição. Você pode escalar outro jogador nesta vaga pelo Campinho ou em TODOS.
+                          </div>
+                        ) : (
+                          grupo.atletas.map((atleta) => {
+                            const escalado = escalacaoMap[atleta.id];
+                            const ehTitular = escalado ? escalado.titular : false;
+                            const ehReserva = escalado ? !escalado.titular : false;
+                            const slotAtual = escalado?.posicaoSlot
+                              ? normalizarSlotId(escalado.posicaoSlot)
+                              : null;
+                            const ehOutraCategoria = atleta.categoria !== categoriaDoJogo;
 
-                          return (
-                            <div
-                              key={atleta.id}
-                              className={`rounded-2xl p-3 sm:p-3.5 transition-all border flex items-center justify-between gap-2.5 ${
-                                ehTitular
-                                  ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-500 shadow-2xs'
-                                  : ehReserva
-                                  ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-400 shadow-2xs'
-                                  : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3 min-w-0 flex-1">
-                                <div
-                                  className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl shrink-0 overflow-hidden flex items-center justify-center font-black text-xs sm:text-sm border ${
-                                    ehTitular
-                                      ? 'bg-blue-600 text-white border-blue-700'
-                                      : ehReserva
-                                      ? 'bg-amber-500 text-white border-amber-600'
-                                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                                  }`}
-                                >
-                                  {atleta.fotoUrl ? (
-                                    <img
-                                      src={atleta.fotoUrl}
-                                      alt={atleta.nome}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <span>{obterIniciaisApelido(atleta)}</span>
-                                  )}
-                                </div>
-
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <h4 className="text-[15px] sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight leading-snug truncate">
-                                      {atleta.apelido || atleta.nome.split(' ')[0]}
-                                    </h4>
-                                    {ehOutraCategoria && (
-                                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
-                                        {atleta.categoria}
-                                      </span>
-                                    )}
-                                    {ehTitular && slotAtual && (
-                                      <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-blue-600 text-white shadow-2xs shrink-0">
-                                        {slotAtual}
-                                      </span>
-                                    )}
-                                    {ehReserva && (
-                                      <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-500 text-white shadow-2xs shrink-0">
-                                        Banco
-                                      </span>
+                            return (
+                              <div
+                                key={atleta.id}
+                                className={`rounded-2xl p-3 sm:p-3.5 transition-all border flex items-center justify-between gap-2.5 ${
+                                  ehTitular
+                                    ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-500 shadow-2xs'
+                                    : ehReserva
+                                    ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-400 shadow-2xs'
+                                    : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <div
+                                    className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl shrink-0 overflow-hidden flex items-center justify-center font-black text-xs sm:text-sm border ${
+                                      ehTitular
+                                        ? 'bg-blue-600 text-white border-blue-700'
+                                        : ehReserva
+                                        ? 'bg-amber-500 text-white border-amber-600'
+                                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                    }`}
+                                  >
+                                    {atleta.fotoUrl ? (
+                                      <img
+                                        src={atleta.fotoUrl}
+                                        alt={atleta.nome}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      <span>{obterIniciaisApelido(atleta)}</span>
                                     )}
                                   </div>
-                                  <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
-                                    Posição:{' '}
-                                    <strong className="text-slate-900 dark:text-slate-100 font-bold">
-                                      {atleta.posicao}
-                                    </strong>{' '}
-                                    · Pé:{' '}
-                                    <span className="font-semibold">
-                                      {formatarPe(atleta.pernaDominante)}
-                                    </span>
-                                  </p>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <h4 className="text-[15px] sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight leading-snug truncate">
+                                        {atleta.apelido || atleta.nome.split(' ')[0]}
+                                      </h4>
+                                      {ehOutraCategoria && (
+                                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
+                                          {atleta.categoria}
+                                        </span>
+                                      )}
+                                      {ehTitular && slotAtual && (
+                                        <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-blue-600 text-white shadow-2xs shrink-0">
+                                          {slotAtual}
+                                        </span>
+                                      )}
+                                      {ehReserva && (
+                                        <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-500 text-white shadow-2xs shrink-0">
+                                          Banco
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
+                                      Posição:{' '}
+                                      <strong className="text-slate-900 dark:text-slate-100 font-bold">
+                                        {atleta.posicao}
+                                      </strong>{' '}
+                                      · Pé:{' '}
+                                      <span className="font-semibold">
+                                        {formatarPe(atleta.pernaDominante)}
+                                      </span>
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleTitular(atleta, grupo)}
+                                    className={`px-2.5 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
+                                      ehTitular
+                                        ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700 shadow-sm'
+                                        : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
+                                    }`}
+                                  >
+                                    {ehTitular && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                                    <span>Titular</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleReserva(atleta)}
+                                    className={`px-2.5 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
+                                      ehReserva
+                                        ? 'bg-amber-500 hover:bg-amber-600 text-white border-2 border-amber-600 shadow-sm'
+                                        : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
+                                    }`}
+                                  >
+                                    {ehReserva && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                                    <span>Reserva</span>
+                                  </button>
                                 </div>
                               </div>
-
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleTitular(atleta, grupoAtribuicao)}
-                                  className={`px-2.5 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
-                                    ehTitular
-                                      ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700 shadow-sm'
-                                      : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
-                                  }`}
-                                >
-                                  {ehTitular && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
-                                  <span>Titular</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleReserva(atleta)}
-                                  className={`px-2.5 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
-                                    ehReserva
-                                      ? 'bg-amber-500 hover:bg-amber-600 text-white border-2 border-amber-600 shadow-sm'
-                                      : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
-                                  }`}
-                                >
-                                  {ehReserva && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
-                                  <span>Reserva</span>
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })
+                        )}
                       </div>
                     )}
                   </div>

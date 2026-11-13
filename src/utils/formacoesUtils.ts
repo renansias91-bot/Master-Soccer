@@ -236,3 +236,191 @@ export function mapearTitularesNosSlots(
     return { slot, atleta };
   });
 }
+
+export interface GrupoPosicaoFormacao {
+  key: string;
+  sigla: string;
+  titulo: string;
+  slots: string[]; // Slots exatos do Campinho cobertos por este grupo (vazio para TODOS)
+  subtituloVagas?: string;
+}
+
+export const GRUPOS_ESCALACAO_POR_FORMACAO: Record<string, GrupoPosicaoFormacao[]> = {
+  '4-4-2 Losango': [
+    { key: 'TODOS', sigla: 'TODOS', titulo: 'TODOS OS ATLETAS', slots: [] },
+    { key: 'GOL', sigla: 'GOL', titulo: 'GOLEIRO', slots: ['GOL'] },
+    { key: 'LD', sigla: 'LD', titulo: 'LATERAL DIREITO', slots: ['LD'] },
+    { key: 'LE', sigla: 'LE', titulo: 'LATERAL ESQUERDO', slots: ['LE'] },
+    { key: 'ZAG', sigla: 'ZAG', titulo: 'ZAGUEIRO', slots: ['ZAG-E', 'ZAG-D'], subtituloVagas: 'ZAG-E e ZAG-D' },
+    { key: 'VOL', sigla: 'VOL', titulo: 'VOLANTE', slots: ['VOL'] },
+    { key: 'MEI-E', sigla: 'MEI-E', titulo: 'MEIO-CAMPISTA ESQUERDO', slots: ['MEI-E'] },
+    { key: 'MEI-C', sigla: 'MEI-C', titulo: 'MEIO-CAMPISTA CENTRAL (10)', slots: ['MEI-C'] },
+    { key: 'MEI-D', sigla: 'MEI-D', titulo: 'MEIO-CAMPISTA DIREITO', slots: ['MEI-D'] },
+    { key: 'ATA', sigla: 'ATA', titulo: 'ATACANTE', slots: ['ATA-E', 'ATA-D'], subtituloVagas: 'ATA-E e ATA-D' },
+  ],
+  '4-2-3-1': [
+    { key: 'TODOS', sigla: 'TODOS', titulo: 'TODOS OS ATLETAS', slots: [] },
+    { key: 'GOL', sigla: 'GOL', titulo: 'GOLEIRO', slots: ['GOL'] },
+    { key: 'LD', sigla: 'LD', titulo: 'LATERAL DIREITO', slots: ['LD'] },
+    { key: 'LE', sigla: 'LE', titulo: 'LATERAL ESQUERDO', slots: ['LE'] },
+    { key: 'ZAG', sigla: 'ZAG', titulo: 'ZAGUEIRO', slots: ['ZAG-E', 'ZAG-D'], subtituloVagas: 'ZAG-E e ZAG-D' },
+    { key: 'VOL', sigla: 'VOL', titulo: 'VOLANTE', slots: ['VOL-E', 'VOL-D'], subtituloVagas: 'VOL-E e VOL-D' },
+    { key: 'MEI-E', sigla: 'MEI-E', titulo: 'MEIO-CAMPISTA ESQUERDO', slots: ['MEI-E'] },
+    { key: 'MEI-C', sigla: 'MEI-C', titulo: 'MEIO-CAMPISTA CENTRAL (10)', slots: ['MEI-C'] },
+    { key: 'MEI-D', sigla: 'MEI-D', titulo: 'MEIO-CAMPISTA DIREITO', slots: ['MEI-D'] },
+    { key: 'ATA', sigla: 'ATA', titulo: 'ATACANTE', slots: ['ATA'] },
+  ],
+  '4-3-3': [
+    { key: 'TODOS', sigla: 'TODOS', titulo: 'TODOS OS ATLETAS', slots: [] },
+    { key: 'GOL', sigla: 'GOL', titulo: 'GOLEIRO', slots: ['GOL'] },
+    { key: 'LD', sigla: 'LD', titulo: 'LATERAL DIREITO', slots: ['LD'] },
+    { key: 'LE', sigla: 'LE', titulo: 'LATERAL ESQUERDO', slots: ['LE'] },
+    { key: 'ZAG', sigla: 'ZAG', titulo: 'ZAGUEIRO', slots: ['ZAG-E', 'ZAG-D'], subtituloVagas: 'ZAG-E e ZAG-D' },
+    { key: 'VOL', sigla: 'VOL', titulo: 'VOLANTE', slots: ['VOL'] },
+    { key: 'MEI', sigla: 'MEI', titulo: 'MEIO-CAMPISTA', slots: ['MEI-E', 'MEI-D'], subtituloVagas: 'MEI-E e MEI-D' },
+    { key: 'PD', sigla: 'PD', titulo: 'PONTA DIREITA', slots: ['ATA-D'] },
+    { key: 'PE', sigla: 'PE', titulo: 'PONTA ESQUERDA', slots: ['ATA-E'] },
+    { key: 'ATA', sigla: 'ATA', titulo: 'CENTROAVANTE', slots: ['ATA-C'] },
+  ],
+  '4-2-4 linhas baixas': [
+    { key: 'TODOS', sigla: 'TODOS', titulo: 'TODOS OS ATLETAS', slots: [] },
+    { key: 'GOL', sigla: 'GOL', titulo: 'GOLEIRO', slots: ['GOL'] },
+    { key: 'LD', sigla: 'LD', titulo: 'LATERAL DIREITO', slots: ['LD'] },
+    { key: 'LE', sigla: 'LE', titulo: 'LATERAL ESQUERDO', slots: ['LE'] },
+    { key: 'ZAG', sigla: 'ZAG', titulo: 'ZAGUEIRO', slots: ['ZAG-E', 'ZAG-D'], subtituloVagas: 'ZAG-E e ZAG-D' },
+    { key: 'VOL', sigla: 'VOL', titulo: 'VOLANTE', slots: ['VOL-E', 'VOL-D'], subtituloVagas: 'VOL-E e VOL-D' },
+    { key: 'MEI-E', sigla: 'MEI-E', titulo: 'MEIO-CAMPISTA ESQUERDO', slots: ['MEI-E'] },
+    { key: 'MEI-D', sigla: 'MEI-D', titulo: 'MEIO-CAMPISTA DIREITO', slots: ['MEI-D'] },
+    { key: 'ATA', sigla: 'ATA', titulo: 'ATACANTE', slots: ['ATA-E', 'ATA-D'], subtituloVagas: 'ATA-E e ATA-D' },
+  ],
+  '4-1-4-1': [
+    { key: 'TODOS', sigla: 'TODOS', titulo: 'TODOS OS ATLETAS', slots: [] },
+    { key: 'GOL', sigla: 'GOL', titulo: 'GOLEIRO', slots: ['GOL'] },
+    { key: 'LD', sigla: 'LD', titulo: 'LATERAL DIREITO', slots: ['LD'] },
+    { key: 'LE', sigla: 'LE', titulo: 'LATERAL ESQUERDO', slots: ['LE'] },
+    { key: 'ZAG', sigla: 'ZAG', titulo: 'ZAGUEIRO', slots: ['ZAG-E', 'ZAG-D'], subtituloVagas: 'ZAG-E e ZAG-D' },
+    { key: 'VOL', sigla: 'VOL', titulo: 'VOLANTE', slots: ['VOL'] },
+    { key: 'MEI-E', sigla: 'MEI-E', titulo: 'MEIO-CAMPISTA ESQUERDO', slots: ['MEI-E'] },
+    { key: 'MEI-C', sigla: 'MEI-C', titulo: 'MEIO-CAMPISTA CENTRAL', slots: ['MEI-CE', 'MEI-CD'], subtituloVagas: 'MEI-CE e MEI-CD' },
+    { key: 'MEI-D', sigla: 'MEI-D', titulo: 'MEIO-CAMPISTA DIREITO', slots: ['MEI-D'] },
+    { key: 'ATA', sigla: 'ATA', titulo: 'ATACANTE', slots: ['ATA'] },
+  ],
+};
+
+GRUPOS_ESCALACAO_POR_FORMACAO['4-4-2'] = GRUPOS_ESCALACAO_POR_FORMACAO['4-4-2 Losango'];
+GRUPOS_ESCALACAO_POR_FORMACAO['4-2-4'] = GRUPOS_ESCALACAO_POR_FORMACAO['4-2-4 linhas baixas'];
+
+export function obterGruposEscalacaoDaFormacao(formacao: string): GrupoPosicaoFormacao[] {
+  return GRUPOS_ESCALACAO_POR_FORMACAO[formacao] || GRUPOS_ESCALACAO_POR_FORMACAO['4-4-2 Losango'];
+}
+
+const PREFERENCIAS_REMAPEAMENTO: Record<string, string[]> = {
+  GOL: ['GOL'],
+  LE: ['LE', 'LD', 'ZAG-E'],
+  LD: ['LD', 'LE', 'ZAG-D'],
+  'ZAG-E': ['ZAG-E', 'ZAG-D'],
+  'ZAG-D': ['ZAG-D', 'ZAG-E'],
+  VOL: ['VOL', 'VOL-E', 'VOL-D', 'MEI-CE', 'MEI-CD', 'MEI-C'],
+  'VOL-E': ['VOL-E', 'VOL', 'VOL-D', 'MEI-CE', 'MEI-E', 'MEI-C'],
+  'VOL-D': ['VOL-D', 'VOL', 'VOL-E', 'MEI-CD', 'MEI-D', 'MEI-C'],
+  'MEI-E': ['MEI-E', 'MEI-CE', 'ATA-E', 'MEI-C', 'MEI-D'],
+  'MEI-D': ['MEI-D', 'MEI-CD', 'ATA-D', 'MEI-C', 'MEI-E'],
+  'MEI-C': ['MEI-C', 'MEI-CE', 'MEI-CD', 'VOL', 'MEI-E', 'MEI-D', 'ATA', 'ATA-C'],
+  'MEI-CE': ['MEI-CE', 'MEI-C', 'MEI-E', 'VOL-E', 'VOL', 'MEI-CD'],
+  'MEI-CD': ['MEI-CD', 'MEI-C', 'MEI-D', 'VOL-D', 'VOL', 'MEI-CE'],
+  ATA: ['ATA', 'ATA-C', 'ATA-E', 'ATA-D', 'MEI-C'],
+  'ATA-C': ['ATA-C', 'ATA', 'ATA-E', 'ATA-D', 'MEI-C'],
+  'ATA-E': ['ATA-E', 'ATA', 'ATA-C', 'MEI-E', 'ATA-D'],
+  'ATA-D': ['ATA-D', 'ATA', 'ATA-C', 'MEI-D', 'ATA-E'],
+  PD: ['ATA-D', 'MEI-D', 'ATA-E', 'ATA'],
+  PE: ['ATA-E', 'MEI-E', 'ATA-D', 'ATA'],
+};
+
+/**
+ * Remapeia os jogadores já escalados quando o técnico troca de formação tática.
+ * Regra: nenhum atleta pode ser apagado. Titulares mantêm vaga idêntica ou migram
+ * para a vaga mais parecida disponível na nova formação. Reservas ficam no banco.
+ */
+export function remapearEscalacaoParaFormacao(
+  escalacaoAtual: Record<string, AtletaEscalado>,
+  novaFormacao: string
+): Record<string, AtletaEscalado> {
+  const slotsDestino = FORMACOES_CAMPINHO[novaFormacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
+  const idsDestino = slotsDestino.map((s) => normalizarSlotId(s.id));
+  const mapSlotInfo = new Map<string, SlotPosicaoCampinho>(
+    slotsDestino.map((s) => [normalizarSlotId(s.id), s])
+  );
+
+  const resultado: Record<string, AtletaEscalado> = {};
+  const ocupados = new Set<string>();
+  const pendentes: Array<{ id: string; item: AtletaEscalado; slotAntigo: string }> = [];
+
+  // 1. Mantém reservas intactos e titulares que já possuem a mesma vaga exata na nova formação
+  for (const [id, item] of Object.entries(escalacaoAtual || {})) {
+    if (!item) continue;
+    if (!item.titular) {
+      resultado[id] = { ...item };
+      continue;
+    }
+
+    const slotAntigo = normalizarSlotId(item.posicaoSlot || '');
+    if (slotAntigo && mapSlotInfo.has(slotAntigo) && !ocupados.has(slotAntigo)) {
+      ocupados.add(slotAntigo);
+      const slotInfo = mapSlotInfo.get(slotAntigo)!;
+      resultado[id] = {
+        ...item,
+        titular: true,
+        posicaoSlot: slotAntigo,
+        posicaoJogo: slotInfo.nomeCompleto || item.posicaoJogo,
+      };
+    } else {
+      pendentes.push({ id, item, slotAntigo });
+    }
+  }
+
+  // 2. Remapeia titulares restantes para a vaga mais parecida disponível na nova formação
+  const aindaSemVaga: Array<{ id: string; item: AtletaEscalado }> = [];
+  for (const { id, item, slotAntigo } of pendentes) {
+    const preferencias = PREFERENCIAS_REMAPEAMENTO[slotAntigo] || [];
+    const melhorVaga = preferencias.find((cand) => mapSlotInfo.has(cand) && !ocupados.has(cand));
+
+    if (melhorVaga) {
+      ocupados.add(melhorVaga);
+      const slotInfo = mapSlotInfo.get(melhorVaga)!;
+      resultado[id] = {
+        ...item,
+        titular: true,
+        posicaoSlot: melhorVaga,
+        posicaoJogo: slotInfo.nomeCompleto || item.posicaoJogo,
+      };
+    } else {
+      aindaSemVaga.push({ id, item });
+    }
+  }
+
+  // 3. Garante que nenhum titular suma: aloca em qualquer vaga vazia restante da nova formação
+  // (e somente se já houver mais de 11 titulares, move excedente para o banco em vez de apagar)
+  for (const { id, item } of aindaSemVaga) {
+    const qualquerVagaLivre = idsDestino.find((sid) => !ocupados.has(sid));
+    if (qualquerVagaLivre) {
+      ocupados.add(qualquerVagaLivre);
+      const slotInfo = mapSlotInfo.get(qualquerVagaLivre)!;
+      resultado[id] = {
+        ...item,
+        titular: true,
+        posicaoSlot: qualquerVagaLivre,
+        posicaoJogo: slotInfo.nomeCompleto || item.posicaoJogo,
+      };
+    } else {
+      resultado[id] = {
+        ...item,
+        titular: false,
+        posicaoSlot: undefined,
+        posicaoJogo: 'Reserva',
+      };
+    }
+  }
+
+  return resultado;
+}
+
