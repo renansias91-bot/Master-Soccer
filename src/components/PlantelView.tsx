@@ -238,6 +238,80 @@ function inferirPosicaoJogoPadrao(posicaoOriginal?: string): string {
   return 'Atacante';
 }
 
+type PosicaoGrupoKey = 'TODOS' | 'GOL' | 'LD' | 'LE' | 'ZAG' | 'VOL' | 'MEI' | 'ATA' | 'PD' | 'PE';
+
+const GRUPOS_POSICAO_ESCALACAO: Array<{
+  key: PosicaoGrupoKey;
+  sigla: string;
+  titulo: string;
+}> = [
+  { key: 'TODOS', sigla: 'TODOS', titulo: 'TODOS OS ATLETAS' },
+  { key: 'GOL', sigla: 'GOL', titulo: 'GOLEIRO' },
+  { key: 'LD', sigla: 'LD', titulo: 'LATERAL DIREITO' },
+  { key: 'LE', sigla: 'LE', titulo: 'LATERAL ESQUERDO' },
+  { key: 'ZAG', sigla: 'ZAG', titulo: 'ZAGUEIRO' },
+  { key: 'VOL', sigla: 'VOL', titulo: 'VOLANTE' },
+  { key: 'MEI', sigla: 'MEI', titulo: 'MEIO-CAMPISTA' },
+  { key: 'ATA', sigla: 'ATA', titulo: 'ATACANTE' },
+  { key: 'PD', sigla: 'PD', titulo: 'PONTA DIREITA' },
+  { key: 'PE', sigla: 'PE', titulo: 'PONTA ESQUERDA' },
+];
+
+const POSICOES_DUPLAS = new Set<PosicaoGrupoKey>(['ZAG', 'VOL', 'MEI', 'ATA']);
+
+const ORDEM_POSICAO_TODOS: Record<Exclude<PosicaoGrupoKey, 'TODOS'>, number> = {
+  GOL: 1,
+  LD: 2,
+  LE: 3,
+  ZAG: 4,
+  VOL: 5,
+  MEI: 6,
+  ATA: 7,
+  PD: 8,
+  PE: 9,
+};
+
+function mapearPosicaoParaGrupo(posicao?: string): Exclude<PosicaoGrupoKey, 'TODOS'> {
+  const pos = (posicao || '').trim().toLowerCase();
+  if (pos.includes('gol')) return 'GOL';
+  if (pos.includes('lateral') && (pos.includes('direit') || pos === 'ld')) return 'LD';
+  if (pos.includes('lateral') && (pos.includes('esquerd') || pos === 'le')) return 'LE';
+  if (pos === 'ld') return 'LD';
+  if (pos === 'le') return 'LE';
+  if (pos.includes('zag') || pos.includes('def')) return 'ZAG';
+  if (pos.includes('vol')) return 'VOL';
+  if (pos.includes('mei') || pos.includes('meia')) return 'MEI';
+  if (pos === 'pd' || (pos.includes('ponta') && pos.includes('dir'))) return 'PD';
+  if (pos === 'pe' || (pos.includes('ponta') && pos.includes('esq'))) return 'PE';
+  return 'ATA';
+}
+
+function obterNomePosicaoPorSlot(slotId: string, formacaoAtual: string): string {
+  const norm = normalizarSlotId(slotId);
+  const slots = FORMACOES_CAMPINHO[formacaoAtual] || FORMACOES_CAMPINHO['4-4-2 Losango'];
+  const slotObj = slots.find((s) => normalizarSlotId(s.id) === norm);
+  if (slotObj?.nomeCompleto) return slotObj.nomeCompleto;
+
+  const nomesFixos: Record<string, string> = {
+    GOL: 'Goleiro',
+    LD: 'Lateral Direito',
+    LE: 'Lateral Esquerdo',
+    'ZAG-E': 'Zagueiro Esquerdo',
+    'ZAG-D': 'Zagueiro Direito',
+    'VOL-E': 'Volante Esquerdo',
+    'VOL-D': 'Volante Direito',
+    'MEI-E': 'Meio-Campista Esquerdo',
+    'MEI-D': 'Meio-Campista Direito',
+    'MEI-C': 'Meio-Campo Central (10)',
+    'ATA-E': 'Atacante Esquerdo',
+    'ATA-D': 'Atacante Direito',
+    PD: 'Ponta Direita',
+    PE: 'Ponta Esquerda',
+  };
+
+  return nomesFixos[norm] || norm;
+}
+
 export const PlantelView: React.FC<PlantelViewProps> = ({
   atletas,
   avaliacoes,
@@ -257,7 +331,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   const [filtroCategoriaLista, setFiltroCategoriaLista] = useState<string>('TODAS');
   const [abaSubEscalacao, setAbaSubEscalacao] = useState<'lista' | 'campinho'>('lista');
   const [formacao, setFormacao] = useState<string>('4-4-2 Losango');
-  const [vagaSelecionada, setVagaSelecionada] = useState<string>('TODOS');
+  const [posicaoAberta, setPosicaoAberta] = useState<PosicaoGrupoKey | null>(null);
   const [modalTrocaAberto, setModalTrocaAberto] = useState<boolean>(false);
   const [slotSelecionado, setSlotSelecionado] = useState<string | null>(null);
   const [atletaParaTroca, setAtletaParaTroca] = useState<{
@@ -370,7 +444,10 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   };
 
   // 1 CLIQUE JÁ CONVOCA / DESCONVOCA: [Titular]
-  const handleToggleTitular = (atleta: Atleta) => {
+  // Regra de lados por ordem de marcação:
+  // - Posições duplas (ZAG, VOL, MEI, ATA): 1º marcado = -E (Esquerdo), 2º marcado = -D (Direito)
+  // - Posições únicas (GOL, LD, LE, PD, PE): sem lado (-E/-D)
+  const handleToggleTitular = (atleta: Atleta, grupoForcado?: Exclude<PosicaoGrupoKey, 'TODOS'>) => {
     const escaladoAtual = escalacaoMap[atleta.id];
 
     if (escaladoAtual && escaladoAtual.titular) {
@@ -383,22 +460,71 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
       return;
     }
 
-    // 1º Identifica a vaga: se escolheu no filtro ESCOLHA A VAGA, vai EXATAMENTE para ela
-    const targetSlotId =
-      vagaSelecionada !== 'TODOS'
-        ? normalizarSlotId(vagaSelecionada)
-        : encontrarMelhorSlotVazio(atleta, formacao, escalacaoMap);
-
-    const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
-    const slotObj = slots.find((s) => normalizarSlotId(s.id) === targetSlotId);
-    const nomePosicao = slotObj?.nomeCompleto || slotObj?.label || targetSlotId;
+    const grupo =
+      grupoForcado ||
+      (posicaoAberta && posicaoAberta !== 'TODOS'
+        ? posicaoAberta
+        : mapearPosicaoParaGrupo(atleta.posicao));
 
     setEscalacaoMap((prev) => {
       const copy = { ...prev };
+      let targetSlotId: string = grupo;
 
-      // Se uma vaga já estiver ocupada e colocar outro atleta, ele SUBSTITUI só aquela vaga.
+      if (POSICOES_DUPLAS.has(grupo)) {
+        const slotE = `${grupo}-E`;
+        const slotD = `${grupo}-D`;
+
+        const ocupadoE = Object.entries(copy).some(
+          ([id, info]) =>
+            id !== atleta.id &&
+            info?.titular &&
+            (normalizarSlotId(info.posicaoSlot || '') === slotE ||
+              (grupo === 'VOL' && normalizarSlotId(info.posicaoSlot || '') === 'VOL'))
+        );
+
+        const ocupadoD = Object.entries(copy).some(
+          ([id, info]) =>
+            id !== atleta.id && info?.titular && normalizarSlotId(info.posicaoSlot || '') === slotD
+        );
+
+        if (!ocupadoE) {
+          targetSlotId = slotE;
+        } else if (!ocupadoD) {
+          targetSlotId = slotD;
+        } else if (grupo === 'MEI') {
+          const slotsFormacao = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
+          const extrasMei = slotsFormacao
+            .map((s) => normalizarSlotId(s.id))
+            .filter((sid) => sid === 'MEI-C' || sid === 'MEI-CE' || sid === 'MEI-CD');
+
+          const extraLivre = extrasMei.find(
+            (sid) =>
+              !Object.entries(copy).some(
+                ([id, info]) =>
+                  id !== atleta.id &&
+                  info?.titular &&
+                  normalizarSlotId(info.posicaoSlot || '') === sid
+              )
+          );
+
+          targetSlotId = extraLivre || slotD;
+        } else {
+          targetSlotId = slotD;
+        }
+      } else {
+        // Posição com 1 vaga: GOL, LD, LE, PD, PE
+        targetSlotId = grupo;
+      }
+
+      const normTarget = normalizarSlotId(targetSlotId);
+
+      // Se a vaga escolhida já estava ocupada por outro atleta, substitui apenas essa vaga
       for (const id in copy) {
-        if (id !== atleta.id && copy[id]?.titular && normalizarSlotId(copy[id].posicaoSlot || '') === targetSlotId) {
+        if (
+          id !== atleta.id &&
+          copy[id]?.titular &&
+          normalizarSlotId(copy[id].posicaoSlot || '') === normTarget
+        ) {
           delete copy[id];
         }
       }
@@ -406,8 +532,8 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
       copy[atleta.id] = {
         atletaId: atleta.id,
         titular: true,
-        posicaoJogo: nomePosicao,
-        posicaoSlot: targetSlotId,
+        posicaoJogo: obterNomePosicaoPorSlot(normTarget, formacao),
+        posicaoSlot: normTarget,
       };
 
       return copy;
@@ -442,20 +568,55 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   };
 
   // Atribuição 100% determinística dos titulares aos slots da formação tática.
-  // Cada vaga do campinho é uma CHAVE FIXA e INDEPENDENTE. Somente a vaga do atleta muda.
   const atribuirTitularesAosSlots = (
     titularesList: Atleta[],
     slots: SlotPosicaoCampinho[]
   ): Array<{ slot: SlotPosicaoCampinho; atleta: Atleta | null }> => {
-    return slots.map((slot) => {
+    const usados = new Set<string>();
+
+    const primeiraPassagem = slots.map((slot) => {
       const targetId = normalizarSlotId(slot.id);
       const atleta =
         titularesList.find((a) => {
+          if (usados.has(a.id)) return false;
           const info = escalacaoMap[a.id];
           return info && info.titular && normalizarSlotId(info.posicaoSlot || '') === targetId;
         }) || null;
 
+      if (atleta) usados.add(atleta.id);
       return { slot, atleta };
+    });
+
+    const candidatosFallback: Record<string, string[]> = {
+      VOL: ['VOL-E', 'VOL-D'],
+      'VOL-E': ['VOL'],
+      'ATA-E': ['PE'],
+      'ATA-D': ['PD'],
+      'ATA-C': ['ATA', 'ATA-E', 'ATA-D'],
+      ATA: ['ATA-C', 'ATA-E', 'ATA-D'],
+      'MEI-E': ['PE'],
+      'MEI-D': ['PD'],
+      'MEI-CE': ['MEI-E', 'MEI-C'],
+      'MEI-CD': ['MEI-D'],
+    };
+
+    return primeiraPassagem.map(({ slot, atleta }) => {
+      if (atleta) return { slot, atleta };
+      const targetId = normalizarSlotId(slot.id);
+      const aceitos = candidatosFallback[targetId];
+      if (!aceitos) return { slot, atleta: null };
+
+      const match =
+        titularesList.find((a) => {
+          if (usados.has(a.id)) return false;
+          const info = escalacaoMap[a.id];
+          if (!info?.titular) return false;
+          const s = normalizarSlotId(info.posicaoSlot || '');
+          return aceitos.includes(s);
+        }) || null;
+
+      if (match) usados.add(match.id);
+      return { slot, atleta: match };
     });
   };
 
@@ -556,10 +717,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   const handlePromoverParaTitular = (atletaId: string, posicaoJogo?: string) => {
     const atleta = atletas.find((a) => a.id === atletaId);
     if (!atleta) return;
-    const targetSlotId =
-      vagaSelecionada !== 'TODOS'
-        ? normalizarSlotId(vagaSelecionada)
-        : encontrarMelhorSlotVazio(atleta, formacao, escalacaoMap);
+    const targetSlotId = encontrarMelhorSlotVazio(atleta, formacao, escalacaoMap);
     const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
     const slotObj = slots.find((s) => normalizarSlotId(s.id) === targetSlotId);
     const nomePosicao = posicaoJogo || slotObj?.nomeCompleto || slotObj?.label || 'Titular';
@@ -615,20 +773,6 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
   const categoriaDoJogo = jogoAtivo?.categoria || 'SUB-15';
 
-  const bloquinhosAtuais = useMemo(() => {
-    return BLOQUINHOS_FORMACAO[formacao] || BLOQUINHOS_FORMACAO['4-4-2 Losango'];
-  }, [formacao]);
-
-  // Se a formação mudar e a vaga selecionada não existir mais na formação, reseta para TODOS
-  useEffect(() => {
-    if (vagaSelecionada !== 'TODOS') {
-      const existe = bloquinhosAtuais.some((b) => b.id === vagaSelecionada);
-      if (!existe) {
-        setVagaSelecionada('TODOS');
-      }
-    }
-  }, [bloquinhosAtuais, vagaSelecionada]);
-
   const catJogoNum = extrairNumeroCategoria(categoriaDoJogo);
 
   // Atletas elegíveis para convocação e substituição no modal: apenas mesma categoria ou inferior
@@ -636,11 +780,9 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
     return atletas.filter((a) => extrairNumeroCategoria(a.categoria) <= catJogoNum);
   }, [atletas, catJogoNum]);
 
-  // Separação em: Atletas da Categoria do Jogo e Outras Categorias (apenas inferiores)
-  // ESTRITAMENTE PROIBIDO: mostrar categorias superiores à categoria do jogo!
-  const { atletasDaCategoria, atletasOutrasCategorias } = useMemo(() => {
-    // 1. Filtro de busca de texto
-    let base = atletas;
+  // Atletas elegíveis ordenados para a Lista por Posição (apenas categoria do jogo ou inferior)
+  const atletasElegiveisOrdenados = useMemo(() => {
+    let base = atletas.filter((a) => extrairNumeroCategoria(a.categoria) <= catJogoNum);
     if (busca.trim()) {
       const b = busca.toLowerCase();
       base = base.filter(
@@ -651,57 +793,37 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
       );
     }
 
-    // 2. Filtro estrito: apenas mesma categoria ou inferior (catNum <= catJogoNum)
-    const elegiveis = base.filter((a) => {
-      const catNum = extrairNumeroCategoria(a.categoria);
-      return catNum <= catJogoNum;
-    });
+    return [...base].sort((a, b) => {
+      const mesmaCatA = a.categoria === categoriaDoJogo ? 0 : 1;
+      const mesmaCatB = b.categoria === categoriaDoJogo ? 0 : 1;
+      if (mesmaCatA !== mesmaCatB) return mesmaCatA - mesmaCatB;
 
-    const principal: Atleta[] = [];
-    const inferiores: Atleta[] = [];
-
-    for (const atleta of elegiveis) {
-      if (atleta.categoria === categoriaDoJogo) {
-        principal.push(atleta);
-      } else {
-        inferiores.push(atleta);
-      }
-    }
-
-    // 3. Ordena categoria principal por vaga/pé/posição e desempate por nome
-    principal.sort((a, b) => {
-      const scoreA = calcularScoreAtleta(a, vagaSelecionada, categoriaDoJogo);
-      const scoreB = calcularScoreAtleta(b, vagaSelecionada, categoriaDoJogo);
-      if (scoreA !== scoreB) {
-        return scoreA - scoreB;
-      }
-      const nomeA = a.apelido || a.nome;
-      const nomeB = b.apelido || b.nome;
-      return nomeA.localeCompare(nomeB, 'pt-BR');
-    });
-
-    // 4. Ordena categorias inferiores: categoria decrescente (ex: SUB-16 depois SUB-15) e por vaga/pé
-    inferiores.sort((a, b) => {
       const numA = extrairNumeroCategoria(a.categoria);
       const numB = extrairNumeroCategoria(b.categoria);
-      if (numA !== numB) {
-        return numB - numA;
-      }
-      const scoreA = calcularScoreAtleta(a, vagaSelecionada, a.categoria);
-      const scoreB = calcularScoreAtleta(b, vagaSelecionada, b.categoria);
-      if (scoreA !== scoreB) {
-        return scoreA - scoreB;
-      }
+      if (numA !== numB) return numB - numA;
+
+      const ordA = ORDEM_POSICAO_TODOS[mapearPosicaoParaGrupo(a.posicao)];
+      const ordB = ORDEM_POSICAO_TODOS[mapearPosicaoParaGrupo(b.posicao)];
+      if (ordA !== ordB) return ordA - ordB;
+
       const nomeA = a.apelido || a.nome;
       const nomeB = b.apelido || b.nome;
       return nomeA.localeCompare(nomeB, 'pt-BR');
     });
+  }, [atletas, busca, categoriaDoJogo, catJogoNum]);
 
-    return {
-      atletasDaCategoria: principal,
-      atletasOutrasCategorias: inferiores,
-    };
-  }, [atletas, busca, vagaSelecionada, categoriaDoJogo, catJogoNum]);
+  // Agrupamento dos atletas por posição (só exibe posição com >= 1 atleta)
+  const gruposPosicaoVisiveis = useMemo(() => {
+    return GRUPOS_POSICAO_ESCALACAO.map((grupo) => {
+      const lista =
+        grupo.key === 'TODOS'
+          ? atletasElegiveisOrdenados
+          : atletasElegiveisOrdenados.filter(
+              (a) => mapearPosicaoParaGrupo(a.posicao) === grupo.key
+            );
+      return { ...grupo, atletas: lista };
+    }).filter((g) => g.atletas.length > 0);
+  }, [atletasElegiveisOrdenados]);
 
 
 
@@ -931,183 +1053,177 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         </div>
       </div>
 
-      {/* 5. BLOCO: Barra ESCOLHA A VAGA - APENAS NA ABA LISTA */}
-      {abaSubEscalacao === 'lista' && (
-        <div className="flex items-center gap-2 py-2 px-2.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs overflow-x-auto no-scrollbar">
-          <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 shrink-0">
-            ESCOLHA A VAGA:
-          </span>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {bloquinhosAtuais.map((b) => {
-              const ativo = normalizarSlotId(vagaSelecionada) === normalizarSlotId(b.id);
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => setVagaSelecionada(b.id)}
-                  style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-                  className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
-                    ativo
-                      ? 'shadow-xs border border-blue-600'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700'
-                  }`}
-                >
-                  {b.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Conteúdo: Lista única de atletas ou Campinho */}
+      {/* Conteúdo: Lista Vertical por Posição (1 posição aberta por vez) ou Campinho */}
       {abaSubEscalacao === 'lista' ? (
-        <div className="space-y-3">
-          {(() => {
-            const renderCardAtleta = (atleta: Atleta) => {
-              const escalado = escalacaoMap[atleta.id];
-              const ehTitular = escalado ? escalado.titular : false;
-              const ehReserva = escalado ? !escalado.titular : false;
-              const slotAtual = escalado?.posicaoSlot ? normalizarSlotId(escalado.posicaoSlot) : null;
-              const ehOutraCategoria = atleta.categoria !== categoriaDoJogo;
+        <div className="space-y-2.5">
+          <div className="px-1 pt-1">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
+              ESCOLHA A POSIÇÃO:
+            </span>
+          </div>
 
-              return (
-                <div
-                  key={atleta.id}
-                  className={`rounded-2xl p-3 sm:p-4 transition-all border min-h-[72px] flex flex-col justify-center scroll-mt-[260px] ${
-                    ehTitular
-                      ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-500 shadow-xs'
-                      : ehReserva
-                      ? 'bg-amber-50/50 dark:bg-amber-950/30 border-amber-400 shadow-xs'
-                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    {/* Avatar com foto ou iniciais do APELIDO + Dados do Atleta (SEM checkbox!) */}
-                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                      {/* Foto / Iniciais do APELIDO */}
-                      <div
-                        className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl shrink-0 overflow-hidden flex items-center justify-center font-black text-sm border ${
-                          ehTitular
-                            ? 'bg-blue-600 text-white border-blue-700'
-                            : ehReserva
-                            ? 'bg-amber-500 text-white border-amber-600'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+          {gruposPosicaoVisiveis.length === 0 ? (
+            <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-sm text-slate-400">
+              Nenhum atleta encontrado para os critérios pesquisados.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {gruposPosicaoVisiveis.map((grupo) => {
+                const aberto = posicaoAberta === grupo.key;
+                const qtdTexto =
+                  grupo.key === 'TODOS'
+                    ? `${grupo.sigla} - ${grupo.titulo} (${grupo.atletas.length})`
+                    : `${grupo.sigla} - ${grupo.titulo} (${grupo.atletas.length} ${
+                        grupo.atletas.length === 1 ? 'atleta' : 'atletas'
+                      })`;
+
+                return (
+                  <div
+                    key={grupo.key}
+                    className={`rounded-2xl border overflow-hidden transition-all ${
+                      aberto
+                        ? 'border-blue-600 shadow-sm bg-white dark:bg-slate-900'
+                        : 'border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    {/* Cabeçalho da Posição: AZUL/BRANCA quando aberta, CINZA CLARO/PRETA quando fechada */}
+                    <button
+                      type="button"
+                      onClick={() => setPosicaoAberta(aberto ? null : grupo.key)}
+                      style={
+                        aberto
+                          ? { backgroundColor: '#2563eb', color: '#ffffff' }
+                          : { backgroundColor: '#f1f5f9', color: '#0f172a' }
+                      }
+                      className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left font-black text-xs sm:text-sm uppercase tracking-wide transition-colors cursor-pointer"
+                    >
+                      <span className="truncate">{qtdTexto}</span>
+                      <ChevronDown
+                        className={`w-5 h-5 shrink-0 transition-transform duration-200 ${
+                          aberto ? 'rotate-180 text-white' : 'text-slate-700'
                         }`}
-                      >
-                        {atleta.fotoUrl ? (
-                          <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
-                        ) : (
-                          <span>{obterIniciaisApelido(atleta)}</span>
-                        )}
+                      />
+                    </button>
+
+                    {/* Lista vertical de atletas da posição aberta (um embaixo do outro) */}
+                    {aberto && (
+                      <div className="p-3 bg-white dark:bg-slate-900 flex flex-col gap-2.5">
+                        {grupo.atletas.map((atleta) => {
+                          const escalado = escalacaoMap[atleta.id];
+                          const ehTitular = escalado ? escalado.titular : false;
+                          const ehReserva = escalado ? !escalado.titular : false;
+                          const slotAtual = escalado?.posicaoSlot
+                            ? normalizarSlotId(escalado.posicaoSlot)
+                            : null;
+                          const ehOutraCategoria = atleta.categoria !== categoriaDoJogo;
+                          const grupoAtribuicao =
+                            grupo.key === 'TODOS'
+                              ? mapearPosicaoParaGrupo(atleta.posicao)
+                              : grupo.key;
+
+                          return (
+                            <div
+                              key={atleta.id}
+                              className={`rounded-2xl p-3 sm:p-3.5 transition-all border flex items-center justify-between gap-2.5 ${
+                                ehTitular
+                                  ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-500 shadow-2xs'
+                                  : ehReserva
+                                  ? 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-400 shadow-2xs'
+                                  : 'bg-slate-50/70 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div
+                                  className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl shrink-0 overflow-hidden flex items-center justify-center font-black text-xs sm:text-sm border ${
+                                    ehTitular
+                                      ? 'bg-blue-600 text-white border-blue-700'
+                                      : ehReserva
+                                      ? 'bg-amber-500 text-white border-amber-600'
+                                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                  }`}
+                                >
+                                  {atleta.fotoUrl ? (
+                                    <img
+                                      src={atleta.fotoUrl}
+                                      alt={atleta.nome}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <span>{obterIniciaisApelido(atleta)}</span>
+                                  )}
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <h4 className="text-[15px] sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight leading-snug truncate">
+                                      {atleta.apelido || atleta.nome.split(' ')[0]}
+                                    </h4>
+                                    {ehOutraCategoria && (
+                                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
+                                        {atleta.categoria}
+                                      </span>
+                                    )}
+                                    {ehTitular && slotAtual && (
+                                      <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-blue-600 text-white shadow-2xs shrink-0">
+                                        {slotAtual}
+                                      </span>
+                                    )}
+                                    {ehReserva && (
+                                      <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-500 text-white shadow-2xs shrink-0">
+                                        Banco
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
+                                    Posição:{' '}
+                                    <strong className="text-slate-900 dark:text-slate-100 font-bold">
+                                      {atleta.posicao}
+                                    </strong>{' '}
+                                    · Pé:{' '}
+                                    <span className="font-semibold">
+                                      {formatarPe(atleta.pernaDominante)}
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleTitular(atleta, grupoAtribuicao)}
+                                  className={`px-2.5 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
+                                    ehTitular
+                                      ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700 shadow-sm'
+                                      : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
+                                  }`}
+                                >
+                                  {ehTitular && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                                  <span>Titular</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleReserva(atleta)}
+                                  className={`px-2.5 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
+                                    ehReserva
+                                      ? 'bg-amber-500 hover:bg-amber-600 text-white border-2 border-amber-600 shadow-sm'
+                                      : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
+                                  }`}
+                                >
+                                  {ehReserva && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                                  <span>Reserva</span>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="text-[16px] sm:text-[17px] font-bold text-slate-900 dark:text-white uppercase tracking-tight leading-snug truncate">
-                            {atleta.apelido || atleta.nome.split(' ')[0]}
-                          </h4>
-                          {ehOutraCategoria && (
-                            <span className="text-[10px] sm:text-[11px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
-                              {atleta.categoria}
-                            </span>
-                          )}
-                          {ehTitular && slotAtual && (
-                            <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-blue-600 text-white shadow-2xs shrink-0">
-                              {slotAtual}
-                            </span>
-                          )}
-                          {ehReserva && (
-                            <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-500 text-white shadow-2xs shrink-0">
-                              Banco
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[13px] sm:text-[14px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
-                          Posição: <strong className="text-slate-900 dark:text-slate-100 font-bold">{atleta.posicao}</strong> · Pé: <span className="font-semibold">{formatarPe(atleta.pernaDominante)}</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* DEIXAR SÓ TITULAR / RESERVA DIRETO NO CARD - SEMPRE VISÍVEL (1 CLIQUE JÁ CONVOCA) */}
-                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleTitular(atleta)}
-                        title={
-                          ehTitular
-                            ? 'Clique para desconvocar atleta'
-                            : `Convocar como Titular (${vagaSelecionada !== 'TODOS' ? vagaSelecionada : 'no campinho'})`
-                        }
-                        className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
-                          ehTitular
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700 shadow-sm'
-                            : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
-                        }`}
-                      >
-                        {ehTitular && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
-                        <span>Titular</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleToggleReserva(atleta)}
-                        title={ehReserva ? 'Clique para desconvocar atleta' : 'Convocar como Reserva (Banco)'}
-                        className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
-                          ehReserva
-                            ? 'bg-amber-500 hover:bg-amber-600 text-white border-2 border-amber-600 shadow-sm'
-                            : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
-                        }`}
-                      >
-                        {ehReserva && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
-                        <span>Reserva</span>
-                      </button>
-                    </div>
+                    )}
                   </div>
-                </div>
-              );
-            };
-
-            if (atletasDaCategoria.length === 0 && atletasOutrasCategorias.length === 0) {
-              return (
-                <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-sm text-slate-400">
-                  Nenhum atleta encontrado para os critérios pesquisados.
-                </div>
-              );
-            }
-
-            return (
-              <>
-                {/* 1. Atletas da Categoria Principal do Jogo */}
-                {atletasDaCategoria.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {atletasDaCategoria.map(renderCardAtleta)}
-                  </div>
-                ) : (
-                  <div className="p-4 text-center bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400">
-                    Nenhum atleta da categoria {categoriaDoJogo} encontrado com o filtro atual.
-                  </div>
-                )}
-
-                {/* 2. Seção OUTRAS CATEGORIAS - PODE CONVOCAR (Apenas categorias inferiores!) */}
-                {atletasOutrasCategorias.length > 0 && (
-                  <div className="pt-3 border-t-2 border-dashed border-slate-200 dark:border-slate-800 space-y-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-950/70 px-3 py-1.5 rounded-xl border border-amber-300/80 shadow-2xs">
-                        OUTRAS CATEGORIAS - PODE CONVOCAR
-                      </span>
-                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                        ({atletasOutrasCategorias.length} atletas disponíveis de categorias inferiores)
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {atletasOutrasCategorias.map(renderCardAtleta)}
-                    </div>
-                  </div>
-                )}
-              </>
-            );
-          })()}
+                );
+              })}
+            </div>
+          )}
         </div>
       ) : (
         /* ========================================================= */
