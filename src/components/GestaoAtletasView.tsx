@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
   Users,
   UserPlus,
@@ -27,7 +27,12 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { compartilharDocumentoPdf } from '../utils/pdfShareUtils';
+import {
+  compartilharArquivoPdfPronto,
+  compartilharDocumentoPdf,
+  MENSAGEM_SEM_SUPORTE_SHARE,
+  navegadorSuportaCompartilharArquivoPdf,
+} from '../utils/pdfShareUtils';
 import {
   Atleta,
   AvaliacaoJogo,
@@ -55,6 +60,7 @@ interface AtletaPreviaLote {
   tempId: string;
   nome: string;
   apelido: string;
+  documento: string;
   categoria: string;
   posicao: PosicaoAtleta;
   pernaDominante: PernaDominante;
@@ -165,6 +171,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
   // 5. ESTADO DO CADASTRO UNITÁRIO
   const [formNome, setFormNome] = useState('');
   const [formApelido, setFormApelido] = useState('');
+  const [formDocumento, setFormDocumento] = useState('');
   const [formCategoria, setFormCategoria] = useState<CategoriaBase>('SUB-15');
   const [formPosicao, setFormPosicao] = useState<PosicaoAtleta>('Meio-Campista');
   const [formPerna, setFormPerna] = useState<PernaDominante>('Destro');
@@ -185,6 +192,17 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
   const [documentoImpressao, setDocumentoImpressao] = useState<DadosDocumentoImpressao | null>(null);
   const documentoRef = useRef<HTMLDivElement | null>(null);
   const [compartilhando, setCompartilhando] = useState(false);
+  const [erroShareDoc, setErroShareDoc] = useState<string | null>(null);
+  const [arquivoProntoDoc, setArquivoProntoDoc] = useState<{
+    file: File;
+    titulo: string;
+    texto: string;
+  } | null>(null);
+
+  useEffect(() => {
+    setErroShareDoc(null);
+    setArquivoProntoDoc(null);
+  }, [documentoImpressao]);
 
   // 8. ESTADO DE EDIÇÃO INLINE DO ATLETA (na aba Editar Dados do card expandido)
   const [dadosEdicao, setDadosEdicao] = useState<Record<string, Atleta>>({});
@@ -282,6 +300,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
       id: '',
       nome: formNome.trim(),
       apelido: formApelido.trim() || undefined,
+      documento: formDocumento.trim() || undefined,
       categoria: formCategoria,
       posicao: formPosicao,
       pernaDominante: formPerna,
@@ -300,6 +319,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
       // Limpa formulário para o próximo
       setFormNome('');
       setFormApelido('');
+      setFormDocumento('');
       setFormAltura('');
       setFormPeso('');
       setFormFotoUrl('');
@@ -313,8 +333,9 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
   const handleBaixarModelo = () => {
     const wsData = [
       [
-        'Nome',
+        'Nome Completo',
         'Apelido',
+        'Identidade / RG / CPF',
         'Categoria',
         'Posição',
         'Pé Dominante',
@@ -325,6 +346,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
       [
         'João Pedro Santos',
         'Jota',
+        '12.345.678-9',
         'SUB-15',
         'Goleiro',
         'Destro',
@@ -335,6 +357,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
       [
         'Cauã Ferreira Lima',
         'Cauã',
+        '23.456.789-0',
         'SUB-15',
         'Lateral Esquerdo',
         'Canhoto',
@@ -345,6 +368,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
       [
         'Bryan Alencar Costa',
         'Bryan',
+        '34.567.890-1',
         'SUB-15',
         'Zagueiro',
         'Canhoto',
@@ -355,6 +379,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
       [
         'Felipe Augusto Rocha',
         'Lipe (10)',
+        '45.678.901-2',
         'SUB-16',
         'Meio-Campista',
         'Destro',
@@ -365,6 +390,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
       [
         'Marcos Vinicius Silva',
         'Markito',
+        '56.789.012-3',
         'SUB-15',
         'Volante',
         'Destro',
@@ -409,6 +435,9 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
 
         const idxNome = headers.findIndex((h) => h.includes('nome'));
         const idxApelido = headers.findIndex((h) => h.includes('apelido'));
+        const idxDoc = headers.findIndex(
+          (h) => h.includes('ident') || h.includes('rg') || h.includes('cpf') || h.includes('doc')
+        );
         const idxCat = headers.findIndex((h) => h.includes('cat'));
         const idxPos = headers.findIndex((h) => h.includes('pos'));
         const idxPe = headers.findIndex((h) => h.includes('pe') || h.includes('perna'));
@@ -426,6 +455,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
 
           const nome = String(row[idxNome] || '').trim();
           const apelido = idxApelido >= 0 ? String(row[idxApelido] || '').trim() : '';
+          const documento = idxDoc >= 0 ? String(row[idxDoc] || '').trim() : '';
           const categoriaBruta = idxCat >= 0 ? String(row[idxCat] || '').trim().toUpperCase() : '';
           const posicaoBruta = idxPos >= 0 ? String(row[idxPos] || '').trim() : '';
           const peBruto = idxPe >= 0 ? String(row[idxPe] || '').trim() : '';
@@ -457,6 +487,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
             tempId: `lote-${i}-${Date.now()}-${Math.random()}`,
             nome,
             apelido,
+            documento,
             categoria,
             posicao,
             pernaDominante,
@@ -529,6 +560,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
       id: '',
       nome: item.nome.trim(),
       apelido: item.apelido.trim() || undefined,
+      documento: item.documento.trim() || undefined,
       categoria: item.categoria,
       posicao: item.posicao,
       pernaDominante: item.pernaDominante,
@@ -795,6 +827,27 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
 
   // 5. Compartilhar Documento via Web Share API gerando PDF em memória
   const handleCompartilharDocumento = async () => {
+    setErroShareDoc(null);
+
+    if (arquivoProntoDoc) {
+      const resPronto = await compartilharArquivoPdfPronto(
+        arquivoProntoDoc.file,
+        arquivoProntoDoc.titulo,
+        arquivoProntoDoc.texto
+      );
+      if (resPronto.sucesso) {
+        setArquivoProntoDoc(null);
+        return;
+      }
+      setErroShareDoc(resPronto.erro || MENSAGEM_SEM_SUPORTE_SHARE);
+      return;
+    }
+
+    if (!navegadorSuportaCompartilharArquivoPdf()) {
+      setErroShareDoc(MENSAGEM_SEM_SUPORTE_SHARE);
+      return;
+    }
+
     if (!documentoRef.current || !documentoImpressao) return;
     setCompartilhando(true);
     try {
@@ -804,43 +857,54 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
       const yyyy = dataHoje.getFullYear();
       const dataStr = `${dd}-${mm}-${yyyy}`;
 
+      const limparSlug = (s: string) =>
+        s
+          .trim()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/[^a-zA-Z0-9-_]/g, '');
+
       let nomeArquivo = '';
       if (documentoImpressao.tipo === 'estatistica_categoria') {
-        const cat = documentoImpressao.categoria || 'GERAL';
+        const cat = limparSlug(documentoImpressao.categoria || 'GERAL');
         nomeArquivo = `Relatorio-Estatisticas-${cat}-${dataStr}.pdf`;
       } else if (documentoImpressao.tipo === 'historico_categoria') {
-        const cat = documentoImpressao.categoria || 'GERAL';
+        const cat = limparSlug(documentoImpressao.categoria || 'GERAL');
         nomeArquivo = `Historico-Categoria-${cat}-${dataStr}.pdf`;
       } else if (documentoImpressao.tipo === 'estatistica_atleta') {
-        const apelidoOuNome = (
-          documentoImpressao.atleta?.apelido ||
-          documentoImpressao.atleta?.nome ||
-          'Atleta'
-        )
-          .trim()
-          .replace(/\s+/g, '-');
+        const apelidoOuNome = limparSlug(
+          documentoImpressao.atleta?.apelido || documentoImpressao.atleta?.nome || 'Atleta'
+        );
         nomeArquivo = `Estatistica-${apelidoOuNome}-${dataStr}.pdf`;
       } else if (documentoImpressao.tipo === 'historico_atleta') {
-        const apelidoOuNome = (
-          documentoImpressao.atleta?.apelido ||
-          documentoImpressao.atleta?.nome ||
-          'Atleta'
-        )
-          .trim()
-          .replace(/\s+/g, '-');
+        const apelidoOuNome = limparSlug(
+          documentoImpressao.atleta?.apelido || documentoImpressao.atleta?.nome || 'Atleta'
+        );
         nomeArquivo = `Historico-${apelidoOuNome}-${dataStr}.pdf`;
       } else {
         nomeArquivo = `Documento-MasterSoccer-${dataStr}.pdf`;
       }
 
-      await compartilharDocumentoPdf({
+      const titulo = documentoImpressao.titulo;
+      const texto = `Documento oficial Master Soccer RJ: ${documentoImpressao.titulo}`;
+
+      const res = await compartilharDocumentoPdf({
         elemento: documentoRef.current,
         nomeArquivo,
-        titulo: documentoImpressao.titulo,
-        texto: `Documento oficial Master Soccer RJ: ${documentoImpressao.titulo}`,
+        titulo,
+        texto,
       });
+
+      if (!res.sucesso) {
+        if (res.precisaSegundoToque && res.arquivoPronto) {
+          setArquivoProntoDoc({ file: res.arquivoPronto, titulo, texto });
+        }
+        setErroShareDoc(res.erro || MENSAGEM_SEM_SUPORTE_SHARE);
+      }
     } catch (err: any) {
       console.error('Erro ao compartilhar documento:', err);
+      setErroShareDoc('Não foi possível gerar o PDF do documento.');
     } finally {
       setCompartilhando(false);
     }
@@ -1453,7 +1517,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                               {/* Apelido */}
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                                  Apelido
+                                  Apelido (Campinho / Estratégia)
                                 </label>
                                 <input
                                   type="text"
@@ -1462,6 +1526,25 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                                     setDadosEdicao((prev) => ({
                                       ...prev,
                                       [atleta.id]: { ...dadosEdit, apelido: e.target.value },
+                                    }))
+                                  }
+                                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
+                                />
+                              </div>
+
+                              {/* Identidade / RG / CPF */}
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                                  Identidade / RG / CPF (Súmula)
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="Ex: 12.345.678-9"
+                                  value={dadosEdit.documento ?? dadosEdit.rg ?? ''}
+                                  onChange={(e) =>
+                                    setDadosEdicao((prev) => ({
+                                      ...prev,
+                                      [atleta.id]: { ...dadosEdit, documento: e.target.value },
                                     }))
                                   }
                                   className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
@@ -1730,13 +1813,27 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                   {/* Apelido */}
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Apelido
+                      Apelido (Campinho / Estratégia)
                     </label>
                     <input
                       type="text"
                       placeholder="Ex: Biel"
                       value={formApelido}
                       onChange={(e) => setFormApelido(e.target.value)}
+                      className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    />
+                  </div>
+
+                  {/* Identidade / RG / CPF */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Identidade / RG / CPF (Súmula)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 12.345.678-9"
+                      value={formDocumento}
+                      onChange={(e) => setFormDocumento(e.target.value)}
                       className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
@@ -1938,8 +2035,9 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                       <thead>
                         <tr className="bg-slate-100 dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700">
                           <th className="p-3">Status</th>
-                          <th className="p-3">Nome do Atleta *</th>
+                          <th className="p-3">Nome Completo *</th>
                           <th className="p-3">Apelido</th>
+                          <th className="p-3">Identidade / RG / CPF</th>
                           <th className="p-3">Categoria *</th>
                           <th className="p-3">Posição *</th>
                           <th className="p-3">Pé</th>
@@ -1992,6 +2090,18 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                                   handleAtualizarPreviaLote(item.tempId, 'apelido', e.target.value)
                                 }
                                 className="w-24 px-2 py-1 bg-white dark:bg-slate-900 border rounded text-xs"
+                              />
+                            </td>
+
+                            <td className="p-3">
+                              <input
+                                type="text"
+                                placeholder="RG / CPF"
+                                value={item.documento}
+                                onChange={(e) =>
+                                  handleAtualizarPreviaLote(item.tempId, 'documento', e.target.value)
+                                }
+                                className="w-28 px-2 py-1 bg-white dark:bg-slate-900 border rounded text-xs"
                               />
                             </td>
 
@@ -2162,7 +2272,11 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setDocumentoImpressao(null)}
+                onClick={() => {
+                  setDocumentoImpressao(null);
+                  setErroShareDoc(null);
+                  setArquivoProntoDoc(null);
+                }}
                 className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl"
               >
                 <X className="w-5 h-5" />
@@ -2173,6 +2287,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
             <div
               ref={documentoRef}
               id="printable-document"
+              style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
               className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1 bg-white text-slate-900"
             >
               {/* Cabeçalho Oficial do Documento */}
@@ -2216,11 +2331,33 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
               </div>
             </div>
 
+            {/* Aviso de Compartilhamento (quando navegador não suporta ou precisa de 2º toque) */}
+            {erroShareDoc && (
+              <div className="no-print px-4 py-2.5 bg-amber-50 dark:bg-amber-950/60 border-t border-amber-200 dark:border-amber-800 flex items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200 shrink-0">
+                <div className="flex items-center gap-2 font-bold">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>{erroShareDoc}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setErroShareDoc(null)}
+                  className="p-1 text-amber-700 hover:text-amber-950 dark:text-amber-300 cursor-pointer"
+                  aria-label="Fechar aviso"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {/* Rodapé com Botão Fechar, Compartilhar e Imprimir */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5 bg-slate-50 dark:bg-slate-800/60 flex-wrap">
+            <div className="no-print p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5 bg-slate-50 dark:bg-slate-800/60 flex-wrap">
               <button
                 type="button"
-                onClick={() => setDocumentoImpressao(null)}
+                onClick={() => {
+                  setDocumentoImpressao(null);
+                  setErroShareDoc(null);
+                  setArquivoProntoDoc(null);
+                }}
                 className="px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
               >
                 Fechar
@@ -2237,6 +2374,11 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-white" />
                     <span>Gerando PDF...</span>
+                  </>
+                ) : arquivoProntoDoc ? (
+                  <>
+                    <Share2 className="w-4 h-4 text-white" />
+                    <span>Abrir Compartilhar PDF</span>
                   </>
                 ) : (
                   <>

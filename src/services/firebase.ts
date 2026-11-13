@@ -177,6 +177,9 @@ export const firebaseService = {
     const path = 'athletes';
     const rawData = {
       nome: (atletaData.nome || '').trim(),
+      ...(atletaData.nomeCompleto && atletaData.nomeCompleto.trim()
+        ? { nomeCompleto: atletaData.nomeCompleto.trim() }
+        : {}),
       categoria: atletaData.categoria || 'SUB-15',
       posicao: atletaData.posicao || 'Meio-Campista',
       dataNascimento: atletaData.dataNascimento || '2010-01-01',
@@ -184,6 +187,11 @@ export const firebaseService = {
       status: atletaData.status || 'Ativo',
       dataCadastro: atletaData.dataCadastro || new Date().toISOString().split('T')[0],
       ...(atletaData.apelido && atletaData.apelido.trim() ? { apelido: atletaData.apelido.trim() } : {}),
+      ...(atletaData.documento && atletaData.documento.trim()
+        ? { documento: atletaData.documento.trim() }
+        : atletaData.rg && atletaData.rg.trim()
+        ? { documento: atletaData.rg.trim() }
+        : {}),
       ...(atletaData.altura && !isNaN(Number(atletaData.altura)) ? { altura: Number(atletaData.altura) } : {}),
       ...(atletaData.peso && !isNaN(Number(atletaData.peso)) ? { peso: Number(atletaData.peso) } : {}),
       ...(atletaData.numeroCamisa && !isNaN(Number(atletaData.numeroCamisa))
@@ -340,7 +348,9 @@ export const firebaseService = {
         atletas.push({
           id: docSnap.id,
           nome: d.nome || '',
+          nomeCompleto: d.nomeCompleto || '',
           apelido: d.apelido || '',
+          documento: d.documento || d.rg || '',
           categoria: d.categoria || 'SUB-15',
           posicao: d.posicao || 'Meio-Campista',
           numeroCamisa: d.numeroCamisa || undefined,
@@ -411,7 +421,9 @@ export const firebaseService = {
           atls.push({
             id: docSnap.id,
             nome: d.nome || '',
+            nomeCompleto: d.nomeCompleto || '',
             apelido: d.apelido || '',
+            documento: d.documento || d.rg || '',
             categoria: d.categoria || 'SUB-15',
             posicao: d.posicao || 'Meio-Campista',
             numeroCamisa: d.numeroCamisa || undefined,
@@ -610,6 +622,7 @@ export const firebaseService = {
       realizado: Boolean(jogo.realizado),
       observacoesGerais: jogo.observacoesGerais || '',
       escalacao: jogo.escalacao || {},
+      ...(jogo.formacao ? { formacao: jogo.formacao } : {}),
       criadoEm: jogo.criadoEm || new Date().toISOString(),
       atualizadoEm: new Date().toISOString(),
     });
@@ -659,6 +672,7 @@ export const firebaseService = {
             realizado: Boolean(d.realizado),
             observacoesGerais: d.observacoesGerais || '',
             escalacao: d.escalacao || {},
+            formacao: d.formacao || undefined,
             criadoEm: d.criadoEm || '',
           });
         });

@@ -59,6 +59,37 @@ canvas {
   .no-print {
     display: none !important;
   }
+  body:has(.print-modal-root) #root {
+    display: none !important;
+  }
+  .print-modal-root {
+    position: static !important;
+    inset: auto !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  .print-modal-card {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+  .print-modal-scroll {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 0 !important;
+  }
   .print-page {
     padding: 0 !important;
     margin: 0 !important;

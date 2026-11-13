@@ -12,13 +12,20 @@ import {
   Users,
   Search,
   Trash2,
+  AlertCircle,
+  X,
 } from 'lucide-react';
 import { Atleta, AvaliacaoJogo } from '../types';
 import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
-import { compartilharDocumentoPdf } from '../utils/pdfShareUtils';
+import {
+  compartilharArquivoPdfPronto,
+  compartilharDocumentoPdf,
+  MENSAGEM_SEM_SUPORTE_SHARE,
+  navegadorSuportaCompartilharArquivoPdf,
+} from '../utils/pdfShareUtils';
 
 interface RelatorioIndividualProps {
   atletas: Atleta[];
@@ -79,12 +86,44 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
 
   const relatorioRef = useRef<HTMLDivElement | null>(null);
   const [compartilhando, setCompartilhando] = useState(false);
+  const [erroShare, setErroShare] = useState<string | null>(null);
+  const [arquivoPronto, setArquivoPronto] = useState<{
+    file: File;
+    titulo: string;
+    texto: string;
+  } | null>(null);
+
+  useEffect(() => {
+    setErroShare(null);
+    setArquivoPronto(null);
+  }, [atletaAtivoId, jogoIndexAtivo]);
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleCompartilharFicha = async () => {
+    setErroShare(null);
+
+    if (arquivoPronto) {
+      const resPronto = await compartilharArquivoPdfPronto(
+        arquivoPronto.file,
+        arquivoPronto.titulo,
+        arquivoPronto.texto
+      );
+      if (resPronto.sucesso) {
+        setArquivoPronto(null);
+        return;
+      }
+      setErroShare(resPronto.erro || MENSAGEM_SEM_SUPORTE_SHARE);
+      return;
+    }
+
+    if (!navegadorSuportaCompartilharArquivoPdf()) {
+      setErroShare(MENSAGEM_SEM_SUPORTE_SHARE);
+      return;
+    }
+
     if (!relatorioRef.current || !atletaAtivo) return;
     setCompartilhando(true);
     try {
@@ -95,17 +134,30 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
       const dataStr = `${dd}-${mm}-${yyyy}`;
       const apelidoOuNome = (atletaAtivo.apelido || atletaAtivo.nome || 'Atleta')
         .trim()
-        .replace(/\s+/g, '-');
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/[^a-zA-Z0-9-_]/g, '');
       const nomeArquivo = `Ficha-${apelidoOuNome}-${dataStr}.pdf`;
+      const titulo = `Ficha Técnica: ${atletaAtivo.nome}`;
+      const texto = `Ficha Técnica e Histórico Master Soccer RJ - ${atletaAtivo.nome} (${atletaAtivo.categoria})`;
 
-      await compartilharDocumentoPdf({
+      const res = await compartilharDocumentoPdf({
         elemento: relatorioRef.current,
         nomeArquivo,
-        titulo: `Ficha Técnica: ${atletaAtivo.nome}`,
-        texto: `Ficha Técnica e Histórico Master Soccer RJ - ${atletaAtivo.nome} (${atletaAtivo.categoria})`,
+        titulo,
+        texto,
       });
+
+      if (!res.sucesso) {
+        if (res.precisaSegundoToque && res.arquivoPronto) {
+          setArquivoPronto({ file: res.arquivoPronto, titulo, texto });
+        }
+        setErroShare(res.erro || MENSAGEM_SEM_SUPORTE_SHARE);
+      }
     } catch (err: any) {
       console.error('Erro ao compartilhar ficha:', err);
+      setErroShare('Não foi possível gerar o PDF da ficha.');
     } finally {
       setCompartilhando(false);
     }
@@ -177,7 +229,9 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
             ) : (
               <Share2 className="w-4 h-4 text-white" />
             )}
-            <span className="hidden sm:inline">Compartilhar</span>
+            <span className="hidden sm:inline">
+              {arquivoPronto ? 'Abrir Compartilhar' : 'Compartilhar'}
+            </span>
           </button>
           <button
             type="button"
@@ -189,6 +243,23 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
           </button>
         </div>
       </div>
+
+      {erroShare && (
+        <div className="no-print px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 flex items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200">
+          <div className="flex items-center gap-2 font-bold">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>{erroShare}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setErroShare(null)}
+            className="p-1 text-amber-700 hover:text-amber-950 dark:text-amber-300 cursor-pointer"
+            aria-label="Fechar aviso"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Seletor Rápido de Jogadores (Cards / Carrossel Horizontal) */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 no-print">

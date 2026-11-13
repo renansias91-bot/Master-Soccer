@@ -43,7 +43,15 @@
         "adversario": { "type": "string" },
         "competicao": { "type": "string" },
         "minutosJogados": { "type": "number" },
+        "minutos1Tempo": { "type": "number" },
+        "minutos2Tempo": { "type": "number" },
         "titular": { "type": "boolean" },
+        "posicaoJogo": { "type": "string" },
+        "gols": { "type": "number" },
+        "assistencias": { "type": "number" },
+        "cartoesAmarelos": { "type": "number" },
+        "cartaoVermelho": { "type": "boolean" },
+        "jogoAgendaId": { "type": "string" },
         "resultado": { "type": "string" }
       },
       "required": ["atletaId", "categoria", "notaGeral", "observacoes"]

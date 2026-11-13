@@ -36,6 +36,7 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
 }) => {
   const [nome, setNome] = useState('');
   const [apelido, setApelido] = useState('');
+  const [documento, setDocumento] = useState('');
   const [categoria, setCategoria] = useState<CategoriaBase>(categoriaPadrao);
   const [posicao, setPosicao] = useState<PosicaoAtleta>('Meio-Campista');
   const [dataNascimento, setDataNascimento] = useState('2010-01-01');
@@ -51,6 +52,7 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
     if (atletaEditando) {
       setNome(atletaEditando.nome);
       setApelido(atletaEditando.apelido || '');
+      setDocumento(atletaEditando.documento || atletaEditando.rg || '');
       setCategoria(atletaEditando.categoria);
       setPosicao(atletaEditando.posicao);
       setDataNascimento(atletaEditando.dataNascimento);
@@ -62,6 +64,7 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
     } else {
       setNome('');
       setApelido('');
+      setDocumento('');
       setCategoria(categoriaPadrao);
       setPosicao('Meio-Campista');
       setDataNascimento('2010-01-01');
@@ -98,6 +101,9 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
 
     if (apelido.trim()) {
       atletaSalvo.apelido = apelido.trim();
+    }
+    if (documento.trim()) {
+      atletaSalvo.documento = documento.trim();
     }
     if (altura && !isNaN(Number(altura))) {
       atletaSalvo.altura = Number(altura);
@@ -183,13 +189,27 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
             {/* Apelido */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Apelido de Jogo
+                Apelido de Jogo (Campinho / Estratégia)
               </label>
               <input
                 type="text"
                 value={apelido}
                 onChange={(e) => setApelido(e.target.value)}
                 placeholder="Ex: Biel"
+                className="w-full h-10 px-3.5 py-2 text-sm leading-normal bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Identidade / RG / CPF */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Identidade / RG / CPF (Súmula)
+              </label>
+              <input
+                type="text"
+                value={documento}
+                onChange={(e) => setDocumento(e.target.value)}
+                placeholder="Ex: 12.345.678-9"
                 className="w-full h-10 px-3.5 py-2 text-sm leading-normal bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
