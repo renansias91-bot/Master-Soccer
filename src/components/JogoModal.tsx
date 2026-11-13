@@ -12,8 +12,6 @@ interface JogoModalProps {
   categoriaPadrao?: string;
 }
 
-const COMPETICOES_PADRAO = ['Campeonato', 'Copa', 'Torneio', 'Amistoso'] as const;
-
 const aplicarMascaraData = (valor: string): string => {
   const digitos = valor.replace(/\D/g, '').slice(0, 8);
   if (digitos.length <= 2) return digitos;
@@ -79,13 +77,6 @@ export const JogoModal: React.FC<JogoModalProps> = ({
     ])
   );
 
-  const opcoesCompeticao = Array.from(
-    new Set([
-      ...COMPETICOES_PADRAO,
-      ...(jogoEditando?.tipo?.trim() ? [jogoEditando.tipo.trim()] : []),
-    ])
-  );
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!adversario.trim()) {
@@ -105,7 +96,7 @@ export const JogoModal: React.FC<JogoModalProps> = ({
       return;
     }
     if (!tipo.trim()) {
-      setErro('Por favor, selecione a competição.');
+      setErro('Por favor, informe a competição.');
       return;
     }
 
@@ -304,48 +295,19 @@ export const JogoModal: React.FC<JogoModalProps> = ({
             </div>
           </div>
 
-          {/* Competição (botões simples com ícone memorando 📝, sem dropdown) */}
+          {/* Competição (campo de texto livre, sem opções fixas e sem botão Limpar) */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <span className="text-sm leading-none">📝</span>
-                <span>Competição *</span>
-              </label>
-              <button
-                type="button"
-                onClick={() => setTipo('')}
-                title="Limpar competição"
-                aria-label="Limpar competição"
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold transition cursor-pointer ${
-                  tipo
-                    ? 'text-slate-600 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:text-slate-300'
-                    : 'text-slate-300 dark:text-slate-600 cursor-default'
-                }`}
-              >
-                <X className="w-3 h-3" />
-                <span>Limpar</span>
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {opcoesCompeticao.map((comp) => {
-                const selecionada = tipo === comp;
-                return (
-                  <button
-                    key={comp}
-                    type="button"
-                    onClick={() => setTipo(selecionada ? '' : comp)}
-                    className={`h-10 px-2.5 rounded-lg text-xs font-bold border transition-all cursor-pointer truncate ${
-                      selecionada
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-                    }`}
-                    title={comp}
-                  >
-                    {comp}
-                  </button>
-                );
-              })}
-            </div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
+              <span className="text-sm leading-none">📝</span>
+              <span>Competição *</span>
+            </label>
+            <input
+              type="text"
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value)}
+              placeholder="Ex: Copa do Mundo, Copa Rio de Janeiro, Campeonato, Amistoso..."
+              className="w-full h-10 px-3.5 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+            />
           </div>
 
           {/* Local / Campo */}

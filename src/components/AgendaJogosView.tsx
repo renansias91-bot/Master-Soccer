@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Clock,
-  MapPin,
   Plus,
   Edit,
   Trash2,
@@ -13,7 +12,6 @@ import {
   AlertCircle,
   Shield,
   Search,
-  FileText,
 } from 'lucide-react';
 import {
   Atleta,
@@ -33,7 +31,6 @@ import {
 import { tituloNota } from '../utils/avaliacaoUtils';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
-import { ModalSumulaArbitragem, ModalEstrategiaJogo } from './DocumentosJogoModals';
 
 interface AgendaJogosViewProps {
   jogos: JogoAgenda[];
@@ -126,8 +123,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   const [jogoSelecionadoId, setJogoSelecionadoId] = useState<string | null>(null);
   const [jogoFallbackAberto, setJogoFallbackAberto] = useState<JogoAgenda | null>(null);
   const [modoLeitura, setModoLeitura] = useState<boolean>(false);
-  const [jogoParaEstrategia, setJogoParaEstrategia] = useState<JogoAgenda | null>(null);
-  const [jogoParaSumula, setJogoParaSumula] = useState<JogoAgenda | null>(null);
 
   const jogoSelecionadoParaAvaliar = useMemo(() => {
     if (!jogoSelecionadoId) return null;
@@ -642,27 +637,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               <span>Voltar para Jogos</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setJogoParaEstrategia(jogoSelecionadoParaAvaliar)}
-              style={{ backgroundColor: '#059669', color: '#ffffff' }}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-black text-white rounded-xl shadow-xs hover:opacity-95 transition cursor-pointer"
-              title="Visualizar Estratégia de Jogo e Campinho"
-            >
-              <Shield className="w-3.5 h-3.5 text-white" />
-              <span>Estratégia de Jogo</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setJogoParaSumula(jogoSelecionadoParaAvaliar)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-black text-slate-900 bg-amber-400 hover:bg-amber-300 border border-amber-300 rounded-xl shadow-xs transition cursor-pointer"
-              title="Visualizar e Imprimir Súmula para Arbitragem"
-            >
-              <FileText className="w-3.5 h-3.5 text-slate-950" />
-              <span>Súmula</span>
-            </button>
-
             {modoLeitura ? (
               <button
                 type="button"
@@ -683,22 +657,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             )}
           </div>
 
-          <ModalEstrategiaJogo
-            isOpen={Boolean(jogoParaEstrategia)}
-            onClose={() => setJogoParaEstrategia(null)}
-            jogo={jogoParaEstrategia}
-            atletas={atletas}
-            escalacaoMap={jogoParaEstrategia?.escalacao || {}}
-            formacao={jogoParaEstrategia?.formacao}
-          />
-          <ModalSumulaArbitragem
-            isOpen={Boolean(jogoParaSumula)}
-            onClose={() => setJogoParaSumula(null)}
-            jogo={jogoParaSumula}
-            atletas={atletas}
-            escalacaoMap={jogoParaSumula?.escalacao || {}}
-          />
-
           <div className="flex items-center gap-2">
             {modoLeitura && (
               <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 flex items-center gap-1">
@@ -708,9 +666,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
               {jogoSelecionadoParaAvaliar.categoria}
             </span>
-            <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
-              <span>🏟️</span>
-              <span>{jogoSelecionadoParaAvaliar.tipo}</span>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
+              {jogoSelecionadoParaAvaliar.tipo}
             </span>
           </div>
         </div>
@@ -739,14 +696,11 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   {formatarDataExibicao(jogoSelecionadoParaAvaliar.dataJogo)}
                   {jogoSelecionadoParaAvaliar.hora ? ` às ${jogoSelecionadoParaAvaliar.hora}` : ''}
                 </span>
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                <span>
                   {jogoSelecionadoParaAvaliar.local || 'Local a definir'}
                 </span>
-                <span className="font-bold text-amber-300 inline-flex items-center gap-1">
-                  <span>{jogoSelecionadoParaAvaliar.categoria} ·</span>
-                  <span>🏟️</span>
-                  <span>{jogoSelecionadoParaAvaliar.tipo || 'Competição'}</span>
+                <span className="font-bold text-amber-300">
+                  {jogoSelecionadoParaAvaliar.categoria} · {jogoSelecionadoParaAvaliar.tipo || 'Competição'}
                 </span>
               </div>
             </div>
@@ -1400,7 +1354,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           className="bg-gray-50 dark:bg-slate-850 rounded-2xl border border-slate-300 dark:border-slate-700 p-4 sm:p-5 shadow-xs transition-all flex flex-col justify-between gap-3 group"
         >
           <div className="space-y-2">
-            {/* Topo do card: Categoria à esquerda + selo verde ✅ Jogo Realizado ao lado, e competição com estádio 🏟️ à direita */}
+            {/* Topo do card: Categoria à esquerda + selo verde ✅ Jogo Realizado ao lado, e competição à direita */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
@@ -1411,9 +1365,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <span>Jogo Realizado</span>
                 </span>
               </div>
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shrink-0">
-                <span>🏟️</span>
-                <span>{jogo.tipo}</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shrink-0">
+                {jogo.tipo}
               </span>
             </div>
 
@@ -1429,8 +1382,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                 <span className="font-semibold text-slate-700 dark:text-slate-300">Resultado final</span>
               </div>
               {jogo.local && (
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <div>
                   <span>{jogo.local}</span>
                 </div>
               )}
@@ -1446,11 +1398,11 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             <button
               type="button"
               onClick={() => onExcluirJogo(jogo.id, placarExibicao)}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-900 flex items-center gap-1.5 transition active:scale-98 cursor-pointer"
+              className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition active:scale-98 cursor-pointer"
               title="Excluir este jogo, escalação e avaliações"
+              aria-label="Excluir jogo"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Excluir</span>
+              <Trash2 className="w-4 h-4" />
             </button>
 
             <button
@@ -1466,7 +1418,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       );
     }
 
-    // 2. Jogo Não Realizado / Próximo Jogo (agendinha 🗓️ só aqui + selo competição com estádio 🏟️)
+    // 2. Jogo Não Realizado / Próximo Jogo (agendinha 🗓️ só aqui)
     const dataAmigavel = formatarDataAmigavelJogo(jogo.dataJogo, jogo.hora);
 
     return (
@@ -1476,7 +1428,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs hover:border-blue-500/40 transition-all flex flex-col justify-between gap-3 group"
       >
         <div>
-          {/* Linha 1: selo azul categoria + agendinha 🗓️ Próximo Jogo à esquerda, selo competição com estádio 🏟️ à direita */}
+          {/* Linha 1: selo azul categoria + agendinha 🗓️ Próximo Jogo à esquerda, competição à direita */}
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
@@ -1487,9 +1439,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                 <span>Próximo Jogo</span>
               </span>
             </div>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shrink-0">
-              <span>🏟️</span>
-              <span>{jogo.tipo}</span>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shrink-0">
+              {jogo.tipo}
             </span>
           </div>
 
@@ -1501,22 +1452,21 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           {/* Linha 3 & 4: selo Escalação pendente em laranja, ou Escalação pronta em verde + 0 titulares • 0 reservas */}
           <div className="mt-2.5 space-y-1">{renderStatusEscalacao(jogo)}</div>
 
-          {/* Linha 5: data com agendinha 🗓️ + local */}
+          {/* Linha 5: data com agendinha 🗓️ + texto simples do local (sem ícone) */}
           <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 mt-2.5">
             <div className="flex items-center gap-1.5 font-mono font-semibold">
               <span className="shrink-0">🗓️</span>
               <span>{dataAmigavel}</span>
             </div>
             {jogo.local && (
-              <div className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <div>
                 <span>{jogo.local}</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Linha 6: botões [Editar] [Escalação] [Estratégia de Jogo] [Súmula] [Avaliar >] (+ Excluir) */}
+        {/* Linha 6: apenas [Editar] [Escalação] [Lixeira] [Avaliar >] */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
           <div className="flex flex-wrap items-center gap-1.5">
             <button
@@ -1549,30 +1499,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
             <button
               type="button"
-              onClick={() => setJogoParaEstrategia(jogo)}
-              style={{ backgroundColor: '#059669', color: '#ffffff' }}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-white hover:opacity-95 flex items-center gap-1 transition cursor-pointer shadow-2xs"
-              title="Visualizar Estratégia de Jogo (Formação, Titulares, Reservas e Campinho)"
-            >
-              <Shield className="w-3.5 h-3.5 text-white" />
-              <span>Estratégia de Jogo</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setJogoParaSumula(jogo)}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 border border-amber-300 flex items-center gap-1 transition cursor-pointer shadow-2xs"
-              title="Visualizar e Imprimir Súmula Oficial para Arbitragem"
-            >
-              <FileText className="w-3.5 h-3.5 text-slate-950" />
-              <span>Súmula</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => onExcluirJogo(jogo.id, `${jogo.adversario} (${jogo.categoria})`)}
               className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
               title="Excluir este jogo"
+              aria-label="Excluir jogo"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -1659,9 +1589,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
       {/* 3) FILTRO 2 - POR COMPETIÇÃO - EM BOTÕES QUE QUEBRAM DE LINHA (GRID 2 COLUNAS) */}
       <div className="space-y-1.5">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 px-0.5">
-          <span>🏟️</span>
-          <span>Competição</span>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-0.5">
+          Competição
         </span>
         <div className="grid grid-cols-2 gap-2.5">
           {/* Botão [Todas] */}
@@ -1685,13 +1614,13 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                 key={comp.nome}
                 type="button"
                 onClick={() => handleTrocarCompeticaoFiltro(comp.nome)}
-                className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5 break-words leading-tight whitespace-normal min-h-[46px] ${
+                className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[46px] ${
                   ativo
                     ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
                     : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                <span>🏟️ {comp.nome} ({comp.count})</span>
+                <span>{comp.nome} ({comp.count})</span>
               </button>
             );
           })}
@@ -1736,7 +1665,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               return (
                 <div className="flex flex-wrap items-center gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-base leading-none shrink-0">🏟️</span>
                     <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
                       {competicaoFiltro} ({jogosFiltrados.length})
                     </h3>
@@ -1811,22 +1739,6 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         );
       })()}
 
-      {/* Modais Somente Leitura de Estratégia de Jogo e Súmula para Arbitragem */}
-      <ModalEstrategiaJogo
-        isOpen={Boolean(jogoParaEstrategia)}
-        onClose={() => setJogoParaEstrategia(null)}
-        jogo={jogoParaEstrategia}
-        atletas={atletas}
-        escalacaoMap={jogoParaEstrategia?.escalacao || {}}
-        formacao={jogoParaEstrategia?.formacao}
-      />
-      <ModalSumulaArbitragem
-        isOpen={Boolean(jogoParaSumula)}
-        onClose={() => setJogoParaSumula(null)}
-        jogo={jogoParaSumula}
-        atletas={atletas}
-        escalacaoMap={jogoParaSumula?.escalacao || {}}
-      />
     </div>
   );
 };
