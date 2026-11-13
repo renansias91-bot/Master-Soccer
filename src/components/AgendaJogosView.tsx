@@ -1,25 +1,17 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  Calendar,
   Clock,
   MapPin,
-  Trophy,
   Plus,
   Edit,
   Trash2,
   CheckCircle2,
-  Award,
   ChevronDown,
-  ChevronRight,
   ChevronUp,
   ArrowLeft,
   Users,
   AlertCircle,
-  Sliders,
   Shield,
-  Activity,
-  Flame,
-  Info,
   Search,
   FileText,
 } from 'lucide-react';
@@ -716,8 +708,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
               {jogoSelecionadoParaAvaliar.categoria}
             </span>
-            <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
-              {jogoSelecionadoParaAvaliar.tipo}
+            <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
+              <span>🏟️</span>
+              <span>{jogoSelecionadoParaAvaliar.tipo}</span>
             </span>
           </div>
         </div>
@@ -742,7 +735,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               </h2>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-blue-100 mt-1.5 font-medium">
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+                  <span>{jogoSelecionadoParaAvaliar.realizado ? '✅' : '🗓️'}</span>
                   {formatarDataExibicao(jogoSelecionadoParaAvaliar.dataJogo)}
                   {jogoSelecionadoParaAvaliar.hora ? ` às ${jogoSelecionadoParaAvaliar.hora}` : ''}
                 </span>
@@ -750,8 +743,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   <MapPin className="w-3.5 h-3.5 text-amber-300 shrink-0" />
                   {jogoSelecionadoParaAvaliar.local || 'Local a definir'}
                 </span>
-                <span className="font-bold text-amber-300">
-                  {jogoSelecionadoParaAvaliar.categoria} · {jogoSelecionadoParaAvaliar.tipo || 'Campeonato'}
+                <span className="font-bold text-amber-300 inline-flex items-center gap-1">
+                  <span>{jogoSelecionadoParaAvaliar.categoria} ·</span>
+                  <span>🏟️</span>
+                  <span>{jogoSelecionadoParaAvaliar.tipo || 'Competição'}</span>
                 </span>
               </div>
             </div>
@@ -1405,18 +1400,20 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           className="bg-gray-50 dark:bg-slate-850 rounded-2xl border border-slate-300 dark:border-slate-700 p-4 sm:p-5 shadow-xs transition-all flex flex-col justify-between gap-3 group"
         >
           <div className="space-y-2">
-            {/* Topo do card: Categoria à esquerda + selo verde ✓ Jogo Realizado ao lado, e competição à direita */}
+            {/* Topo do card: Categoria à esquerda + selo verde ✅ Jogo Realizado ao lado, e competição com estádio 🏟️ à direita */}
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                   {jogo.categoria}
                 </span>
-                <span className="bg-green-100 text-green-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
-                  <span>✓</span> Jogo Realizado
+                <span className="bg-green-100 text-green-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                  <span>✅</span>
+                  <span>Jogo Realizado</span>
                 </span>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
-                {jogo.tipo}
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shrink-0">
+                <span>🏟️</span>
+                <span>{jogo.tipo}</span>
               </span>
             </div>
 
@@ -1426,7 +1423,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
             <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400 font-medium">
               <div className="flex items-center gap-1.5 font-mono font-semibold">
-                <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span className="shrink-0">✅</span>
                 <span>{dataAmigavel}</span>
                 <span>•</span>
                 <span className="font-semibold text-slate-700 dark:text-slate-300">Resultado final</span>
@@ -1469,7 +1466,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       );
     }
 
-    // 2. Jogo Não Realizado (Linha 1 a Linha 6 completas)
+    // 2. Jogo Não Realizado / Próximo Jogo (agendinha 🗓️ só aqui + selo competição com estádio 🏟️)
     const dataAmigavel = formatarDataAmigavelJogo(jogo.dataJogo, jogo.hora);
 
     return (
@@ -1479,13 +1476,20 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs hover:border-blue-500/40 transition-all flex flex-col justify-between gap-3 group"
       >
         <div>
-          {/* Linha 1: selo azul SUB-15 à esquerda, selo laranja Copa Rio de Janeiro à direita */}
+          {/* Linha 1: selo azul categoria + agendinha 🗓️ Próximo Jogo à esquerda, selo competição com estádio 🏟️ à direita */}
           <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-              {jogo.categoria}
-            </span>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
-              {jogo.tipo}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                {jogo.categoria}
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 inline-flex items-center gap-1">
+                <span>🗓️</span>
+                <span>Próximo Jogo</span>
+              </span>
+            </div>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shrink-0">
+              <span>🏟️</span>
+              <span>{jogo.tipo}</span>
             </span>
           </div>
 
@@ -1497,10 +1501,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           {/* Linha 3 & 4: selo Escalação pendente em laranja, ou Escalação pronta em verde + 0 titulares • 0 reservas */}
           <div className="mt-2.5 space-y-1">{renderStatusEscalacao(jogo)}</div>
 
-          {/* Linha 5: data 06/11/2026 às 14:30 + local Campo do Batatal - Magé */}
+          {/* Linha 5: data com agendinha 🗓️ + local */}
           <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 mt-2.5">
             <div className="flex items-center gap-1.5 font-mono font-semibold">
-              <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="shrink-0">🗓️</span>
               <span>{dataAmigavel}</span>
             </div>
             {jogo.local && (
@@ -1655,8 +1659,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
       {/* 3) FILTRO 2 - POR COMPETIÇÃO - EM BOTÕES QUE QUEBRAM DE LINHA (GRID 2 COLUNAS) */}
       <div className="space-y-1.5">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-0.5">
-          Competição
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 px-0.5">
+          <span>🏟️</span>
+          <span>Competição</span>
         </span>
         <div className="grid grid-cols-2 gap-2.5">
           {/* Botão [Todas] */}
@@ -1680,13 +1685,13 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                 key={comp.nome}
                 type="button"
                 onClick={() => handleTrocarCompeticaoFiltro(comp.nome)}
-                className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[46px] ${
+                className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs flex items-center justify-center gap-1.5 break-words leading-tight whitespace-normal min-h-[46px] ${
                   ativo
                     ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
                     : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                <span>{comp.nome} ({comp.count})</span>
+                <span>🏟️ {comp.nome} ({comp.count})</span>
               </button>
             );
           })}
@@ -1714,42 +1719,24 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         )}
       </div>
 
-      {/* 5) LISTA DE JOGOS: LISTA CORRIDA QUANDO [TODAS] (SEM TÍTULO DE SEÇÃO), OU SEÇÃO DA COMPETIÇÃO QUANDO ESPECÍFICA */}
-      {competicaoFiltro === 'TODAS' ? (
-        jogosFiltrados.length === 0 ? (
-          <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-xs">
-            {buscaAdversario
-              ? `Nenhum jogo encontrado para "${buscaAdversario}".`
-              : 'Nenhum jogo cadastrado neste filtro. Clique em "+ Novo Jogo" para adicionar.'}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-            {jogosFiltrados.map((jogo) => renderCardJogo(jogo))}
-          </div>
-        )
-      ) : (
-        /* Visualização quando uma competição específica está selecionada (com título de seção) */
-        jogosFiltrados.length === 0 ? (
-          <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-xs">
-            {buscaAdversario
-              ? `Nenhum jogo encontrado para "${buscaAdversario}" em ${competicaoFiltro}.`
-              : `Nenhum jogo cadastrado na competição ${competicaoFiltro}.`}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {/* Título de seção: COPA RIO DE JANEIRO (3) • 2 com escalação pendente */}
-            {(() => {
-              const pendentes = jogosFiltrados.filter((j) => {
-                if (j.realizado) return false;
+      {/* 5) LISTA DE JOGOS SEPARADA EM PRÓXIMOS JOGOS (🗓️) E JOGOS QUE JÁ ACONTECERAM (✅) */}
+      {(() => {
+        const proximosJogosFiltrados = jogosFiltrados.filter((j) => !j.realizado);
+        const jogosRealizadosFiltrados = jogosFiltrados.filter((j) => Boolean(j.realizado));
+
+        const cabecalhoCompeticao =
+          competicaoFiltro !== 'TODAS' ? (
+            (() => {
+              const pendentes = proximosJogosFiltrados.filter((j) => {
                 const escalacao = j.escalacao || {};
                 const titulares = Object.values(escalacao).filter((e) => e.titular).length;
                 return titulares < 11;
               }).length;
 
               return (
-                <div className="flex flex-wrap items-center gap-2 pb-1 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex flex-wrap items-center gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
                   <div className="flex items-center gap-1.5">
-                    <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span className="text-base leading-none shrink-0">🏟️</span>
                     <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
                       {competicaoFiltro} ({jogosFiltrados.length})
                     </h3>
@@ -1761,24 +1748,68 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                       </span>
                     ) : (
                       <span className="text-amber-600 dark:text-amber-400 font-extrabold">
-                        • {pendentes}{' '}
-                        {pendentes === 1
-                          ? 'com escalação pendente'
-                          : 'com escalação pendente'}
+                        • {pendentes} com escalação pendente
                       </span>
                     )}
                   </div>
                 </div>
               );
-            })()}
+            })()
+          ) : null;
 
-            {/* Cards da competição selecionada */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {jogosFiltrados.map((jogo) => renderCardJogo(jogo))}
+        if (jogosFiltrados.length === 0) {
+          return (
+            <div className="space-y-3">
+              {cabecalhoCompeticao}
+              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-xs">
+                {buscaAdversario
+                  ? `Nenhum jogo encontrado para "${buscaAdversario}"${
+                      competicaoFiltro !== 'TODAS' ? ` em ${competicaoFiltro}` : ''
+                    }.`
+                  : competicaoFiltro !== 'TODAS'
+                  ? `Nenhum jogo cadastrado na competição ${competicaoFiltro}.`
+                  : 'Nenhum jogo cadastrado neste filtro. Clique em "+ Novo Jogo" para adicionar.'}
+              </div>
             </div>
+          );
+        }
+
+        return (
+          <div className="space-y-6">
+            {cabecalhoCompeticao}
+
+            {/* Seção 1: PRÓXIMOS JOGOS — ícone agendinha 🗓️ */}
+            {proximosJogosFiltrados.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2 px-0.5">
+                  <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <span className="text-base leading-none">🗓️</span>
+                    <span>PRÓXIMOS JOGOS ({proximosJogosFiltrados.length})</span>
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {proximosJogosFiltrados.map((jogo) => renderCardJogo(jogo))}
+                </div>
+              </div>
+            )}
+
+            {/* Seção 2: JOGOS QUE JÁ ACONTECERAM — selo check ✅ */}
+            {jogosRealizadosFiltrados.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2 px-0.5">
+                  <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <span className="text-base leading-none">✅</span>
+                    <span>JOGOS QUE JÁ ACONTECERAM ({jogosRealizadosFiltrados.length})</span>
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  {jogosRealizadosFiltrados.map((jogo) => renderCardJogo(jogo))}
+                </div>
+              </div>
+            )}
           </div>
-        )
-      )}
+        );
+      })()}
 
       {/* Modais Somente Leitura de Estratégia de Jogo e Súmula para Arbitragem */}
       <ModalEstrategiaJogo
