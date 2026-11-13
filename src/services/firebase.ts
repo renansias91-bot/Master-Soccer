@@ -20,6 +20,7 @@ import {
 import { getAuth } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Atleta, AvaliacaoJogo, ItemCompeticaoTaxa, RegistroFinanceiroAtleta, JogoAgenda, TesteFisicoAtleta } from '../types';
+import { normalizarCompeticao, normalizarRegistroFinanceiro } from './storage';
 
 export enum OperationType {
   CREATE = 'create',
@@ -102,7 +103,15 @@ export function cleanFirestoreData<T extends Record<string, any>>(obj: T): Recor
   const cleaned: Record<string, any> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined && value !== null) {
-      if (typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+      if (Array.isArray(value)) {
+        cleaned[key] = value
+          .filter((item) => item !== undefined && item !== null)
+          .map((item) =>
+            typeof item === 'object' && !Array.isArray(item) && !(item instanceof Date)
+              ? cleanFirestoreData(item)
+              : item
+          );
+      } else if (typeof value === 'object' && !(value instanceof Date)) {
         cleaned[key] = cleanFirestoreData(value);
       } else {
         cleaned[key] = value;
@@ -516,20 +525,23 @@ export const firebaseService = {
 
   // Salvar ou atualizar competição / taxa no Firestore
   async salvarCompeticao(comp: ItemCompeticaoTaxa): Promise<void> {
-    const path = `financeiro_competicoes/${comp.id}`;
+    const normalizada = normalizarCompeticao(comp);
+    const path = `financeiro_competicoes/${normalizada.id}`;
     const payload = cleanFirestoreData({
-      id: comp.id,
-      nome: comp.nome,
-      valor: Number(comp.valor) || 0,
-      tipo: comp.tipo || 'competicao',
-      categoria: comp.categoria || 'TODAS',
-      descricao: comp.descricao || '',
-      criadoEm: comp.criadoEm || new Date().toISOString(),
+      id: normalizada.id,
+      nome: normalizada.nome,
+      valor: normalizada.valorInscricao,
+      valorInscricao: normalizada.valorInscricao,
+      valorJogo: normalizada.valorJogo,
+      tipo: normalizada.tipo || 'competicao',
+      categoria: normalizada.categoria || 'TODAS',
+      descricao: normalizada.descricao || '',
+      criadoEm: normalizada.criadoEm || new Date().toISOString(),
       atualizadoEm: new Date().toISOString(),
     });
 
     try {
-      await setDoc(doc(db, 'financeiro_competicoes', comp.id), payload, { merge: true });
+      await setDoc(doc(db, 'financeiro_competicoes', normalizada.id), payload, { merge: true });
     } catch (error) {
       console.error('Erro ao salvar competicao no Firestore:', error);
       handleFirestoreError(error, OperationType.WRITE, path);
@@ -547,7 +559,7 @@ export const firebaseService = {
     }
   },
 
-  // Salvar registro financeiro do atleta (mensalidades pagas e competições pagas)
+  // Salvar registro financeiro do atleta (mensalidades, inscrições e taxas de jogo)
   async salvarRegistroFinanceiroAtleta(registro: RegistroFinanceiroAtleta): Promise<void> {
     const path = `financeiro_atletas/${registro.atletaId}`;
     const payload = cleanFirestoreData({
@@ -555,6 +567,8 @@ export const firebaseService = {
       valorMensalidadePadrao: registro.valorMensalidadePadrao || 150,
       mensalidadesPagas: registro.mensalidadesPagas || [],
       competicoesPagas: registro.competicoesPagas || {},
+      inscricoes: registro.inscricoes || [],
+      taxasJogo: registro.taxasJogo || [],
       atualizadoEm: new Date().toISOString(),
     });
 
@@ -571,22 +585,41 @@ export const firebaseService = {
     onCompeticoes: (comps: ItemCompeticaoTaxa[]) => void,
     onRegistros: (registros: Record<string, RegistroFinanceiroAtleta>) => void
   ): () => void {
+    let ultimasComps: ItemCompeticaoTaxa[] = [];
+
     const unsubCompeticoes = onSnapshot(
       collection(db, 'financeiro_competicoes'),
       (snapshot) => {
         const comps: ItemCompeticaoTaxa[] = [];
         snapshot.forEach((docSnap) => {
           const d = docSnap.data();
-          comps.push({
+          const precisaMigrar = d.valorInscricao === undefined || d.valorJogo === undefined;
+          const normalizada = normalizarCompeticao({
             id: docSnap.id,
             nome: d.nome || '',
-            valor: Number(d.valor) || 0,
+            valor: d.valor !== undefined ? Number(d.valor) : 0,
+            valorInscricao: d.valorInscricao !== undefined ? Number(d.valorInscricao) : undefined,
+            valorJogo: d.valorJogo !== undefined ? Number(d.valorJogo) : undefined,
             tipo: d.tipo || 'competicao',
             categoria: d.categoria || 'TODAS',
             descricao: d.descricao || '',
             criadoEm: d.criadoEm || '',
           });
+          comps.push(normalizada);
+
+          if (precisaMigrar) {
+            setDoc(
+              doc(db, 'financeiro_competicoes', docSnap.id),
+              cleanFirestoreData({
+                valorInscricao: normalizada.valorInscricao,
+                valorJogo: normalizada.valorJogo,
+                atualizadoEm: new Date().toISOString(),
+              }),
+              { merge: true }
+            ).catch(() => {});
+          }
         });
+        ultimasComps = comps;
         if (comps.length > 0) {
           onCompeticoes(comps);
         }
@@ -602,13 +635,17 @@ export const firebaseService = {
         const registros: Record<string, RegistroFinanceiroAtleta> = {};
         snapshot.forEach((docSnap) => {
           const d = docSnap.data();
-          registros[docSnap.id] = {
+          const bruto: RegistroFinanceiroAtleta = {
             atletaId: docSnap.id,
             valorMensalidadePadrao: Number(d.valorMensalidadePadrao) || 150,
             mensalidadesPagas: Array.isArray(d.mensalidadesPagas) ? d.mensalidadesPagas : [],
-            competicoesPagas: d.competicoesPagas && typeof d.competicoesPagas === 'object' ? d.competicoesPagas : {},
+            competicoesPagas:
+              d.competicoesPagas && typeof d.competicoesPagas === 'object' ? d.competicoesPagas : {},
+            inscricoes: Array.isArray(d.inscricoes) ? d.inscricoes : undefined,
+            taxasJogo: Array.isArray(d.taxasJogo) ? d.taxasJogo : undefined,
             atualizadoEm: d.atualizadoEm || '',
           };
+          registros[docSnap.id] = normalizarRegistroFinanceiro(bruto, ultimasComps);
         });
         onRegistros(registros);
       },

@@ -214,18 +214,46 @@ export const MESES_DO_ANO: { id: MesAno; label: string; nomeCompleto: string }[]
 export interface ItemCompeticaoTaxa {
   id: string;
   nome: string;
-  valor: number; // ex: 150.00
+  valor?: number; // mantido para compatibilidade retroativa
+  valorInscricao: number; // Taxa de Inscrição (única por competição)
+  valorJogo: number; // Taxa de Jogo (por jogo)
   tipo: 'competicao' | 'taxa_jogo';
   categoria?: string; // SUB-15, SUB-16, SUB-17 ou 'TODAS'
   descricao?: string;
   criadoEm?: string;
 }
 
+export interface DebitoInscricaoAtleta {
+  id: string;
+  competicaoId?: string;
+  competicaoNome: string;
+  valor: number; // valor congelado na geração do débito
+  pago: boolean;
+  jogoOrigemId?: string;
+  criadoEm: string;
+  pagoEm?: string;
+}
+
+export interface DebitoTaxaJogoAtleta {
+  id: string;
+  jogoId: string;
+  competicaoId?: string;
+  competicaoNome: string;
+  dataJogo: string;
+  adversario: string;
+  valor: number; // valor congelado na geração do débito
+  pago: boolean;
+  criadoEm: string;
+  pagoEm?: string;
+}
+
 export interface RegistroFinanceiroAtleta {
   atletaId: string;
   valorMensalidadePadrao?: number; // padrão ex: 150
   mensalidadesPagas: MesAno[]; // Meses pagos ex: ['JAN', 'FEV']
-  competicoesPagas: Record<string, boolean>; // idDaCompeticao -> true (pago) / false (não pago)
+  competicoesPagas: Record<string, boolean>; // legado / compatibilidade
+  inscricoes?: DebitoInscricaoAtleta[]; // 1 por competição (ao escalar pela 1ª vez)
+  taxasJogo?: DebitoTaxaJogoAtleta[]; // 1 por jogo (ao escalar + avaliar)
   atualizadoEm?: string;
 }
 

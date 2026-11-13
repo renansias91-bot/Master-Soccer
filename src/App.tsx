@@ -4,7 +4,6 @@ import {
   Users,
   Award,
   Calendar,
-  Plus,
   Download,
   Upload,
   RotateCcw,
@@ -14,7 +13,6 @@ import {
   Settings,
   Smartphone,
   DollarSign,
-  FileText,
   Activity,
   Trophy,
   ChevronRight,
@@ -24,12 +22,21 @@ import {
   Atleta,
   AvaliacaoJogo,
   ItemCompeticaoTaxa,
+  DebitoInscricaoAtleta,
+  DebitoTaxaJogoAtleta,
   RegistroFinanceiroAtleta,
   JogoAgenda,
   TesteFisicoAtleta,
 } from './types';
-import { storageService, CATEGORIAS_PADRAO } from './services/storage';
+import {
+  storageService,
+  CATEGORIAS_PADRAO,
+  normalizarNomeCompeticao,
+  encontrarCompeticaoFinanceiro,
+  normalizarRegistroFinanceiro,
+} from './services/storage';
 import { firebaseService } from './services/firebase';
+import { formatarDataExibicao } from './utils/dateUtils';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { PainelGeral } from './components/PainelGeral';
@@ -185,8 +192,11 @@ export default function App() {
         }
       },
       (novosRegistros) => {
-        setRegistrosFinanceiros(novosRegistros);
-        storageService.salvarRegistrosFinanceiros(novosRegistros);
+        setRegistrosFinanceiros((prev) => {
+          const merged = { ...prev, ...novosRegistros };
+          storageService.salvarRegistrosFinanceiros(merged);
+          return merged;
+        });
       }
     );
 
@@ -557,6 +567,110 @@ export default function App() {
     }
   };
 
+  // Helper: Garante que a competição digitada no Jogo exista no Financeiro (cria com R$ 0,00 / R$ 0,00 se for nova)
+  const garantirCompeticaoNoFinanceiro = async (
+    nomeCompeticao: string,
+    categoriaJogo?: string
+  ): Promise<ItemCompeticaoTaxa | null> => {
+    const nomeLimpo = (nomeCompeticao || '').trim();
+    if (!nomeLimpo) return null;
+
+    const compsAtuais = storageService.getCompeticoes();
+    const existente = encontrarCompeticaoFinanceiro(compsAtuais, nomeLimpo, categoriaJogo);
+    if (existente) return existente;
+
+    const novaComp: ItemCompeticaoTaxa = {
+      id: `comp-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      nome: nomeLimpo,
+      valor: 0,
+      valorInscricao: 0,
+      valorJogo: 0,
+      tipo: 'competicao',
+      categoria: categoriaJogo || 'TODAS',
+      criadoEm: new Date().toISOString(),
+    };
+
+    storageService.salvarCompeticao(novaComp);
+    setCompeticoes(storageService.getCompeticoes());
+    firebaseService.salvarCompeticao(novaComp).catch((err) => {
+      console.warn('Competição criada localmente (offline):', err);
+    });
+
+    return novaComp;
+  };
+
+  // Helper: Salva registro financeiro de um atleta local + estado + nuvem
+  const persistirRegistroFinanceiroAtleta = (reg: RegistroFinanceiroAtleta) => {
+    const atualizado: RegistroFinanceiroAtleta = {
+      ...reg,
+      atualizadoEm: new Date().toISOString(),
+    };
+    storageService.salvarRegistroFinanceiroAtleta(atualizado);
+    setRegistrosFinanceiros((prev) => ({
+      ...prev,
+      [atualizado.atletaId]: atualizado,
+    }));
+    firebaseService.salvarRegistroFinanceiroAtleta(atualizado).catch((err) => {
+      console.warn('Registro financeiro salvo localmente (offline):', err);
+    });
+  };
+
+  // Helper: Limpa débitos pendentes (não pagos) vinculados a jogo/avaliação removidos
+  const limparDebitosPendentesDeJogo = (
+    jogoId: string,
+    atletaIdsAlvo?: string[],
+    removerTaxaJogo = true,
+    removerInscricaoOrfa = true,
+    jogosRestantes?: JogoAgenda[]
+  ) => {
+    const compsAtuais = storageService.getCompeticoes();
+    const todosRegistros = storageService.getRegistrosFinanceiros();
+    const jogosBase = jogosRestantes || storageService.getJogosAgenda();
+
+    const ids = atletaIdsAlvo || Object.keys(todosRegistros);
+    for (const atlId of ids) {
+      const regBruto = todosRegistros[atlId];
+      if (!regBruto) continue;
+      const reg = normalizarRegistroFinanceiro(regBruto, compsAtuais);
+      let mudou = false;
+
+      if (removerTaxaJogo && reg.taxasJogo && reg.taxasJogo.length > 0) {
+        const filtradas = reg.taxasJogo.filter((t) => !(t.jogoId === jogoId && !t.pago));
+        if (filtradas.length !== reg.taxasJogo.length) {
+          reg.taxasJogo = filtradas;
+          mudou = true;
+        }
+      }
+
+      if (removerInscricaoOrfa && reg.inscricoes && reg.inscricoes.length > 0) {
+        const novasInscricoes: DebitoInscricaoAtleta[] = [];
+        for (const insc of reg.inscricoes) {
+          if (insc.jogoOrigemId === jogoId && !insc.pago) {
+            const outroJogoEscalado = jogosBase.find(
+              (j) =>
+                j.id !== jogoId &&
+                normalizarNomeCompeticao(j.tipo) === normalizarNomeCompeticao(insc.competicaoNome) &&
+                Boolean(j.escalacao?.[atlId])
+            );
+            if (outroJogoEscalado) {
+              novasInscricoes.push({ ...insc, jogoOrigemId: outroJogoEscalado.id });
+              mudou = true;
+            } else {
+              mudou = true; // Remove inscrição pendente órfã pois não está mais escalado na competição
+            }
+          } else {
+            novasInscricoes.push(insc);
+          }
+        }
+        reg.inscricoes = novasInscricoes;
+      }
+
+      if (mudou) {
+        persistirRegistroFinanceiroAtleta(reg);
+      }
+    }
+  };
+
   // Handlers para Avaliações
   const handleSalvarAvaliacao = async (avaliacao: AvaliacaoJogo) => {
     storageService.salvarAvaliacao(avaliacao);
@@ -564,6 +678,81 @@ export default function App() {
 
     const atleta = atletas.find((a) => a.id === atletaIdValido(avaliacao.atletaId));
     const nomeAtleta = atleta ? atleta.nome : '';
+
+    // REGRA TAXA DE JOGO + INSCRIÇÃO: só gera se o atleta foi ESCALADO + AVALIADO no jogo
+    const jogosAtuais = storageService.getJogosAgenda();
+    const advAvNorm = (avaliacao.adversario || '').replace(/^vs\s+/i, '').trim().toLowerCase();
+    const dataAvNorm = formatarDataExibicao(avaliacao.dataJogo);
+
+    const jogoVinculado =
+      (avaliacao.jogoAgendaId
+        ? jogosAtuais.find((j) => j.id === avaliacao.jogoAgendaId)
+        : undefined) ||
+      jogosAtuais.find((j) => {
+        const advJogoNorm = (j.adversario || '').replace(/^vs\s+/i, '').trim().toLowerCase();
+        return (
+          advJogoNorm === advAvNorm &&
+          j.categoria === avaliacao.categoria &&
+          formatarDataExibicao(j.dataJogo) === dataAvNorm
+        );
+      });
+
+    if (jogoVinculado && jogoVinculado.escalacao && jogoVinculado.escalacao[avaliacao.atletaId]) {
+      const comp = await garantirCompeticaoNoFinanceiro(
+        jogoVinculado.tipo || avaliacao.competicao,
+        jogoVinculado.categoria
+      );
+      if (comp) {
+        const compsAtuais = storageService.getCompeticoes();
+        const bruto =
+          registrosFinanceiros[avaliacao.atletaId] ||
+          storageService.getRegistroFinanceiroAtleta(avaliacao.atletaId);
+        const reg = normalizarRegistroFinanceiro(bruto, compsAtuais);
+        let mudouFinanceiro = false;
+
+        // Garante Inscrição única se ainda não tiver
+        const jaTemInscricao = (reg.inscricoes || []).some(
+          (i) =>
+            i.competicaoId === comp.id ||
+            normalizarNomeCompeticao(i.competicaoNome) === normalizarNomeCompeticao(comp.nome)
+        );
+        if (!jaTemInscricao) {
+          const novaInsc: DebitoInscricaoAtleta = {
+            id: `insc-${comp.id}`,
+            competicaoId: comp.id,
+            competicaoNome: comp.nome,
+            valor: Number(comp.valorInscricao) || 0,
+            pago: false,
+            jogoOrigemId: jogoVinculado.id,
+            criadoEm: new Date().toISOString(),
+          };
+          reg.inscricoes = [...(reg.inscricoes || []), novaInsc];
+          mudouFinanceiro = true;
+        }
+
+        // Gera Taxa de Jogo para este jogo específico (se ainda não foi gerada)
+        const jaTemTaxaJogo = (reg.taxasJogo || []).some((t) => t.jogoId === jogoVinculado.id);
+        if (!jaTemTaxaJogo) {
+          const novaTaxa: DebitoTaxaJogoAtleta = {
+            id: `taxajogo-${jogoVinculado.id}`,
+            jogoId: jogoVinculado.id,
+            competicaoId: comp.id,
+            competicaoNome: comp.nome,
+            dataJogo: formatarDataExibicao(jogoVinculado.dataJogo),
+            adversario: jogoVinculado.adversario,
+            valor: Number(comp.valorJogo) || 0,
+            pago: false,
+            criadoEm: new Date().toISOString(),
+          };
+          reg.taxasJogo = [...(reg.taxasJogo || []), novaTaxa];
+          mudouFinanceiro = true;
+        }
+
+        if (mudouFinanceiro) {
+          persistirRegistroFinanceiroAtleta(reg);
+        }
+      }
+    }
 
     try {
       await firebaseService.salvarAvaliacao(avaliacao, nomeAtleta);
@@ -590,23 +779,76 @@ export default function App() {
   };
 
   const handleExcluirAvaliacaoDireto = async (id: string) => {
+    const avAlvo = avaliacoes.find((a) => a.id === id);
     try {
       await firebaseService.excluirAvaliacao(id);
       storageService.excluirAvaliacao(id);
       setAvaliacoes(storageService.getAvaliacoes());
+      if (avAlvo?.jogoAgendaId) {
+        limparDebitosPendentesDeJogo(avAlvo.jogoAgendaId, [avAlvo.atletaId], true, false);
+      }
       exibirToast('Avaliação apagada com sucesso.');
     } catch (e: any) {
       console.error('Erro ao excluir avaliação:', e);
       storageService.excluirAvaliacao(id);
       setAvaliacoes(storageService.getAvaliacoes());
+      if (avAlvo?.jogoAgendaId) {
+        limparDebitosPendentesDeJogo(avAlvo.jogoAgendaId, [avAlvo.atletaId], true, false);
+      }
       exibirToast('Avaliação apagada localmente.');
     }
   };
 
   // Handlers para Jogos da Agenda
   const handleSalvarJogo = async (jogo: JogoAgenda) => {
+    // 1. Garante criação automática da competição no Financeiro caso seja um nome novo
+    const comp = await garantirCompeticaoNoFinanceiro(jogo.tipo, jogo.categoria);
+
+    // 2. Salva o jogo na agenda
     storageService.salvarJogoAgenda(jogo);
-    setJogos(storageService.getJogosAgenda());
+    const jogosAtualizados = storageService.getJogosAgenda();
+    setJogos(jogosAtualizados);
+
+    // 3. Gera Taxa de Inscrição única para atletas escalados pela 1ª vez nesta competição
+    const escaladosIds = Object.keys(jogo.escalacao || {});
+    const compsAtuais = storageService.getCompeticoes();
+
+    if (comp && escaladosIds.length > 0) {
+      for (const atlId of escaladosIds) {
+        const bruto =
+          registrosFinanceiros[atlId] || storageService.getRegistroFinanceiroAtleta(atlId);
+        const reg = normalizarRegistroFinanceiro(bruto, compsAtuais);
+
+        const jaTemInscricao = (reg.inscricoes || []).some(
+          (i) =>
+            i.competicaoId === comp.id ||
+            normalizarNomeCompeticao(i.competicaoNome) === normalizarNomeCompeticao(comp.nome)
+        );
+
+        if (!jaTemInscricao) {
+          const novaInsc: DebitoInscricaoAtleta = {
+            id: `insc-${comp.id}`,
+            competicaoId: comp.id,
+            competicaoNome: comp.nome,
+            valor: Number(comp.valorInscricao) || 0,
+            pago: false,
+            jogoOrigemId: jogo.id,
+            criadoEm: new Date().toISOString(),
+          };
+          reg.inscricoes = [...(reg.inscricoes || []), novaInsc];
+          persistirRegistroFinanceiroAtleta(reg);
+        }
+      }
+    }
+
+    // Remove débitos pendentes de atletas que foram retirados da escalação deste jogo
+    const todosRegistros = storageService.getRegistrosFinanceiros();
+    const naoEscaladosIds = Object.keys(todosRegistros).filter(
+      (atlId) => !escaladosIds.includes(atlId)
+    );
+    if (naoEscaladosIds.length > 0) {
+      limparDebitosPendentesDeJogo(jogo.id, naoEscaladosIds, true, true, jogosAtualizados);
+    }
 
     try {
       await firebaseService.salvarJogo(jogo);
@@ -676,15 +918,21 @@ export default function App() {
         }
         exibirToast('Atleta e suas avaliações foram apagados com sucesso.');
       } else if (itemParaExcluir.tipo === 'avaliacao') {
+        const avAlvo = avaliacoes.find((a) => a.id === itemParaExcluir.id);
         await firebaseService.excluirAvaliacao(itemParaExcluir.id);
         storageService.excluirAvaliacao(itemParaExcluir.id);
         setAvaliacoes(storageService.getAvaliacoes());
+        if (avAlvo?.jogoAgendaId) {
+          limparDebitosPendentesDeJogo(avAlvo.jogoAgendaId, [avAlvo.atletaId], true, false);
+        }
         exibirToast('Avaliação apagada com sucesso.');
       } else if (itemParaExcluir.tipo === 'jogo') {
         await firebaseService.excluirJogo(itemParaExcluir.id);
         storageService.excluirJogoAgenda(itemParaExcluir.id);
-        setJogos(storageService.getJogosAgenda());
+        const jogosRestantes = storageService.getJogosAgenda();
+        setJogos(jogosRestantes);
         setAvaliacoes(storageService.getAvaliacoes());
+        limparDebitosPendentesDeJogo(itemParaExcluir.id, undefined, true, true, jogosRestantes);
         exibirToast('Jogo, escalação e avaliações foram excluídos com sucesso.');
       } else if (itemParaExcluir.tipo === 'testefisico') {
         await firebaseService.excluirTesteFisico(itemParaExcluir.id);
@@ -879,7 +1127,7 @@ export default function App() {
               onClick={() => setMenuDrawerOpen(!menuDrawerOpen)}
               className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-xl text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xs focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 shrink-0 active:scale-95 cursor-pointer"
               aria-label="Abrir menu de opções"
-              title="Menu: Financeiro, Histórico / Relatório e Teste Físico"
+              title="Menu: Gestão de Atletas, Financeiro e Teste Físico"
             >
               <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-slate-800 dark:text-white" />
             </button>
@@ -889,7 +1137,7 @@ export default function App() {
 
       {/* ========================================================= */}
       {/* DRAWER / MENU FLUTUANTE ABERTO PELOS 3 RISQUINHOS ☰ */}
-      {/* Contém: Financeiro, Histórico / Relatório, Teste Físico */}
+      {/* Contém: Gestão de Atletas, Financeiro, Teste Físico */}
       {/* ========================================================= */}
       {menuDrawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end no-print animate-in fade-in duration-150">
@@ -921,50 +1169,60 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Itens do Menu Solicitados: Cadastrar Atleta, Financeiro, Histórico / Relatório, Teste Físico */}
+              {/* Itens do Menu Solicitados: Gestão de Atletas, Financeiro, Teste Físico */}
               <div className="py-5 space-y-2.5">
-                {/* 0. Cadastrar Atleta */}
+                {/* 1. Gestão de Atletas */}
                 <button
                   onClick={() => {
                     setMenuDrawerOpen(false);
                     handleAbrirNovoAtleta('lista');
                   }}
                   className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all border-2 active:scale-98 ${
-                    abaAtiva === 'atletas'
+                    abaAtiva === 'atletas' || abaAtiva === 'relatorio'
                       ? 'bg-emerald-600 text-white font-extrabold border-emerald-600 shadow-md'
                       : 'hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-900 dark:text-slate-100 font-bold border-emerald-300 dark:border-emerald-700 bg-emerald-50/60 dark:bg-emerald-950/20'
                   }`}
-                  style={abaAtiva === 'atletas' ? { backgroundColor: '#059669', color: '#ffffff' } : {}}
+                  style={
+                    abaAtiva === 'atletas' || abaAtiva === 'relatorio'
+                      ? { backgroundColor: '#059669', color: '#ffffff' }
+                      : {}
+                  }
                 >
                   <div className="flex items-center gap-3.5">
                     <div
                       className={`p-2.5 rounded-xl ${
-                        abaAtiva === 'atletas'
+                        abaAtiva === 'atletas' || abaAtiva === 'relatorio'
                           ? 'bg-emerald-700 text-white'
                           : 'bg-emerald-500 text-white shadow-xs'
                       }`}
                     >
-                      <Plus className="w-5 h-5 text-white" />
+                      <Users className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <div className="text-base font-extrabold">
-                        Cadastrar Atleta
+                        Gestão de Atletas
                       </div>
                       <div
                         className={`text-xs font-medium ${
-                          abaAtiva === 'atletas' ? 'text-emerald-100' : 'text-slate-600 dark:text-slate-400'
+                          abaAtiva === 'atletas' || abaAtiva === 'relatorio'
+                            ? 'text-emerald-100'
+                            : 'text-slate-600 dark:text-slate-400'
                         }`}
                       >
-                        Lista de Atletas & Cadastro por Lote
+                        Lista, Cadastro, Histórico e Relatórios
                       </div>
                     </div>
                   </div>
                   <ChevronRight
-                    className={`w-5 h-5 ${abaAtiva === 'atletas' ? 'text-white' : 'text-emerald-600'}`}
+                    className={`w-5 h-5 ${
+                      abaAtiva === 'atletas' || abaAtiva === 'relatorio'
+                        ? 'text-white'
+                        : 'text-emerald-600'
+                    }`}
                   />
                 </button>
 
-                {/* 1. Financeiro */}
+                {/* 2. Financeiro */}
                 <button
                   onClick={() => handleNavegarMenuTopo('financeiro')}
                   className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all border-2 active:scale-98 ${
@@ -992,43 +1250,6 @@ export default function App() {
                         }`}
                       >
                         Mensalidades & Competições
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 opacity-70" />
-                </button>
-
-                {/* 2. Histórico / Relatório */}
-                <button
-                  onClick={() => {
-                    setMenuDrawerOpen(false);
-                    handleAbrirNovoAtleta('lista');
-                  }}
-                  className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all border-2 active:scale-98 ${
-                    abaAtiva === 'relatorio'
-                      ? 'bg-blue-600 text-white font-extrabold border-blue-600 shadow-md'
-                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold border-slate-200/80 dark:border-slate-800'
-                  }`}
-                  style={abaAtiva === 'relatorio' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div
-                      className={`p-2.5 rounded-xl ${
-                        abaAtiva === 'relatorio'
-                          ? 'bg-blue-700 text-white'
-                          : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600'
-                      }`}
-                    >
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-base font-extrabold">Histórico / Relatório</div>
-                      <div
-                        className={`text-xs font-medium ${
-                          abaAtiva === 'relatorio' ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
-                        }`}
-                      >
-                        Ficha do Atleta com estatísticas e jogos
                       </div>
                     </div>
                   </div>
@@ -1324,6 +1545,7 @@ export default function App() {
         jogoEditando={jogoEditando}
         categoriasDisponiveis={categorias}
         categoriaPadrao={categoriaAtiva === 'TODAS' ? 'SUB-15' : categoriaAtiva}
+        competicoesFinanceiro={competicoes}
       />
 
       {/* Modal de Atleta */}

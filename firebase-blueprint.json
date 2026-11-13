@@ -91,6 +91,34 @@
         "flexibilidadeBanco": { "type": "number" }
       },
       "required": ["atletaId", "data", "categoria"]
+    },
+    "CompeticaoFinanceira": {
+      "title": "CompeticaoFinanceira",
+      "description": "Competição com Taxa de Inscrição e Taxa de Jogo editáveis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "valor": { "type": "number" },
+        "valorInscricao": { "type": "number" },
+        "valorJogo": { "type": "number" },
+        "tipo": { "type": "string" },
+        "categoria": { "type": "string" }
+      },
+      "required": ["id", "nome"]
+    },
+    "RegistroFinanceiroAtleta": {
+      "title": "RegistroFinanceiroAtleta",
+      "description": "Controle financeiro individual do atleta com mensalidades, inscrições e taxas de jogo",
+      "type": "object",
+      "properties": {
+        "atletaId": { "type": "string" },
+        "valorMensalidadePadrao": { "type": "number" },
+        "mensalidadesPagas": { "type": "array" },
+        "inscricoes": { "type": "array" },
+        "taxasJogo": { "type": "array" }
+      },
+      "required": ["atletaId"]
     }
   },
   "firestore": {
@@ -113,6 +141,14 @@
     "/testes_fisicos/{testeId}": {
       "schema": "TesteFisico",
       "description": "Testes físicos periódicos dos atletas"
+    },
+    "/financeiro_competicoes/{compId}": {
+      "schema": "CompeticaoFinanceira",
+      "description": "Competições e taxas do clube com Taxa de Inscrição e Taxa de Jogo"
+    },
+    "/financeiro_atletas/{atletaId}": {
+      "schema": "RegistroFinanceiroAtleta",
+      "description": "Registros financeiros individuais por atleta"
     }
   }
 }

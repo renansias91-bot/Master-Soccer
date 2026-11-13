@@ -37,7 +37,7 @@ interface PainelGeralProps {
   onNavegarPlantel: (categoria?: string) => void;
   onSelecionarAtleta: (atleta: Atleta) => void;
   onNovaAvaliacao: () => void;
-  onNovoAtleta: () => void;
+  onNovoAtleta?: () => void;
   onNavegarJogo?: (jogoId?: string, categoria?: string, competicao?: string) => void;
 }
 
@@ -100,7 +100,6 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
   onNavegarPlantel,
   onSelecionarAtleta,
   onNovaAvaliacao,
-  onNovoAtleta,
   onNavegarJogo,
 }) => {
   // Estado da aba de filtro selecionada: 'GERAL' por padrão
@@ -504,14 +503,14 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
       {/* ========================================================= */}
       {/* BANNER DE BOAS-VINDAS MASTER SOCCER (AZUL E OURO) */}
       {/* ========================================================= */}
-      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white rounded-3xl p-6 sm:p-8 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-2 border-blue-800/80 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white rounded-3xl p-6 sm:p-8 shadow-md flex flex-col items-center justify-center text-center gap-4 border-2 border-blue-800/80 relative overflow-hidden">
         {/* Glow sutil de fundo dourado */}
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="flex items-center gap-5 z-10">
-          <MasterSoccerEscudo size={76} className="drop-shadow-lg shrink-0" />
-          <div className="space-y-1.5 max-w-xl">
-            <div className="flex items-center gap-2">
+        <div className="flex flex-col items-center gap-4 z-10 max-w-2xl">
+          <MasterSoccerEscudo size={96} className="drop-shadow-lg shrink-0" />
+          <div className="space-y-2 flex flex-col items-center text-center">
+            <div className="flex items-center justify-center gap-2">
               <span className="text-xs font-black text-amber-400 tracking-wider uppercase font-mono bg-blue-950/90 px-2.5 py-1 rounded-lg border border-amber-400/40">
                 Master Soccer · Rio de Janeiro
               </span>
@@ -524,21 +523,6 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
               oficiais e pareceres pós-jogo.
             </p>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 shrink-0 z-10">
-          <button
-            onClick={onNovoAtleta}
-            className="px-5 py-3 text-sm font-extrabold text-slate-950 bg-amber-400 hover:bg-amber-300 active:scale-98 rounded-2xl transition-all shadow-sm cursor-pointer"
-          >
-            + Cadastrar Atleta
-          </button>
-          <button
-            onClick={onNovaAvaliacao}
-            className="px-5 py-3 text-sm font-extrabold text-white bg-blue-600 hover:bg-blue-500 active:scale-98 rounded-2xl transition-all shadow-sm border border-blue-400/40 cursor-pointer"
-          >
-            Agenda de Jogos
-          </button>
         </div>
       </div>
 

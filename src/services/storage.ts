@@ -5,6 +5,8 @@ import {
   EstatisticasAtleta,
   NotasPilares,
   ItemCompeticaoTaxa,
+  DebitoInscricaoAtleta,
+  DebitoTaxaJogoAtleta,
   RegistroFinanceiroAtleta,
   ResumoFinanceiroAtleta,
   MesAno,
@@ -31,12 +33,154 @@ export const TROFEUS_PADRAO: Trofeu[] = [
 
 export const CATEGORIAS_PADRAO = ['SUB-15', 'SUB-16', 'SUB-17'];
 
+export const normalizarNomeCompeticao = (nome: string): string =>
+  (nome || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+export const normalizarCompeticao = (
+  c: Partial<ItemCompeticaoTaxa> & { id: string; nome: string }
+): ItemCompeticaoTaxa => {
+  const legadoValor = Number(c.valor) || 0;
+  const isLegacyTaxaJogo = c.tipo === 'taxa_jogo';
+
+  const valorInscricao =
+    c.valorInscricao !== undefined && !isNaN(Number(c.valorInscricao))
+      ? Number(c.valorInscricao)
+      : isLegacyTaxaJogo
+      ? 0
+      : legadoValor;
+
+  const valorJogo =
+    c.valorJogo !== undefined && !isNaN(Number(c.valorJogo))
+      ? Number(c.valorJogo)
+      : isLegacyTaxaJogo
+      ? legadoValor
+      : 0;
+
+  return {
+    id: c.id,
+    nome: (c.nome || '').trim(),
+    valor: valorInscricao,
+    valorInscricao,
+    valorJogo,
+    tipo: c.tipo || 'competicao',
+    categoria: c.categoria || 'TODAS',
+    descricao: c.descricao || '',
+    criadoEm: c.criadoEm || '',
+  };
+};
+
+export const encontrarCompeticaoFinanceiro = (
+  competicoes: ItemCompeticaoTaxa[],
+  nomeCompeticao: string,
+  categoriaJogo?: string
+): ItemCompeticaoTaxa | undefined => {
+  const alvo = normalizarNomeCompeticao(nomeCompeticao);
+  if (!alvo) return undefined;
+
+  const mesmasComps = competicoes.filter((c) => normalizarNomeCompeticao(c.nome) === alvo);
+  if (mesmasComps.length === 0) return undefined;
+
+  if (categoriaJogo) {
+    const porCat = mesmasComps.find((c) => c.categoria === categoriaJogo);
+    if (porCat) return porCat;
+  }
+
+  const todas = mesmasComps.find((c) => !c.categoria || c.categoria === 'TODAS');
+  return todas || mesmasComps[0];
+};
+
+export const normalizarRegistroFinanceiro = (
+  reg: RegistroFinanceiroAtleta,
+  competicoes: ItemCompeticaoTaxa[] = []
+): RegistroFinanceiroAtleta => {
+  const inscricoes: DebitoInscricaoAtleta[] = Array.isArray(reg.inscricoes)
+    ? reg.inscricoes.map((i) => ({
+        ...i,
+        valor: Number(i.valor) || 0,
+        pago: Boolean(i.pago),
+      }))
+    : [];
+
+  // Migração segura de pagamentos legados marcados manualmente antes do novo modelo
+  if (!Array.isArray(reg.inscricoes) && reg.competicoesPagas) {
+    for (const [compId, pago] of Object.entries(reg.competicoesPagas)) {
+      if (!pago) continue;
+      const comp = competicoes.find((c) => c.id === compId);
+      if (!comp) continue;
+      const jaTem = inscricoes.some(
+        (i) =>
+          i.competicaoId === comp.id ||
+          normalizarNomeCompeticao(i.competicaoNome) === normalizarNomeCompeticao(comp.nome)
+      );
+      if (!jaTem) {
+        inscricoes.push({
+          id: `insc-${comp.id}`,
+          competicaoId: comp.id,
+          competicaoNome: comp.nome,
+          valor: Number(comp.valorInscricao ?? comp.valor ?? 0),
+          pago: true,
+          criadoEm: reg.atualizadoEm || new Date().toISOString(),
+          pagoEm: reg.atualizadoEm || new Date().toISOString(),
+        });
+      }
+    }
+  }
+
+  const taxasJogo: DebitoTaxaJogoAtleta[] = Array.isArray(reg.taxasJogo)
+    ? reg.taxasJogo.map((t) => ({
+        ...t,
+        valor: Number(t.valor) || 0,
+        pago: Boolean(t.pago),
+      }))
+    : [];
+
+  return {
+    ...reg,
+    mensalidadesPagas: Array.isArray(reg.mensalidadesPagas) ? reg.mensalidadesPagas : [],
+    competicoesPagas:
+      reg.competicoesPagas && typeof reg.competicoesPagas === 'object' ? reg.competicoesPagas : {},
+    inscricoes,
+    taxasJogo,
+  };
+};
+
 export const COMPETICOES_PADRAO: ItemCompeticaoTaxa[] = [
-  { id: 'comp-ferj', nome: 'FERJ', valor: 150, tipo: 'competicao', categoria: 'TODAS' },
-  { id: 'comp-liga-metro', nome: 'LIGA METROPOLITANA', valor: 120, tipo: 'competicao', categoria: 'TODAS' },
-  { id: 'comp-bs', nome: 'BS', valor: 100, tipo: 'competicao', categoria: 'TODAS' },
-  { id: 'comp-spat', nome: 'SPAT', valor: 100, tipo: 'competicao', categoria: 'TODAS' },
-  { id: 'taxa-jogo-padrao', nome: 'TAXA DE JOGO', valor: 50, tipo: 'taxa_jogo', categoria: 'TODAS' },
+  {
+    id: 'comp-ferj',
+    nome: 'FERJ',
+    valor: 150,
+    valorInscricao: 150,
+    valorJogo: 0,
+    tipo: 'competicao',
+    categoria: 'TODAS',
+  },
+  {
+    id: 'comp-liga-metro',
+    nome: 'LIGA METROPOLITANA',
+    valor: 120,
+    valorInscricao: 120,
+    valorJogo: 0,
+    tipo: 'competicao',
+    categoria: 'TODAS',
+  },
+  {
+    id: 'comp-bs',
+    nome: 'BS',
+    valor: 100,
+    valorInscricao: 100,
+    valorJogo: 0,
+    tipo: 'competicao',
+    categoria: 'TODAS',
+  },
+  {
+    id: 'comp-spat',
+    nome: 'SPAT',
+    valor: 100,
+    valorInscricao: 100,
+    valorJogo: 0,
+    tipo: 'competicao',
+    categoria: 'TODAS',
+  },
 ];
 
 export const JOGOS_AGENDA_PADRAO: JogoAgenda[] = [
@@ -414,7 +558,11 @@ export const storageService = {
     try {
       const data = localStorage.getItem(STORAGE_KEY_COMPETICOES);
       if (data) {
-        return JSON.parse(data);
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) {
+          const normalizadas = parsed.map((c) => normalizarCompeticao(c));
+          return normalizadas;
+        }
       }
     } catch (e) {
       console.warn('Erro ao ler competições do storage', e);
@@ -424,16 +572,18 @@ export const storageService = {
   },
 
   salvarCompeticoes(competicoes: ItemCompeticaoTaxa[]): void {
-    localStorage.setItem(STORAGE_KEY_COMPETICOES, JSON.stringify(competicoes));
+    const normalizadas = competicoes.map((c) => normalizarCompeticao(c));
+    localStorage.setItem(STORAGE_KEY_COMPETICOES, JSON.stringify(normalizadas));
   },
 
   salvarCompeticao(comp: ItemCompeticaoTaxa): void {
+    const normalizada = normalizarCompeticao(comp);
     const lista = this.getCompeticoes();
-    const index = lista.findIndex((c) => c.id === comp.id);
+    const index = lista.findIndex((c) => c.id === normalizada.id);
     if (index >= 0) {
-      lista[index] = comp;
+      lista[index] = normalizada;
     } else {
-      lista.push(comp);
+      lista.push(normalizada);
     }
     this.salvarCompeticoes(lista);
   },
@@ -447,7 +597,15 @@ export const storageService = {
     try {
       const data = localStorage.getItem(STORAGE_KEY_FINANCEIRO_ATLETAS);
       if (data) {
-        return JSON.parse(data);
+        const parsed = JSON.parse(data);
+        if (parsed && typeof parsed === 'object') {
+          const comps = this.getCompeticoes();
+          const out: Record<string, RegistroFinanceiroAtleta> = {};
+          for (const [k, v] of Object.entries(parsed)) {
+            out[k] = normalizarRegistroFinanceiro(v as RegistroFinanceiroAtleta, comps);
+          }
+          return out;
+        }
       }
     } catch (e) {
       console.warn('Erro ao ler registros financeiros do storage', e);
@@ -469,6 +627,8 @@ export const storageService = {
       valorMensalidadePadrao: this.getValorMensalidadePadrao(),
       mensalidadesPagas: [],
       competicoesPagas: {},
+      inscricoes: [],
+      taxasJogo: [],
       atualizadoEm: new Date().toISOString(),
     };
     return novo;
@@ -512,32 +672,41 @@ export const storageService = {
     competicoes: ItemCompeticaoTaxa[],
     registroParam?: RegistroFinanceiroAtleta
   ): ResumoFinanceiroAtleta {
-    const registro = registroParam || this.getRegistroFinanceiroAtleta(atleta.id);
+    const registroBruto = registroParam || this.getRegistroFinanceiroAtleta(atleta.id);
+    const registro = normalizarRegistroFinanceiro(registroBruto, competicoes);
     const valorMensalidade =
       registro.valorMensalidadePadrao !== undefined && registro.valorMensalidadePadrao > 0
         ? registro.valorMensalidadePadrao
         : this.getValorMensalidadePadrao();
 
-    // Filtra competições aplicáveis para esta categoria
-    const compsAplicaveis = competicoes.filter(
-      (c) => !c.categoria || c.categoria === 'TODAS' || c.categoria === atleta.categoria
-    );
-
     const mensalidadesPagasCount = (registro.mensalidadesPagas || []).length;
     const mensalidadesTotalCount = 12;
 
-    const competicoesTotalCount = compsAplicaveis.length;
+    const inscricoes = registro.inscricoes || [];
+    const taxasJogo = registro.taxasJogo || [];
+
+    const competicoesTotalCount = inscricoes.length + taxasJogo.length;
     let competicoesPagasCount = 0;
     let totalPagoCompeticoes = 0;
     let totalDevendoCompeticoes = 0;
 
-    for (const comp of compsAplicaveis) {
-      const estaPago = Boolean(registro.competicoesPagas?.[comp.id]);
-      if (estaPago) {
+    for (const insc of inscricoes) {
+      const valorItem = Number(insc.valor) || 0;
+      if (insc.pago) {
         competicoesPagasCount++;
-        totalPagoCompeticoes += comp.valor || 0;
+        totalPagoCompeticoes += valorItem;
       } else {
-        totalDevendoCompeticoes += comp.valor || 0;
+        totalDevendoCompeticoes += valorItem;
+      }
+    }
+
+    for (const taxa of taxasJogo) {
+      const valorItem = Number(taxa.valor) || 0;
+      if (taxa.pago) {
+        competicoesPagasCount++;
+        totalPagoCompeticoes += valorItem;
+      } else {
+        totalDevendoCompeticoes += valorItem;
       }
     }
 

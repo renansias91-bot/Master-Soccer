@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, MapPin, Shield, CheckCircle2 } from 'lucide-react';
-import { JogoAgenda } from '../types';
+import { JogoAgenda, ItemCompeticaoTaxa } from '../types';
 import { formatarDataExibicao } from '../utils/dateUtils';
+import { normalizarNomeCompeticao } from '../services/storage';
 
 interface JogoModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface JogoModalProps {
   jogoEditando?: JogoAgenda | null;
   categoriasDisponiveis: string[];
   categoriaPadrao?: string;
+  competicoesFinanceiro?: ItemCompeticaoTaxa[];
 }
 
 const aplicarMascaraData = (valor: string): string => {
@@ -31,6 +33,7 @@ export const JogoModal: React.FC<JogoModalProps> = ({
   onSave,
   jogoEditando,
   categoriasDisponiveis,
+  competicoesFinanceiro = [],
 }) => {
   const [adversario, setAdversario] = useState('');
   const [dataJogo, setDataJogo] = useState('');
@@ -295,8 +298,8 @@ export const JogoModal: React.FC<JogoModalProps> = ({
             </div>
           </div>
 
-          {/* Competição (campo de texto livre, sem opções fixas e sem botão Limpar) */}
-          <div>
+          {/* Competição (campo de texto livre + botões clicáveis das competições do Financeiro) */}
+          <div className="space-y-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
               <span className="text-sm leading-none">📝</span>
               <span>Competição *</span>
@@ -308,6 +311,51 @@ export const JogoModal: React.FC<JogoModalProps> = ({
               placeholder="Ex: Copa do Mundo, Copa Rio de Janeiro, Campeonato, Amistoso..."
               className="w-full h-10 px-3.5 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
             />
+
+            {(() => {
+              const listaComps = competicoesFinanceiro.filter((c) => {
+                if (!c.nome?.trim() || c.id === 'taxa-jogo-padrao') return false;
+                if (!categoria.trim()) return true;
+                return !c.categoria || c.categoria === 'TODAS' || c.categoria === categoria.trim();
+              });
+              const nomesVistos = new Set<string>();
+              const compsUnicas = listaComps.filter((c) => {
+                const k = normalizarNomeCompeticao(c.nome);
+                if (nomesVistos.has(k)) return false;
+                nomesVistos.add(k);
+                return true;
+              });
+
+              if (compsUnicas.length === 0) return null;
+
+              return (
+                <div className="pt-1">
+                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5">
+                    Competições já cadastradas no Financeiro:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {compsUnicas.map((comp) => {
+                      const selecionada =
+                        normalizarNomeCompeticao(tipo) === normalizarNomeCompeticao(comp.nome);
+                      return (
+                        <button
+                          key={comp.id}
+                          type="button"
+                          onClick={() => setTipo(comp.nome)}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
+                            selecionada
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                              : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-blue-50 hover:border-blue-400 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          {comp.nome}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Local / Campo */}
