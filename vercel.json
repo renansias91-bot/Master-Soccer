@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/cadastro-atleta",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cadastro-atleta/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/((?!.*\\.).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

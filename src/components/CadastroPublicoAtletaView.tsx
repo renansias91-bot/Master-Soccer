@@ -25,12 +25,7 @@ export const CadastroPublicoAtletaView: React.FC<CadastroPublicoAtletaViewProps>
         status: 'Ativo',
       };
 
-      let docId = '';
-      try {
-        docId = await firebaseService.cadastrarAtleta(atletaParaSalvar);
-      } catch (err) {
-        console.warn('Erro ao salvar cadastro público no Firestore, salvando localmente:', err);
-      }
+      const docId = await firebaseService.cadastrarAtleta(atletaParaSalvar);
 
       storageService.salvarAtleta({
         ...atletaParaSalvar,

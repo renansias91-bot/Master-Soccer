@@ -1,5 +1,5 @@
 // Master Soccer RJ Service Worker (Offline Cache)
-const CACHE_NAME = 'mastersoccer-rj-v1';
+const CACHE_NAME = 'mastersoccer-rj-v2';
 
 const STATIC_ASSETS = [
   '/',

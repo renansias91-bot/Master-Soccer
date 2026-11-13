@@ -86,8 +86,8 @@ export default function App() {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const isRotaCadastroPublico =
     typeof window !== 'undefined' &&
-    (window.location.pathname.replace(/\/+$/, '') === '/cadastro-atleta' ||
-      window.location.hash === '#/cadastro-atleta' ||
+    (window.location.pathname.toLowerCase().replace(/\/+$/, '') === '/cadastro-atleta' ||
+      window.location.hash.toLowerCase().startsWith('#/cadastro-atleta') ||
       new URLSearchParams(window.location.search).get('cadastro') === 'atleta');
 
   // Estados principais

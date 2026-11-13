@@ -288,9 +288,17 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
 
   const linkCadastroPublico = useMemo(() => {
     if (typeof window !== 'undefined' && window.location?.origin) {
-      return `${window.location.origin}/cadastro-atleta`;
+      const origin = window.location.origin;
+      const ehPreviewInterno =
+        origin.includes('run.app') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1');
+      if (ehPreviewInterno) {
+        return 'https://master-soccer.vercel.app/cadastro-atleta';
+      }
+      return `${origin}/cadastro-atleta`;
     }
-    return '/cadastro-atleta';
+    return 'https://master-soccer.vercel.app/cadastro-atleta';
   }, []);
 
   const handleCopiarLinkCadastro = async () => {
@@ -1931,16 +1939,21 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                   htmlFor="campo-link-cadastro-publico"
                   className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide"
                 >
-                  Link público (/cadastro-atleta)
+                  Link público de cadastro
                 </label>
-                <input
+                <div
                   id="campo-link-cadastro-publico"
-                  type="text"
-                  readOnly
-                  value={linkCadastroPublico}
-                  onClick={(e) => (e.target as HTMLInputElement).select()}
-                  className="w-full min-h-[48px] px-4 py-3 text-sm font-mono font-bold bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
+                  onClick={(e) => {
+                    const sel = window.getSelection();
+                    const range = document.createRange();
+                    range.selectNodeContents(e.currentTarget);
+                    sel?.removeAllRanges();
+                    sel?.addRange(range);
+                  }}
+                  className="w-full px-4 py-3.5 text-sm font-mono font-bold bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white break-all select-all cursor-text leading-relaxed"
+                >
+                  {linkCadastroPublico}
+                </div>
               </div>
 
               <button
@@ -1971,6 +1984,17 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                   <span>Link copiado! Agora é só colar no grupo do WhatsApp.</span>
                 </div>
               )}
+
+              <div className="pt-1 text-center">
+                <a
+                  href="/cadastro-atleta"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Abrir formulário de cadastro neste navegador →
+                </a>
+              </div>
             </div>
           )}
 
