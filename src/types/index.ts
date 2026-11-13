@@ -20,8 +20,9 @@ export interface Atleta {
   nome: string; // Nome Completo do atleta
   nomeCompleto?: string; // Nome civil completo para documentos oficiais / súmula
   apelido?: string; // Apelido para campinho e estratégia
-  documento?: string; // Identidade / RG / CPF
-  rg?: string; // Sinônimo de documento
+  documento?: string; // Identidade / RG / CPF (compatibilidade com súmula)
+  rg?: string; // Identidade / RG
+  cpf?: string; // CPF do atleta
   categoria: CategoriaBase;
   posicao: PosicaoAtleta;
   numeroCamisa?: number;
@@ -29,6 +30,8 @@ export interface Atleta {
   pernaDominante: PernaDominante;
   altura?: number; // em cm
   peso?: number; // em kg
+  nomeResponsavel?: string; // Nome do Responsável Financeiro
+  telefoneResponsavel?: string; // Telefone do Responsável
   status: StatusAtleta;
   dataCadastro: string;
   fotoUrl?: string;

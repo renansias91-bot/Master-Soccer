@@ -46,6 +46,7 @@ import { GerenciarCategoriasModal } from './components/GerenciarCategoriasModal'
 import { AbaTrofeus } from './components/AbaTrofeus';
 import { ConfirmacaoApagarModal } from './components/ConfirmacaoApagarModal';
 import { MasterSoccerEscudo } from './components/MasterSoccerEscudo';
+import { CadastroPublicoAtletaView } from './components/CadastroPublicoAtletaView';
 
 type AbaNavegacao =
   | 'painel'
@@ -83,6 +84,11 @@ const getChaveScrollAba = (aba: AbaNavegacao): string => {
 export default function App() {
   const isOnline = useOnlineStatus();
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
+  const isRotaCadastroPublico =
+    typeof window !== 'undefined' &&
+    (window.location.pathname.replace(/\/+$/, '') === '/cadastro-atleta' ||
+      window.location.hash === '#/cadastro-atleta' ||
+      new URLSearchParams(window.location.search).get('cadastro') === 'atleta');
 
   // Estados principais
   const [atletas, setAtletas] = useState<Atleta[]>([]);
@@ -157,6 +163,7 @@ export default function App() {
 
   // Sincronização em tempo real via onSnapshot do Firestore
   useEffect(() => {
+    if (isRotaCadastroPublico) return;
     // 1. Atletas e Avaliações
     const unsubDados = firebaseService.observarDados(
       (novosAtletas) => {
@@ -790,6 +797,10 @@ export default function App() {
     setMenuDrawerOpen(false);
     mudarAbaComMemoriaScroll(aba);
   };
+
+  if (isRotaCadastroPublico) {
+    return <CadastroPublicoAtletaView categorias={categorias} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans w-full max-w-[100vw] overflow-x-hidden box-border">

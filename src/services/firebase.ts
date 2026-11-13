@@ -182,18 +182,28 @@ export const firebaseService = {
         : {}),
       categoria: atletaData.categoria || 'SUB-15',
       posicao: atletaData.posicao || 'Meio-Campista',
-      dataNascimento: atletaData.dataNascimento || '2010-01-01',
+      dataNascimento: atletaData.dataNascimento || '',
       pernaDominante: atletaData.pernaDominante || 'Destro',
       status: atletaData.status || 'Ativo',
       dataCadastro: atletaData.dataCadastro || new Date().toISOString().split('T')[0],
       ...(atletaData.apelido && atletaData.apelido.trim() ? { apelido: atletaData.apelido.trim() } : {}),
+      ...(atletaData.rg && atletaData.rg.trim() ? { rg: atletaData.rg.trim() } : {}),
+      ...(atletaData.cpf && atletaData.cpf.trim() ? { cpf: atletaData.cpf.trim() } : {}),
       ...(atletaData.documento && atletaData.documento.trim()
         ? { documento: atletaData.documento.trim() }
         : atletaData.rg && atletaData.rg.trim()
         ? { documento: atletaData.rg.trim() }
+        : atletaData.cpf && atletaData.cpf.trim()
+        ? { documento: atletaData.cpf.trim() }
         : {}),
       ...(atletaData.altura && !isNaN(Number(atletaData.altura)) ? { altura: Number(atletaData.altura) } : {}),
       ...(atletaData.peso && !isNaN(Number(atletaData.peso)) ? { peso: Number(atletaData.peso) } : {}),
+      ...(atletaData.nomeResponsavel && atletaData.nomeResponsavel.trim()
+        ? { nomeResponsavel: atletaData.nomeResponsavel.trim() }
+        : {}),
+      ...(atletaData.telefoneResponsavel && atletaData.telefoneResponsavel.trim()
+        ? { telefoneResponsavel: atletaData.telefoneResponsavel.trim() }
+        : {}),
       ...(atletaData.numeroCamisa && !isNaN(Number(atletaData.numeroCamisa))
         ? { numeroCamisa: Number(atletaData.numeroCamisa) }
         : {}),
@@ -350,14 +360,18 @@ export const firebaseService = {
           nome: d.nome || '',
           nomeCompleto: d.nomeCompleto || '',
           apelido: d.apelido || '',
-          documento: d.documento || d.rg || '',
+          documento: d.documento || d.rg || d.cpf || '',
+          rg: d.rg || '',
+          cpf: d.cpf || '',
           categoria: d.categoria || 'SUB-15',
           posicao: d.posicao || 'Meio-Campista',
           numeroCamisa: d.numeroCamisa || undefined,
-          dataNascimento: d.dataNascimento || '2009-01-01',
+          dataNascimento: d.dataNascimento || '',
           pernaDominante: d.pernaDominante || 'Destro',
           altura: d.altura || undefined,
           peso: d.peso || undefined,
+          nomeResponsavel: d.nomeResponsavel || '',
+          telefoneResponsavel: d.telefoneResponsavel || '',
           status: d.status || 'Ativo',
           dataCadastro: d.dataCadastro || new Date().toISOString().split('T')[0],
           fotoUrl: d.fotoUrl || '',
@@ -423,14 +437,18 @@ export const firebaseService = {
             nome: d.nome || '',
             nomeCompleto: d.nomeCompleto || '',
             apelido: d.apelido || '',
-            documento: d.documento || d.rg || '',
+            documento: d.documento || d.rg || d.cpf || '',
+            rg: d.rg || '',
+            cpf: d.cpf || '',
             categoria: d.categoria || 'SUB-15',
             posicao: d.posicao || 'Meio-Campista',
             numeroCamisa: d.numeroCamisa || undefined,
-            dataNascimento: d.dataNascimento || '2009-01-01',
+            dataNascimento: d.dataNascimento || '',
             pernaDominante: d.pernaDominante || 'Destro',
             altura: d.altura || undefined,
             peso: d.peso || undefined,
+            nomeResponsavel: d.nomeResponsavel || '',
+            telefoneResponsavel: d.telefoneResponsavel || '',
             status: d.status || 'Ativo',
             dataCadastro: d.dataCadastro || new Date().toISOString().split('T')[0],
             fotoUrl: d.fotoUrl || '',

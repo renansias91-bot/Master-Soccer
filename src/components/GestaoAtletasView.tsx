@@ -25,6 +25,8 @@ import {
   Plus,
   Share2,
   RefreshCw,
+  Link2,
+  Copy,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import {
@@ -36,7 +38,6 @@ import {
 import {
   Atleta,
   AvaliacaoJogo,
-  CategoriaBase,
   PernaDominante,
   PosicaoAtleta,
   StatusAtleta,
@@ -44,6 +45,13 @@ import {
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { formatarDataExibicao } from '../utils/dateUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
+import {
+  FormularioAtletaCadastro,
+  POSICOES_CAMPO_OPTIONS,
+  PE_DOMINANTE_OPTIONS,
+  formatarCpf,
+  formatarTelefone,
+} from './FormularioAtletaCadastro';
 
 interface GestaoAtletasViewProps {
   atletas: Atleta[];
@@ -154,8 +162,9 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
   // 1. ABA PRINCIPAL DO TOPO: [Lista de Atletas] ou [Cadastrar Novo Atleta] (padrão 'lista')
   const [abaPrincipal, setAbaPrincipal] = useState<'lista' | 'cadastro'>(subAbaInicial);
 
-  // 2. SUB-OPÇÕES NA ABA CADASTRAR: [Cadastrar Um por Um] ou [Cadastrar por Lote] (padrão 'unitario')
-  const [modoCadastro, setModoCadastro] = useState<'unitario' | 'lote'>('unitario');
+  // 2. SUB-OPÇÕES NA ABA CADASTRAR: [Cadastrar Um por Um], [Cadastrar por Lote] ou [Link de Cadastro]
+  const [modoCadastro, setModoCadastro] = useState<'unitario' | 'lote' | 'link'>('unitario');
+  const [linkCopiado, setLinkCopiado] = useState(false);
 
   // 3. FILTRO DA LISTA: GERAL, SUB-15, SUB-16, SUB-17 (não usar mais TODOS, usar GERAL)
   const [filtroCategoria, setFiltroCategoria] = useState<string>('GERAL');
@@ -169,18 +178,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
   const [estatisticasNivel2, setEstatisticasNivel2] = useState<Record<string, boolean>>({});
 
   // 5. ESTADO DO CADASTRO UNITÁRIO
-  const [formNome, setFormNome] = useState('');
-  const [formApelido, setFormApelido] = useState('');
-  const [formDocumento, setFormDocumento] = useState('');
-  const [formCategoria, setFormCategoria] = useState<CategoriaBase>('SUB-15');
-  const [formPosicao, setFormPosicao] = useState<PosicaoAtleta>('Meio-Campista');
-  const [formPerna, setFormPerna] = useState<PernaDominante>('Destro');
-  const [formAltura, setFormAltura] = useState('');
-  const [formPeso, setFormPeso] = useState('');
-  const [formDataNasc, setFormDataNasc] = useState('2011-01-01');
-  const [formFotoUrl, setFormFotoUrl] = useState('');
   const [feedbackUnitario, setFeedbackUnitario] = useState<string | null>(null);
-  const [erroUnitario, setErroUnitario] = useState<string | null>(null);
 
   // 6. ESTADO DO CADASTRO POR LOTE
   const [atletasPreviaLote, setAtletasPreviaLote] = useState<AtletaPreviaLote[]>([]);
@@ -288,45 +286,37 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
     }
   };
 
-  // Submeter cadastro unitário
-  const handleSubmitUnitario = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formNome.trim()) {
-      setErroUnitario('Informe o nome completo do atleta.');
-      return;
+  const linkCadastroPublico = useMemo(() => {
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return `${window.location.origin}/cadastro-atleta`;
     }
+    return '/cadastro-atleta';
+  }, []);
 
-    const novoAtleta: Atleta = {
-      id: '',
-      nome: formNome.trim(),
-      apelido: formApelido.trim() || undefined,
-      documento: formDocumento.trim() || undefined,
-      categoria: formCategoria,
-      posicao: formPosicao,
-      pernaDominante: formPerna,
-      altura: formAltura ? Number(formAltura) : undefined,
-      peso: formPeso ? Number(formPeso) : undefined,
-      dataNascimento: formDataNasc,
-      fotoUrl: formFotoUrl.trim() || undefined,
-      status: 'Ativo',
-      dataCadastro: new Date().toISOString().split('T')[0],
-    };
-
+  const handleCopiarLinkCadastro = async () => {
     try {
-      await onSalvarAtleta(novoAtleta);
-      setFeedbackUnitario(`✓ Atleta "${novoAtleta.nome}" cadastrado com sucesso!`);
-      setErroUnitario(null);
-      // Limpa formulário para o próximo
-      setFormNome('');
-      setFormApelido('');
-      setFormDocumento('');
-      setFormAltura('');
-      setFormPeso('');
-      setFormFotoUrl('');
-      setTimeout(() => setFeedbackUnitario(null), 5000);
-    } catch (err: any) {
-      setErroUnitario(`Erro ao cadastrar atleta: ${err?.message || err}`);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(linkCadastroPublico);
+      } else {
+        throw new Error('Clipboard indisponível');
+      }
+    } catch {
+      const textArea = document.createElement('textarea');
+      textArea.value = linkCadastroPublico;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch {
+        // Fallback silencioso
+      }
+      document.body.removeChild(textArea);
     }
+    setLinkCopiado(true);
+    setTimeout(() => setLinkCopiado(false), 4000);
   };
 
   // Baixar modelo de planilha
@@ -594,8 +584,19 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
       return;
     }
 
+    const rgLimpo = (atletaEditado.rg ?? atletaEditado.documento ?? '').trim();
+    const cpfLimpo = (atletaEditado.cpf ?? '').trim();
+    const payload: Atleta = {
+      ...atletaEditado,
+      nome: atletaEditado.nome.trim(),
+      nomeCompleto: atletaEditado.nome.trim(),
+      rg: rgLimpo || undefined,
+      cpf: cpfLimpo || undefined,
+      documento: rgLimpo || cpfLimpo || undefined,
+    };
+
     try {
-      await onSalvarAtleta(atletaEditado);
+      await onSalvarAtleta(payload);
       alert('✓ Alterações do atleta salvas com sucesso!');
     } catch (err: any) {
       alert('Erro ao salvar alterações: ' + (err?.message || err));
@@ -1495,11 +1496,11 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                         {/* MINI-ABA 4: EDITAR DADOS */}
                         {miniAba === 'editar' && (
                           <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                              {/* Nome */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {/* 1. Nome Completo */}
                               <div className="sm:col-span-2">
                                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                                  Nome Completo *
+                                  Nome Completo do Atleta *
                                 </label>
                                 <input
                                   type="text"
@@ -1514,8 +1515,8 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                                 />
                               </div>
 
-                              {/* Apelido */}
-                              <div>
+                              {/* 2. Apelido */}
+                              <div className="sm:col-span-2">
                                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
                                   Apelido (Campinho / Estratégia)
                                 </label>
@@ -1532,54 +1533,94 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                                 />
                               </div>
 
-                              {/* Identidade / RG / CPF */}
+                              {/* 3. Identidade / RG */}
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                                  Identidade / RG / CPF (Súmula)
+                                  Identidade / RG
                                 </label>
                                 <input
                                   type="text"
                                   placeholder="Ex: 12.345.678-9"
-                                  value={dadosEdit.documento ?? dadosEdit.rg ?? ''}
+                                  value={dadosEdit.rg ?? dadosEdit.documento ?? ''}
                                   onChange={(e) =>
                                     setDadosEdicao((prev) => ({
                                       ...prev,
-                                      [atleta.id]: { ...dadosEdit, documento: e.target.value },
+                                      [atleta.id]: {
+                                        ...dadosEdit,
+                                        rg: e.target.value,
+                                        documento: e.target.value,
+                                      },
                                     }))
                                   }
                                   className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
                                 />
                               </div>
 
-                              {/* Categoria */}
+                              {/* 4. CPF */}
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                                  Categoria
+                                  CPF
                                 </label>
-                                <select
-                                  value={dadosEdit.categoria}
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="000.000.000-00"
+                                  value={dadosEdit.cpf ?? ''}
                                   onChange={(e) =>
                                     setDadosEdicao((prev) => ({
                                       ...prev,
-                                      [atleta.id]: { ...dadosEdit, categoria: e.target.value },
+                                      [atleta.id]: {
+                                        ...dadosEdit,
+                                        cpf: formatarCpf(e.target.value),
+                                      },
                                     }))
                                   }
-                                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
-                                >
-                                  {categoriasFiltro
-                                    .filter((c) => c !== 'GERAL')
-                                    .map((c) => (
-                                      <option key={c} value={c}>
-                                        {c}
-                                      </option>
-                                    ))}
-                                </select>
+                                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
+                                />
                               </div>
 
-                              {/* Posição */}
+                              {/* 5. Categoria */}
+                              <div className="sm:col-span-2">
+                                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                                  Categoria *
+                                </label>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {categoriasFiltro
+                                    .filter((c) => c !== 'GERAL')
+                                    .map((c) => {
+                                      const sel = dadosEdit.categoria === c;
+                                      return (
+                                        <button
+                                          key={c}
+                                          type="button"
+                                          onClick={() =>
+                                            setDadosEdicao((prev) => ({
+                                              ...prev,
+                                              [atleta.id]: { ...dadosEdit, categoria: c },
+                                            }))
+                                          }
+                                          className={`py-2 px-2 rounded-xl text-xs font-black border transition cursor-pointer ${
+                                            sel
+                                              ? 'bg-blue-600 border-blue-600 text-white'
+                                              : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                                          }`}
+                                          style={
+                                            sel
+                                              ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#ffffff' }
+                                              : {}
+                                          }
+                                        >
+                                          {c}
+                                        </button>
+                                      );
+                                    })}
+                                </div>
+                              </div>
+
+                              {/* 6. Posição em Campo */}
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                                  Posição
+                                  Posição em Campo *
                                 </label>
                                 <select
                                   value={dadosEdit.posicao}
@@ -1594,41 +1635,54 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                                   }
                                   className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
                                 >
-                                  {POSICOES_DISPONIVEIS.map((p) => (
-                                    <option key={p} value={p}>
-                                      {p}
+                                  {POSICOES_CAMPO_OPTIONS.map((p) => (
+                                    <option key={p.value} value={p.value}>
+                                      {p.label}
                                     </option>
                                   ))}
                                 </select>
                               </div>
 
-                              {/* Pé Dominante */}
+                              {/* 7. Pé dominante */}
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                                  Pé Dominante
+                                  Pé dominante
                                 </label>
-                                <select
-                                  value={dadosEdit.pernaDominante}
-                                  onChange={(e) =>
-                                    setDadosEdicao((prev) => ({
-                                      ...prev,
-                                      [atleta.id]: {
-                                        ...dadosEdit,
-                                        pernaDominante: e.target.value as PernaDominante,
-                                      },
-                                    }))
-                                  }
-                                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
-                                >
-                                  {PERNAS_DISPONIVEIS.map((p) => (
-                                    <option key={p} value={p}>
-                                      {p}
-                                    </option>
-                                  ))}
-                                </select>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                  {PE_DOMINANTE_OPTIONS.map((op) => {
+                                    const ativo = dadosEdit.pernaDominante === op.value;
+                                    return (
+                                      <button
+                                        key={op.value}
+                                        type="button"
+                                        onClick={() =>
+                                          setDadosEdicao((prev) => ({
+                                            ...prev,
+                                            [atleta.id]: {
+                                              ...dadosEdit,
+                                              pernaDominante: op.value,
+                                            },
+                                          }))
+                                        }
+                                        className={`py-2 px-1.5 rounded-xl text-[11px] font-black border transition cursor-pointer ${
+                                          ativo
+                                            ? 'bg-blue-600 border-blue-600 text-white'
+                                            : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                                        }`}
+                                        style={
+                                          ativo
+                                            ? { backgroundColor: '#2563eb', borderColor: '#2563eb', color: '#ffffff' }
+                                            : {}
+                                        }
+                                      >
+                                        {op.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </div>
 
-                              {/* Altura */}
+                              {/* 8. Altura */}
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
                                   Altura (cm)
@@ -1649,7 +1703,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                                 />
                               </div>
 
-                              {/* Peso */}
+                              {/* 9. Peso */}
                               <div>
                                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
                                   Peso (kg)
@@ -1670,14 +1724,14 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                                 />
                               </div>
 
-                              {/* Data de Nascimento */}
+                              {/* 10. Data de nascimento */}
                               <div className="sm:col-span-2">
                                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                                  Data de Nascimento
+                                  Data de nascimento
                                 </label>
                                 <input
                                   type="date"
-                                  value={dadosEdit.dataNascimento}
+                                  value={dadosEdit.dataNascimento || ''}
                                   onChange={(e) =>
                                     setDadosEdicao((prev) => ({
                                       ...prev,
@@ -1685,6 +1739,47 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                                     }))
                                   }
                                   className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
+                                />
+                              </div>
+
+                              {/* 11. Nome do Responsável Financeiro */}
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                                  Nome do Responsável Financeiro *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={dadosEdit.nomeResponsavel || ''}
+                                  onChange={(e) =>
+                                    setDadosEdicao((prev) => ({
+                                      ...prev,
+                                      [atleta.id]: { ...dadosEdit, nomeResponsavel: e.target.value },
+                                    }))
+                                  }
+                                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
+                                />
+                              </div>
+
+                              {/* 12. Telefone do Responsável */}
+                              <div>
+                                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                                  Telefone do Responsável
+                                </label>
+                                <input
+                                  type="tel"
+                                  inputMode="tel"
+                                  placeholder="(21) 99999-9999"
+                                  value={dadosEdit.telefoneResponsavel || ''}
+                                  onChange={(e) =>
+                                    setDadosEdicao((prev) => ({
+                                      ...prev,
+                                      [atleta.id]: {
+                                        ...dadosEdit,
+                                        telefoneResponsavel: formatarTelefone(e.target.value),
+                                      },
+                                    }))
+                                  }
+                                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
                                 />
                               </div>
                             </div>
@@ -1729,44 +1824,57 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
       )}
 
       {/* ========================================================= */}
-      {/* ABA 2: CADASTRAR NOVO ATLETA (UM POR UM OU POR LOTE) */}
+      {/* ABA 2: CADASTRAR NOVO ATLETA (UM POR UM, LOTE OU LINK) */}
       {/* ========================================================= */}
       {abaPrincipal === 'cadastro' && (
         <div className="space-y-6">
-          {/* 2 Opções no Início: [Cadastrar Um por Um] e [Cadastrar por Lote] */}
-          <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs flex items-center gap-2">
+          {/* 3 Opções lado a lado: [Cadastrar Um por Um] [Cadastrar por Lote] [Link de Cadastro] */}
+          <div className="bg-white dark:bg-slate-900 p-2 sm:p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs grid grid-cols-3 gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => setModoCadastro('unitario')}
-              className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer text-center ${
+              className={`min-h-[48px] py-2.5 px-2 sm:px-4 rounded-xl text-[11px] sm:text-sm font-black transition-all cursor-pointer text-center leading-tight flex items-center justify-center ${
                 modoCadastro === 'unitario'
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
               }`}
               style={modoCadastro === 'unitario' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
             >
-              1. Cadastrar Um por Um
+              Cadastrar Um por Um
             </button>
 
             <button
               type="button"
               onClick={() => setModoCadastro('lote')}
-              className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer text-center ${
+              className={`min-h-[48px] py-2.5 px-2 sm:px-4 rounded-xl text-[11px] sm:text-sm font-black transition-all cursor-pointer text-center leading-tight flex items-center justify-center ${
                 modoCadastro === 'lote'
                   ? 'bg-blue-600 text-white shadow-md'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
               }`}
               style={modoCadastro === 'lote' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
             >
-              2. Cadastrar por Lote (Planilha Excel / CSV)
+              Cadastrar por Lote (Planilha Excel / CSV)
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setModoCadastro('link')}
+              className={`min-h-[48px] py-2.5 px-2 sm:px-4 rounded-xl text-[11px] sm:text-sm font-black transition-all cursor-pointer text-center leading-tight flex items-center justify-center ${
+                modoCadastro === 'link'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+              }`}
+              style={modoCadastro === 'link' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+            >
+              Link de Cadastro
             </button>
           </div>
 
           {/* ======================================================= */}
-          {/* 2.1 CADASTRAR UM POR UM: Formulário atual sozinho, sem lista */}
+          {/* 2.1 CADASTRAR UM POR UM: Igual ao formulario do link publico */}
           {/* ======================================================= */}
           {modoCadastro === 'unitario' && (
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-md">
+            <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-md">
               <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-1">
                 Ficha de Cadastro Individual
               </h2>
@@ -1775,193 +1883,94 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
               </p>
 
               {feedbackUnitario && (
-                <div className="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 text-emerald-800 dark:text-emerald-200 text-sm font-bold flex items-center justify-between">
+                <div className="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 text-emerald-800 dark:text-emerald-200 text-sm font-bold flex items-center justify-between gap-2">
                   <span>{feedbackUnitario}</span>
                   <button
                     type="button"
                     onClick={() => setAbaPrincipal('lista')}
-                    className="underline text-xs"
+                    className="underline text-xs shrink-0 cursor-pointer"
                   >
                     Ver na Lista de Atletas →
                   </button>
                 </div>
               )}
 
-              {erroUnitario && (
-                <div className="mb-6 p-4 rounded-2xl bg-red-50 text-red-800 border border-red-300 text-xs font-bold">
-                  {erroUnitario}
+              <FormularioAtletaCadastro
+                categorias={categorias}
+                textoBotaoSalvar="Cadastrar Atleta"
+                onSalvar={async (novoAtleta) => {
+                  await onSalvarAtleta(novoAtleta);
+                  setFeedbackUnitario(`✓ Atleta "${novoAtleta.nome}" cadastrado com sucesso!`);
+                  setTimeout(() => setFeedbackUnitario(null), 5000);
+                }}
+              />
+            </div>
+          )}
+
+          {/* ======================================================= */}
+          {/* 2.3 LINK DE CADASTRO: Copiar link e enviar no WhatsApp */}
+          {/* ======================================================= */}
+          {modoCadastro === 'link' && (
+            <div className="bg-white dark:bg-slate-900 p-5 sm:p-7 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-md space-y-5 max-w-2xl">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0">
+                  <Link2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="space-y-1">
+                  <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    Link de Cadastro
+                  </h2>
+                  <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">
+                    Copie o link e mande no grupo do WhatsApp para os atletas se cadastrarem sozinhos
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="campo-link-cadastro-publico"
+                  className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wide"
+                >
+                  Link público (/cadastro-atleta)
+                </label>
+                <input
+                  id="campo-link-cadastro-publico"
+                  type="text"
+                  readOnly
+                  value={linkCadastroPublico}
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                  className="w-full min-h-[48px] px-4 py-3 text-sm font-mono font-bold bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCopiarLinkCadastro}
+                className="w-full min-h-[52px] px-6 py-3.5 rounded-xl text-sm sm:text-base font-black text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.99] shadow-md transition cursor-pointer flex items-center justify-center gap-2.5"
+                style={{
+                  backgroundColor: linkCopiado ? '#059669' : '#2563eb',
+                  color: '#ffffff',
+                }}
+              >
+                {linkCopiado ? (
+                  <>
+                    <Check className="w-5 h-5 shrink-0" />
+                    <span>Link copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-5 h-5 shrink-0" />
+                    <span>Copiar link de cadastro</span>
+                  </>
+                )}
+              </button>
+
+              {linkCopiado && (
+                <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-sm font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span>Link copiado! Agora é só colar no grupo do WhatsApp.</span>
                 </div>
               )}
-
-              <form onSubmit={handleSubmitUnitario} className="space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  {/* Nome Completo */}
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Nome Completo do Atleta *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ex: Gabriel Santos Ferreira"
-                      value={formNome}
-                      onChange={(e) => setFormNome(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-bold focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-
-                  {/* Apelido */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Apelido (Campinho / Estratégia)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Biel"
-                      value={formApelido}
-                      onChange={(e) => setFormApelido(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-
-                  {/* Identidade / RG / CPF */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Identidade / RG / CPF (Súmula)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ex: 12.345.678-9"
-                      value={formDocumento}
-                      onChange={(e) => setFormDocumento(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-
-                  {/* Categoria */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Categoria *
-                    </label>
-                    <select
-                      value={formCategoria}
-                      onChange={(e) => setFormCategoria(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-black focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    >
-                      {categoriasFiltro
-                        .filter((c) => c !== 'GERAL')
-                        .map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  {/* Posição */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Posição em Campo *
-                    </label>
-                    <select
-                      value={formPosicao}
-                      onChange={(e) => setFormPosicao(e.target.value as PosicaoAtleta)}
-                      className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-black focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    >
-                      {POSICOES_DISPONIVEIS.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Pé Dominante */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Pé Dominante *
-                    </label>
-                    <select
-                      value={formPerna}
-                      onChange={(e) => setFormPerna(e.target.value as PernaDominante)}
-                      className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-black focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    >
-                      {PERNAS_DISPONIVEIS.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Altura */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Altura (cm)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Ex: 174"
-                      value={formAltura}
-                      onChange={(e) => setFormAltura(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-
-                  {/* Peso */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Peso (kg)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="Ex: 68"
-                      value={formPeso}
-                      onChange={(e) => setFormPeso(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-
-                  {/* Data de Nascimento */}
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Data de Nascimento *
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={formDataNasc}
-                      onChange={(e) => setFormDataNasc(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-black focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-
-                  {/* Foto URL (opcional) */}
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Link da Foto do Atleta (Opcional)
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://..."
-                      value={formFotoUrl}
-                      onChange={(e) => setFormFotoUrl(e.target.value)}
-                      className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <button
-                    type="submit"
-                    className="px-6 py-3 rounded-xl text-sm font-black text-white bg-blue-600 hover:bg-blue-700 active:scale-95 shadow-md transition cursor-pointer flex items-center gap-2"
-                    style={{ backgroundColor: '#2563eb' }}
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Cadastrar Atleta</span>
-                  </button>
-                </div>
-              </form>
             </div>
           )}
 

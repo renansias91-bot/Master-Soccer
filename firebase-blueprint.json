@@ -11,6 +11,7 @@
         "apelido": { "type": "string" },
         "documento": { "type": "string" },
         "rg": { "type": "string" },
+        "cpf": { "type": "string" },
         "categoria": { "type": "string" },
         "posicao": { "type": "string" },
         "numeroCamisa": { "type": "number" },
@@ -18,6 +19,8 @@
         "pernaDominante": { "type": "string" },
         "altura": { "type": "number" },
         "peso": { "type": "number" },
+        "nomeResponsavel": { "type": "string" },
+        "telefoneResponsavel": { "type": "string" },
         "status": { "type": "string" },
         "dataCadastro": { "type": "string" },
         "fotoUrl": { "type": "string" }
