@@ -482,13 +482,13 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
       // Se clicou dentro de um grupo específico da formação (não TODOS)
       if (grupo && grupo.key !== 'TODOS' && grupo.slots.length > 0) {
-        const slotsDoGrupo = grupo.slots.map((s) => normalizarSlotId(s));
-
-        // Se o atleta já é titular NESTE grupo, desconvoca
-        if (escaladoAtual?.titular && slotsDoGrupo.includes(slotAtual)) {
+        // Se o atleta já está marcado como Titular, desmarca imediatamente sem mover ninguém
+        if (escaladoAtual?.titular) {
           delete copy[atleta.id];
           return copy;
         }
+
+        const slotsDoGrupo = grupo.slots.map((s) => normalizarSlotId(s));
 
         // Procura a 1ª vaga livre dentro das vagas deste grupo (1º marcado = -E / 1ª vaga; 2º marcado = -D / 2ª vaga)
         const vagaLivre = slotsDoGrupo.find(
@@ -558,21 +558,17 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
   // 1 CLIQUE JÁ CONVOCA / DESCONVOCA: [Reserva]
   const handleToggleReserva = (atleta: Atleta) => {
-    const escaladoAtual = escalacaoMap[atleta.id];
-
-    if (escaladoAtual && !escaladoAtual.titular) {
-      // Clicou de novo no botão que já estava marcado -> DESCONVOCA o atleta
-      setEscalacaoMap((prev) => {
-        const copy = { ...prev };
-        delete copy[atleta.id];
-        return copy;
-      });
-      return;
-    }
-
-    // Convocado como reserva: vai direto para o Banco de Reservas e libera qualquer vaga de campo
     setEscalacaoMap((prev) => {
       const copy = { ...prev };
+      const escaladoAtual = copy[atleta.id];
+
+      if (escaladoAtual && !escaladoAtual.titular) {
+        // Clicou de novo no botão que já estava marcado -> DESMARCA o atleta sem mover ninguém
+        delete copy[atleta.id];
+        return copy;
+      }
+
+      // Convocado como reserva: vai direto para o Banco de Reservas e libera qualquer vaga de campo
       copy[atleta.id] = {
         atletaId: atleta.id,
         titular: false,
@@ -825,31 +821,13 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
           return jaEscaladoAqui || atletaCombinaComGrupoFormacao(a, grupo.key, possuiPD, possuiPE);
         });
 
-        // Ordena colocando primeiro quem já está escalado nesta vaga e depois prioridade de pé para vagas de lado
+        // Ordem FIXA em ordem alfabética (A-Z): nunca reordenar ao marcar/desmarcar Titular ou Reserva
         const listaOrdenada = [...listaFiltrada].sort((a, b) => {
-          const slotA = escalacaoMap[a.id]?.titular ? normalizarSlotId(escalacaoMap[a.id].posicaoSlot || '') : '';
-          const slotB = escalacaoMap[b.id]?.titular ? normalizarSlotId(escalacaoMap[b.id].posicaoSlot || '') : '';
-          const aquiA = slotsGrupoNorm.has(slotA) ? 0 : 1;
-          const aquiB = slotsGrupoNorm.has(slotB) ? 0 : 1;
-          if (aquiA !== aquiB) return aquiA - aquiB;
-
-          const mesmaCatA = a.categoria === categoriaDoJogo ? 0 : 1;
-          const mesmaCatB = b.categoria === categoriaDoJogo ? 0 : 1;
-          if (mesmaCatA !== mesmaCatB) return mesmaCatA - mesmaCatB;
-
-          if (grupo.key === 'MEI-E' || grupo.key === 'LE' || grupo.key === 'PE') {
-            const esqA = isPeEsquerdo(a.pernaDominante) ? 0 : 1;
-            const esqB = isPeEsquerdo(b.pernaDominante) ? 0 : 1;
-            if (esqA !== esqB) return esqA - esqB;
-          } else if (grupo.key === 'MEI-D' || grupo.key === 'LD' || grupo.key === 'PD') {
-            const dirA = isPeDireito(a.pernaDominante) ? 0 : 1;
-            const dirB = isPeDireito(b.pernaDominante) ? 0 : 1;
-            if (dirA !== dirB) return dirA - dirB;
-          }
-
-          const nomeA = a.apelido || a.nome;
-          const nomeB = b.apelido || b.nome;
-          return nomeA.localeCompare(nomeB, 'pt-BR');
+          const nomeA = (a.apelido || a.nome).trim();
+          const nomeB = (b.apelido || b.nome).trim();
+          const cmp = nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
+          if (cmp !== 0) return cmp;
+          return a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });
         });
 
         const preenchidosCount = Object.values(escalacaoMap).filter(
@@ -869,7 +847,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         // Sem busca, TODOS e TODAS as posições da formação aparecem na lista (espelho do campinho)
         return g.key !== 'TODOS' || g.atletas.length > 0;
       });
-  }, [formacao, atletasElegiveisOrdenados, escalacaoMap, busca, categoriaDoJogo]);
+  }, [formacao, atletasElegiveisOrdenados, escalacaoMap, busca]);
 
 
 
