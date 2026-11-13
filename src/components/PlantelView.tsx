@@ -821,8 +821,16 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
           return jaEscaladoAqui || atletaCombinaComGrupoFormacao(a, grupo.key, possuiPD, possuiPE);
         });
 
-        // Ordem FIXA em ordem alfabética (A-Z): nunca reordenar ao marcar/desmarcar Titular ou Reserva
+        // Ordem FIXA: primeiro atletas da categoria do jogo, depois categorias inferiores (desc), e em ordem alfabética (A-Z) dentro de cada grupo. Nunca reordena ao marcar Titular/Reserva.
         const listaOrdenada = [...listaFiltrada].sort((a, b) => {
+          const mesmaCatA = a.categoria === categoriaDoJogo ? 0 : 1;
+          const mesmaCatB = b.categoria === categoriaDoJogo ? 0 : 1;
+          if (mesmaCatA !== mesmaCatB) return mesmaCatA - mesmaCatB;
+
+          const numA = extrairNumeroCategoria(a.categoria);
+          const numB = extrairNumeroCategoria(b.categoria);
+          if (numA !== numB) return numB - numA;
+
           const nomeA = (a.apelido || a.nome).trim();
           const nomeB = (b.apelido || b.nome).trim();
           const cmp = nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
@@ -847,7 +855,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         // Sem busca, TODOS e TODAS as posições da formação aparecem na lista (espelho do campinho)
         return g.key !== 'TODOS' || g.atletas.length > 0;
       });
-  }, [formacao, atletasElegiveisOrdenados, escalacaoMap, busca]);
+  }, [formacao, atletasElegiveisOrdenados, escalacaoMap, busca, categoriaDoJogo]);
 
 
 
@@ -1079,37 +1087,29 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
       {/* Conteúdo: Lista Vertical por Posição (1 posição aberta por vez) ou Campinho */}
       {abaSubEscalacao === 'lista' ? (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           <div className="px-1 pt-1 flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
+            <span className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
               ESCOLHA A POSIÇÃO ({formacao}):
             </span>
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+            <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300">
               {titularesCount}/11 vagas preenchidas
             </span>
           </div>
 
           {gruposPosicaoVisiveis.length === 0 ? (
-            <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-sm text-slate-400">
+            <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-base text-slate-400">
               Nenhum atleta encontrado para os critérios pesquisados.
             </div>
           ) : (
             <div className="flex flex-col gap-2.5">
               {gruposPosicaoVisiveis.map((grupo) => {
                 const aberto = posicaoAberta === grupo.key;
-                const vagasLabel =
-                  grupo.key === 'TODOS'
-                    ? `${grupo.atletas.length}`
-                    : `${grupo.preenchidosCount}/${grupo.totalVagas} ${
-                        grupo.totalVagas === 1 ? 'vaga' : 'vagas'
-                      }`;
                 const subtitulo =
                   grupo.key === 'TODOS'
-                    ? `${grupo.sigla} - ${grupo.titulo} (${vagasLabel})`
-                    : `${grupo.sigla} - ${grupo.titulo}${
-                        grupo.subtituloVagas ? ` (${grupo.subtituloVagas})` : ''
-                      } · ${vagasLabel} (${grupo.atletas.length} ${
-                        grupo.atletas.length === 1 ? 'atleta' : 'atletas'
+                    ? `${grupo.sigla} - ${grupo.titulo} (${grupo.atletas.length})`
+                    : `${grupo.sigla} - ${grupo.titulo} (${grupo.atletas.length} ${
+                        grupo.atletas.length === 1 ? 'ATLETA' : 'ATLETAS'
                       })`;
 
                 return (
@@ -1130,11 +1130,11 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                           ? { backgroundColor: '#2563eb', color: '#ffffff' }
                           : { backgroundColor: '#f1f5f9', color: '#0f172a' }
                       }
-                      className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left font-black text-xs sm:text-sm uppercase tracking-wide transition-colors cursor-pointer"
+                      className="w-full px-4 py-4 flex items-center justify-between gap-3 text-left font-black text-sm sm:text-base uppercase tracking-wide transition-colors cursor-pointer"
                     >
                       <span className="truncate">{subtitulo}</span>
                       <ChevronDown
-                        className={`w-5 h-5 shrink-0 transition-transform duration-200 ${
+                        className={`w-6 h-6 shrink-0 transition-transform duration-200 ${
                           aberto ? 'rotate-180 text-white' : 'text-slate-700'
                         }`}
                       />
@@ -1144,7 +1144,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                     {aberto && (
                       <div className="p-3 bg-white dark:bg-slate-900 flex flex-col gap-2.5">
                         {grupo.atletas.length === 0 ? (
-                          <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                          <div className="p-4 text-center text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
                             Nenhum atleta cadastrado nessa posição. Você pode escalar outro jogador nesta vaga pelo Campinho ou em TODOS.
                           </div>
                         ) : (
@@ -1160,7 +1160,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                             return (
                               <div
                                 key={atleta.id}
-                                className={`rounded-2xl p-3 sm:p-3.5 transition-all border flex items-center justify-between gap-2.5 ${
+                                className={`rounded-2xl p-3.5 sm:p-4 transition-all border flex items-center justify-between gap-2.5 ${
                                   ehTitular
                                     ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-500 shadow-2xs'
                                     : ehReserva
@@ -1170,7 +1170,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                               >
                                 <div className="flex items-center gap-3 min-w-0 flex-1">
                                   <div
-                                    className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl shrink-0 overflow-hidden flex items-center justify-center font-black text-xs sm:text-sm border ${
+                                    className={`w-11 h-11 sm:w-12 sm:h-12 rounded-xl shrink-0 overflow-hidden flex items-center justify-center font-black text-sm sm:text-base border ${
                                       ehTitular
                                         ? 'bg-blue-600 text-white border-blue-700'
                                         : ehReserva
@@ -1191,26 +1191,26 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                      <h4 className="text-[15px] sm:text-base font-black text-slate-900 dark:text-white uppercase tracking-tight leading-snug truncate">
+                                      <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight leading-snug truncate">
                                         {atleta.apelido || atleta.nome.split(' ')[0]}
                                       </h4>
                                       {ehOutraCategoria && (
-                                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
+                                        <span className="text-xs font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60 shrink-0">
                                           {atleta.categoria}
                                         </span>
                                       )}
                                       {ehTitular && slotAtual && (
-                                        <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-blue-600 text-white shadow-2xs shrink-0">
+                                        <span className="text-xs font-black px-2 py-0.5 rounded-md bg-blue-600 text-white shadow-2xs shrink-0">
                                           {slotAtual}
                                         </span>
                                       )}
                                       {ehReserva && (
-                                        <span className="text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-500 text-white shadow-2xs shrink-0">
+                                        <span className="text-xs font-black px-2 py-0.5 rounded-md bg-amber-500 text-white shadow-2xs shrink-0">
                                           Banco
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
+                                    <p className="text-sm sm:text-[15px] text-slate-600 dark:text-slate-300 mt-0.5 leading-snug">
                                       Posição:{' '}
                                       <strong className="text-slate-900 dark:text-slate-100 font-bold">
                                         {atleta.posicao}
@@ -1227,26 +1227,26 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleToggleTitular(atleta, grupo)}
-                                    className={`px-2.5 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
+                                    className={`px-3 sm:px-4 py-2.5 rounded-xl text-sm sm:text-[15px] font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
                                       ehTitular
                                         ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-700 shadow-sm'
                                         : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
                                     }`}
                                   >
-                                    {ehTitular && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                                    {ehTitular && <Check className="w-4 h-4 text-white stroke-[3]" />}
                                     <span>Titular</span>
                                   </button>
 
                                   <button
                                     type="button"
                                     onClick={() => handleToggleReserva(atleta)}
-                                    className={`px-2.5 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
+                                    className={`px-3 sm:px-4 py-2.5 rounded-xl text-sm sm:text-[15px] font-black transition-all cursor-pointer whitespace-nowrap active:scale-95 flex items-center gap-1 shadow-2xs ${
                                       ehReserva
                                         ? 'bg-amber-500 hover:bg-amber-600 text-white border-2 border-amber-600 shadow-sm'
                                         : 'bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
                                     }`}
                                   >
-                                    {ehReserva && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                                    {ehReserva && <Check className="w-4 h-4 text-white stroke-[3]" />}
                                     <span>Reserva</span>
                                   </button>
                                 </div>
