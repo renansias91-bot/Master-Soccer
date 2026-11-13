@@ -413,13 +413,16 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
   const jogoAtivo = jogos.find((j) => j.id === jogoAtivoId) || null;
 
-  // Encontra o melhor slot vago da formação quando o usuário está no filtro [TODOS]
-  const encontrarMelhorSlotVazio = (
+  // Encontra um slot vago EXCLUSIVAMENTE dentro da própria posição do atleta na formação atual.
+  // Se todas as vagas daquela posição estiverem cheias, retorna a última vaga da MESMA posição (para substituir sem empurrar ninguém para outra posição).
+  // Se aquela posição não existir na formação atual, retorna null.
+  const encontrarSlotDaMesmaPosicao = (
     atleta: Atleta,
     formacaoAtual: string,
     escalacaoAtual: Record<string, AtletaEscalado>
-  ): string => {
+  ): string | null => {
     const slots = FORMACOES_CAMPINHO[formacaoAtual] || FORMACOES_CAMPINHO['4-4-2 Losango'];
+    const idsFormacao = new Set(slots.map((s) => normalizarSlotId(s.id)));
     const slotsOcupados = new Set<string>();
 
     for (const id in escalacaoAtual) {
@@ -429,79 +432,46 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
       }
     }
 
-    const slotsVazios = slots.filter((s) => !slotsOcupados.has(normalizarSlotId(s.id)));
-    if (slotsVazios.length === 0) {
-      return normalizarSlotId(slots[0]?.id || 'GOL');
-    }
-
     const pos = (atleta.posicao || '').toLowerCase();
     const peEsq = isPeEsquerdo(atleta.pernaDominante);
+    let candidatosMesmaPosicao: string[] = [];
 
     if (pos.includes('gol')) {
-      const s = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'GOL');
-      if (s) return normalizarSlotId(s.id);
-    }
-
-    if (pos.includes('lateral')) {
-      if (pos.includes('esquerd') || peEsq) {
-        const s = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'LE');
-        if (s) return normalizarSlotId(s.id);
+      candidatosMesmaPosicao = ['GOL'];
+    } else if (pos.includes('lateral')) {
+      if (pos.includes('esquerd') || pos === 'le') {
+        candidatosMesmaPosicao = ['LE'];
+      } else if (pos.includes('direit') || pos === 'ld') {
+        candidatosMesmaPosicao = ['LD'];
+      } else {
+        candidatosMesmaPosicao = peEsq ? ['LE', 'LD'] : ['LD', 'LE'];
       }
-      const sLD = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'LD');
-      if (sLD) return normalizarSlotId(sLD.id);
-      const sLE = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'LE');
-      if (sLE) return normalizarSlotId(sLE.id);
-    }
-
-    if (pos.includes('zag') || pos.includes('def')) {
-      if (peEsq) {
-        const s = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'ZAG-E');
-        if (s) return normalizarSlotId(s.id);
+    } else if (pos.includes('zag') || pos.includes('def')) {
+      candidatosMesmaPosicao = ['ZAG-E', 'ZAG-D'];
+    } else if (pos.includes('vol')) {
+      candidatosMesmaPosicao = ['VOL', 'VOL-E', 'VOL-D'];
+    } else if (pos.includes('mei') || pos.includes('meio')) {
+      candidatosMesmaPosicao = ['MEI-E', 'MEI-C', 'MEI-CE', 'MEI-CD', 'MEI-D'];
+    } else if (pos.includes('ponta')) {
+      if (pos.includes('esquerd') || pos === 'pe') {
+        candidatosMesmaPosicao = idsFormacao.has('ATA-E') ? ['ATA-E'] : [];
+      } else {
+        candidatosMesmaPosicao = idsFormacao.has('ATA-D') ? ['ATA-D'] : [];
       }
-      const sD = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'ZAG-D');
-      if (sD) return normalizarSlotId(sD.id);
-      const sE = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'ZAG-E');
-      if (sE) return normalizarSlotId(sE.id);
+    } else if (pos.includes('ata') || pos.includes('cent') || pos.includes('ext')) {
+      candidatosMesmaPosicao = ['ATA', 'ATA-C', 'ATA-E', 'ATA-D'];
     }
 
-    if (pos.includes('vol')) {
-      const s = slotsVazios.find(
-        (sv) =>
-          normalizarSlotId(sv.id) === 'VOL' ||
-          normalizarSlotId(sv.id) === 'VOL-E' ||
-          normalizarSlotId(sv.id) === 'VOL-D'
-      );
-      if (s) return normalizarSlotId(s.id);
-    }
+    const validos = candidatosMesmaPosicao.filter((sid) => idsFormacao.has(sid));
+    if (validos.length === 0) return null;
 
-    if (pos.includes('mei') || pos.includes('meio')) {
-      const s = slotsVazios.find((sv) => sv.linha === 'mei');
-      if (s) return normalizarSlotId(s.id);
-    }
-
-    if (pos.includes('ata') || pos.includes('pon') || pos.includes('cent') || pos.includes('ext')) {
-      if (pos.includes('direit')) {
-        const sD = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'ATA-D');
-        if (sD) return normalizarSlotId(sD.id);
-      }
-      if (pos.includes('esquerd')) {
-        const sE = slotsVazios.find((sv) => normalizarSlotId(sv.id) === 'ATA-E');
-        if (sE) return normalizarSlotId(sE.id);
-      }
-      const s = slotsVazios.find((sv) => sv.linha === 'ata');
-      if (s) return normalizarSlotId(s.id);
-      // Em formações sem pontas (ex: 4-2-3-1, 4-1-4-1), um ponta pode ir para MEI aberto
-      if (pos.includes('pon')) {
-        const sMei = slotsVazios.find((sv) => sv.linha === 'mei' && normalizarSlotId(sv.id).startsWith('MEI'));
-        if (sMei) return normalizarSlotId(sMei.id);
-      }
-    }
-
-    return normalizarSlotId(slotsVazios[0].id);
+    const primeiroLivre = validos.find((sid) => !slotsOcupados.has(sid));
+    return primeiroLivre || validos[validos.length - 1];
   };
 
   // 1 CLIQUE JÁ CONVOCA / DESCONVOCA: [Titular]
-  // Lista e Campinho usam EXATAMENTE os mesmos slots da formação tática atual.
+  // Regra de travamento: cada jogador fica TRAVADO exatamente na vaga onde foi colocado.
+  // Se a vaga daquela posição já estiver cheia, desmarca quem estava na vaga e coloca o novo no MESMO lugar, sem empurrar ninguém para outra posição.
   const handleToggleTitular = (atleta: Atleta, grupo?: GrupoPosicaoFormacao) => {
     setEscalacaoMap((prev) => {
       const copy = { ...prev };
@@ -533,7 +503,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
         const targetSlotId = vagaLivre || slotsDoGrupo[slotsDoGrupo.length - 1];
 
-        // Se todas as vagas desse grupo estavam cheias e estamos substituindo uma vaga específica, remove quem estava nela
+        // Desmarca o jogador que estava naquela vaga específica (NUNCA empurra ele para outra posição)
         for (const id in copy) {
           if (
             id !== atleta.id &&
@@ -560,7 +530,10 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         return copy;
       }
 
-      const targetSlotId = normalizarSlotId(encontrarMelhorSlotVazio(atleta, formacao, copy));
+      const targetSlotId = encontrarSlotDaMesmaPosicao(atleta, formacao, copy);
+      if (!targetSlotId) {
+        return copy;
+      }
 
       for (const id in copy) {
         if (
@@ -610,14 +583,15 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
     });
   };
 
-  // Atribuição 100% determinística dos titulares aos slots da formação tática.
+  // Atribuição 100% determinística dos titulares aos slots exatos da formação tática.
+  // Cada jogador aparece APENAS no slot onde está travado, sem fallback nem pulo para outra posição.
   const atribuirTitularesAosSlots = (
     titularesList: Atleta[],
     slots: SlotPosicaoCampinho[]
   ): Array<{ slot: SlotPosicaoCampinho; atleta: Atleta | null }> => {
     const usados = new Set<string>();
 
-    const primeiraPassagem = slots.map((slot) => {
+    return slots.map((slot) => {
       const targetId = normalizarSlotId(slot.id);
       const atleta =
         titularesList.find((a) => {
@@ -628,38 +602,6 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
       if (atleta) usados.add(atleta.id);
       return { slot, atleta };
-    });
-
-    const candidatosFallback: Record<string, string[]> = {
-      VOL: ['VOL-E', 'VOL-D'],
-      'VOL-E': ['VOL'],
-      'ATA-E': ['PE'],
-      'ATA-D': ['PD'],
-      'ATA-C': ['ATA', 'ATA-E', 'ATA-D'],
-      ATA: ['ATA-C', 'ATA-E', 'ATA-D'],
-      'MEI-E': ['PE'],
-      'MEI-D': ['PD'],
-      'MEI-CE': ['MEI-E', 'MEI-C'],
-      'MEI-CD': ['MEI-D'],
-    };
-
-    return primeiraPassagem.map(({ slot, atleta }) => {
-      if (atleta) return { slot, atleta };
-      const targetId = normalizarSlotId(slot.id);
-      const aceitos = candidatosFallback[targetId];
-      if (!aceitos) return { slot, atleta: null };
-
-      const match =
-        titularesList.find((a) => {
-          if (usados.has(a.id)) return false;
-          const info = escalacaoMap[a.id];
-          if (!info?.titular) return false;
-          const s = normalizarSlotId(info.posicaoSlot || '');
-          return aceitos.includes(s);
-        }) || null;
-
-      if (match) usados.add(match.id);
-      return { slot, atleta: match };
     });
   };
 
@@ -760,7 +702,8 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   const handlePromoverParaTitular = (atletaId: string, posicaoJogo?: string) => {
     const atleta = atletas.find((a) => a.id === atletaId);
     if (!atleta) return;
-    const targetSlotId = encontrarMelhorSlotVazio(atleta, formacao, escalacaoMap);
+    const targetSlotId = encontrarSlotDaMesmaPosicao(atleta, formacao, escalacaoMap);
+    if (!targetSlotId) return;
     const slots = FORMACOES_CAMPINHO[formacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
     const slotObj = slots.find((s) => normalizarSlotId(s.id) === targetSlotId);
     const nomePosicao = posicaoJogo || slotObj?.nomeCompleto || slotObj?.label || 'Titular';

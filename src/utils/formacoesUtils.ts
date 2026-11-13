@@ -314,39 +314,40 @@ export function obterGruposEscalacaoDaFormacao(formacao: string): GrupoPosicaoFo
   return GRUPOS_ESCALACAO_POR_FORMACAO[formacao] || GRUPOS_ESCALACAO_POR_FORMACAO['4-4-2 Losango'];
 }
 
-const PREFERENCIAS_REMAPEAMENTO: Record<string, string[]> = {
+const MESMA_POSICAO_NA_TROCA: Record<string, string[]> = {
   GOL: ['GOL'],
-  LE: ['LE', 'LD', 'ZAG-E'],
-  LD: ['LD', 'LE', 'ZAG-D'],
-  'ZAG-E': ['ZAG-E', 'ZAG-D'],
-  'ZAG-D': ['ZAG-D', 'ZAG-E'],
-  VOL: ['VOL', 'VOL-E', 'VOL-D', 'MEI-CE', 'MEI-CD', 'MEI-C'],
-  'VOL-E': ['VOL-E', 'VOL', 'VOL-D', 'MEI-CE', 'MEI-E', 'MEI-C'],
-  'VOL-D': ['VOL-D', 'VOL', 'VOL-E', 'MEI-CD', 'MEI-D', 'MEI-C'],
-  'MEI-E': ['MEI-E', 'MEI-CE', 'ATA-E', 'MEI-C', 'MEI-D'],
-  'MEI-D': ['MEI-D', 'MEI-CD', 'ATA-D', 'MEI-C', 'MEI-E'],
-  'MEI-C': ['MEI-C', 'MEI-CE', 'MEI-CD', 'VOL', 'MEI-E', 'MEI-D', 'ATA', 'ATA-C'],
-  'MEI-CE': ['MEI-CE', 'MEI-C', 'MEI-E', 'VOL-E', 'VOL', 'MEI-CD'],
-  'MEI-CD': ['MEI-CD', 'MEI-C', 'MEI-D', 'VOL-D', 'VOL', 'MEI-CE'],
-  ATA: ['ATA', 'ATA-C', 'ATA-E', 'ATA-D', 'MEI-C'],
-  'ATA-C': ['ATA-C', 'ATA', 'ATA-E', 'ATA-D', 'MEI-C'],
-  'ATA-E': ['ATA-E', 'ATA', 'ATA-C', 'MEI-E', 'ATA-D'],
-  'ATA-D': ['ATA-D', 'ATA', 'ATA-C', 'MEI-D', 'ATA-E'],
-  PD: ['ATA-D', 'MEI-D', 'ATA-E', 'ATA'],
-  PE: ['ATA-E', 'MEI-E', 'ATA-D', 'ATA'],
+  LE: ['LE'],
+  LD: ['LD'],
+  'ZAG-E': ['ZAG-E'],
+  'ZAG-D': ['ZAG-D'],
+  VOL: ['VOL', 'VOL-E'],
+  'VOL-E': ['VOL-E', 'VOL'],
+  'VOL-D': ['VOL-D'],
+  'MEI-E': ['MEI-E'],
+  'MEI-D': ['MEI-D'],
+  'MEI-C': ['MEI-C', 'MEI-CE'],
+  'MEI-CE': ['MEI-CE', 'MEI-C'],
+  'MEI-CD': ['MEI-CD'],
+  ATA: ['ATA', 'ATA-C', 'ATA-E'],
+  'ATA-C': ['ATA-C', 'ATA'],
+  'ATA-E': ['ATA-E', 'ATA'],
+  'ATA-D': ['ATA-D'],
+  PD: ['ATA-D'],
+  PE: ['ATA-E'],
 };
 
 /**
- * Remapeia os jogadores já escalados quando o técnico troca de formação tática.
- * Regra: nenhum atleta pode ser apagado. Titulares mantêm vaga idêntica ou migram
- * para a vaga mais parecida disponível na nova formação. Reservas ficam no banco.
+ * Atualiza a escalação ao trocar de formação tática SEM pular ninguém de posição.
+ * - Reservas continuam intactos no banco.
+ * - Titulares permanecem na vaga exata (ou na vaga equivalente da mesma posição, ex: VOL-E -> VOL).
+ * - Se a vaga deixou de existir na nova formação (ex: VOL-D no 4-4-2 Losango, ou 2º ATA no 4-2-3-1),
+ *   o jogador é DESMARCADO em vez de ser empurrado para outra posição.
  */
 export function remapearEscalacaoParaFormacao(
   escalacaoAtual: Record<string, AtletaEscalado>,
   novaFormacao: string
 ): Record<string, AtletaEscalado> {
   const slotsDestino = FORMACOES_CAMPINHO[novaFormacao] || FORMACOES_CAMPINHO['4-4-2 Losango'];
-  const idsDestino = slotsDestino.map((s) => normalizarSlotId(s.id));
   const mapSlotInfo = new Map<string, SlotPosicaoCampinho>(
     slotsDestino.map((s) => [normalizarSlotId(s.id), s])
   );
@@ -355,7 +356,7 @@ export function remapearEscalacaoParaFormacao(
   const ocupados = new Set<string>();
   const pendentes: Array<{ id: string; item: AtletaEscalado; slotAntigo: string }> = [];
 
-  // 1. Mantém reservas intactos e titulares que já possuem a mesma vaga exata na nova formação
+  // 1. Mantém reservas intactos e titulares cujo slot exato existe na nova formação
   for (const [id, item] of Object.entries(escalacaoAtual || {})) {
     if (!item) continue;
     if (!item.titular) {
@@ -378,49 +379,28 @@ export function remapearEscalacaoParaFormacao(
     }
   }
 
-  // 2. Remapeia titulares restantes para a vaga mais parecida disponível na nova formação
-  const aindaSemVaga: Array<{ id: string; item: AtletaEscalado }> = [];
+  // 2. Para quem estava em vaga que mudou de sufixo na mesma posição (ex: VOL-E -> VOL, VOL -> VOL-E, ATA-C -> ATA),
+  // mantém apenas se a vaga equivalente da MESMA posição existir e estiver livre. Caso contrário, DESMARCA.
   for (const { id, item, slotAntigo } of pendentes) {
-    const preferencias = PREFERENCIAS_REMAPEAMENTO[slotAntigo] || [];
-    const melhorVaga = preferencias.find((cand) => mapSlotInfo.has(cand) && !ocupados.has(cand));
+    const equivalentesMesmaPosicao = MESMA_POSICAO_NA_TROCA[slotAntigo] || [];
+    const vagaEquivalente = equivalentesMesmaPosicao.find(
+      (cand) => mapSlotInfo.has(cand) && !ocupados.has(cand)
+    );
 
-    if (melhorVaga) {
-      ocupados.add(melhorVaga);
-      const slotInfo = mapSlotInfo.get(melhorVaga)!;
+    if (vagaEquivalente) {
+      ocupados.add(vagaEquivalente);
+      const slotInfo = mapSlotInfo.get(vagaEquivalente)!;
       resultado[id] = {
         ...item,
         titular: true,
-        posicaoSlot: melhorVaga,
+        posicaoSlot: vagaEquivalente,
         posicaoJogo: slotInfo.nomeCompleto || item.posicaoJogo,
       };
-    } else {
-      aindaSemVaga.push({ id, item });
     }
-  }
-
-  // 3. Garante que nenhum titular suma: aloca em qualquer vaga vazia restante da nova formação
-  // (e somente se já houver mais de 11 titulares, move excedente para o banco em vez de apagar)
-  for (const { id, item } of aindaSemVaga) {
-    const qualquerVagaLivre = idsDestino.find((sid) => !ocupados.has(sid));
-    if (qualquerVagaLivre) {
-      ocupados.add(qualquerVagaLivre);
-      const slotInfo = mapSlotInfo.get(qualquerVagaLivre)!;
-      resultado[id] = {
-        ...item,
-        titular: true,
-        posicaoSlot: qualquerVagaLivre,
-        posicaoJogo: slotInfo.nomeCompleto || item.posicaoJogo,
-      };
-    } else {
-      resultado[id] = {
-        ...item,
-        titular: false,
-        posicaoSlot: undefined,
-        posicaoJogo: 'Reserva',
-      };
-    }
+    // Se não há vaga da mesma posição, NÃO inclui em resultado (desmarca o jogador sem empurrar para outra posição)
   }
 
   return resultado;
 }
+
 
