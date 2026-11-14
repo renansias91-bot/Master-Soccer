@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   Zap,
@@ -16,6 +16,8 @@ import { Atleta, TesteFisicoAtleta } from '../types';
 import { getDataAtualBrasil, formatarDataExibicao } from '../utils/dateUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
 
+const STORAGE_KEY_TESTEFISICO_CATEGORIA = 'mastersoccer_testefisico_categoria_v1';
+
 interface TesteFisicoViewProps {
   atletas: Atleta[];
   testesFisicos: TesteFisicoAtleta[];
@@ -31,9 +33,26 @@ export const TesteFisicoView: React.FC<TesteFisicoViewProps> = ({
   onSalvarTeste,
   onExcluirTeste,
 }) => {
-  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('TODAS');
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string>(() => {
+    try {
+      return (
+        localStorage.getItem(STORAGE_KEY_TESTEFISICO_CATEGORIA) ||
+        sessionStorage.getItem(STORAGE_KEY_TESTEFISICO_CATEGORIA) ||
+        'TODAS'
+      );
+    } catch {
+      return 'TODAS';
+    }
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [testeEditando, setTesteEditando] = useState<TesteFisicoAtleta | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_TESTEFISICO_CATEGORIA, categoriaFiltro);
+      sessionStorage.setItem(STORAGE_KEY_TESTEFISICO_CATEGORIA, categoriaFiltro);
+    } catch {}
+  }, [categoriaFiltro]);
 
   // Campos do formulário
   const [atletaId, setAtletaId] = useState('');

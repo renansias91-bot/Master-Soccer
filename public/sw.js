@@ -1,11 +1,10 @@
 // Master Soccer RJ Service Worker (Offline Cache)
-const CACHE_NAME = 'mastersoccer-rj-v2';
+const CACHE_NAME = 'mastersoccer-rj-v3';
 
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icons/icon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-512.png',

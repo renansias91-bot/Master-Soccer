@@ -167,8 +167,25 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
   const [linkCopiado, setLinkCopiado] = useState(false);
 
   // 3. FILTRO DA LISTA: GERAL, SUB-15, SUB-16, SUB-17 (não usar mais TODOS, usar GERAL)
-  const [filtroCategoria, setFiltroCategoria] = useState<string>('GERAL');
+  const [filtroCategoria, setFiltroCategoria] = useState<string>(() => {
+    try {
+      return (
+        localStorage.getItem('mastersoccer_atletas_categoria_v1') ||
+        sessionStorage.getItem('mastersoccer_atletas_categoria_v1') ||
+        'GERAL'
+      );
+    } catch {
+      return 'GERAL';
+    }
+  });
   const [busca, setBusca] = useState<string>('');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mastersoccer_atletas_categoria_v1', filtroCategoria);
+      sessionStorage.setItem('mastersoccer_atletas_categoria_v1', filtroCategoria);
+    } catch {}
+  }, [filtroCategoria]);
 
   // 4. ACCORDION DOS ATLETAS: ID do atleta expandido (ou null)
   const [atletaExpandidoId, setAtletaExpandidoId] = useState<string | null>(null);

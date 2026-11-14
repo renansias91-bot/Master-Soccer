@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DollarSign,
   Plus,
@@ -10,6 +10,8 @@ import {
   Trophy,
   Search,
   X,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import {
   Atleta,
@@ -24,6 +26,8 @@ import {
   normalizarRegistroFinanceiro,
 } from '../services/storage';
 import { firebaseService } from '../services/firebase';
+
+const STORAGE_KEY_FINANCEIRO_CATEGORIA = 'mastersoccer_financeiro_categoria_v1';
 
 interface FinanceiroViewProps {
   atletas: Atleta[];
@@ -44,9 +48,27 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
   onAtualizarRegistro,
   onExibirToast,
 }) => {
-  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('TODAS');
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string>(() => {
+    try {
+      return (
+        localStorage.getItem(STORAGE_KEY_FINANCEIRO_CATEGORIA) ||
+        sessionStorage.getItem(STORAGE_KEY_FINANCEIRO_CATEGORIA) ||
+        'TODAS'
+      );
+    } catch {
+      return 'TODAS';
+    }
+  });
+  const [abaCategoriaAberta, setAbaCategoriaAberta] = useState<boolean>(false);
   const [busca, setBusca] = useState<string>('');
   const [atletaSelecionadoId, setAtletaSelecionadoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_FINANCEIRO_CATEGORIA, categoriaFiltro);
+      sessionStorage.setItem(STORAGE_KEY_FINANCEIRO_CATEGORIA, categoriaFiltro);
+    } catch {}
+  }, [categoriaFiltro]);
 
   // Estados dos Modais
   const [isModalNovaCompeticaoOpen, setIsModalNovaCompeticaoOpen] = useState(false);
@@ -68,15 +90,19 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
   // Competições normalizadas (garante Taxa de Inscrição + Taxa de Jogo separadas)
   const competicoesNormalizadas = competicoes.map((c) => normalizarCompeticao(c));
 
+  // Atletas da categoria selecionada (para os totais de Total Arrecadado / Total a Receber)
+  const atletasDaCategoria = atletas.filter(
+    (a) => categoriaFiltro === 'TODAS' || a.categoria === categoriaFiltro
+  );
+
   // Atletas filtrados por categoria e busca
-  const atletasFiltrados = atletas
+  const atletasFiltrados = atletasDaCategoria
     .filter((a) => {
-      const matchCat = categoriaFiltro === 'TODAS' || a.categoria === categoriaFiltro;
       const matchBusca =
         !busca.trim() ||
         a.nome.toLowerCase().includes(busca.toLowerCase()) ||
         (a.apelido && a.apelido.toLowerCase().includes(busca.toLowerCase()));
-      return matchCat && matchBusca;
+      return matchBusca;
     })
     .sort((a, b) => a.nome.localeCompare(b.nome));
 
@@ -280,8 +306,8 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
     setIsModalMensalidadeOpen(false);
   };
 
-  // Estatísticas globais da lista filtrada
-  const estatisticasGerais = atletasFiltrados.reduce(
+  // Estatísticas globais da categoria selecionada
+  const estatisticasGerais = atletasDaCategoria.reduce(
     (acc, atl) => {
       const res = storageService.calcularResumoAtleta(atl, competicoesNormalizadas, getRegistro(atl.id));
       acc.totalPago += res.totalPago;
@@ -293,10 +319,8 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
     { totalPago: 0, totalDevendo: 0, mensalidadesPagas: 0, competicoesPagas: 0 }
   );
 
-  // Competições exibidas na visão geral conforme filtro de categoria
-  const competicoesVisiveis = competicoesNormalizadas.filter(
-    (c) => categoriaFiltro === 'TODAS' || !c.categoria || c.categoria === 'TODAS' || c.categoria === categoriaFiltro
-  );
+  // Competições permanecem visíveis independentemente do filtro de categoria dos atletas
+  const competicoesVisiveis = competicoesNormalizadas;
 
   return (
     <div className="space-y-6 pb-[120px] max-w-7xl mx-auto">
@@ -669,56 +693,25 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
           })()}
         </div>
       ) : (
-        /* VISÃO GERAL: SELETOR DE CATEGORIA + LISTA DE ATLETAS DA CATEGORIA */
+        /* VISÃO GERAL: BOTÃO NOVA COMPETIÇÃO + TOTAIS + COMPETIÇÕES + FILTRO E LISTA DE ATLETAS */
         <div className="space-y-6">
-          {/* Topo: Botões de Categoria (Todas, SUB-15, SUB-16, SUB-17...) */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-              <button
-                onClick={() => setCategoriaFiltro('TODAS')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  categoriaFiltro === 'TODAS'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                Todas ({atletas.length})
-              </button>
-              {categorias.map((cat) => {
-                const totalCat = atletas.filter((a) => a.categoria === cat).length;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => setCategoriaFiltro(cat)}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                      categoriaFiltro === cat
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {cat} ({totalCat})
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleAbrirNovaCompeticao}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5 text-amber-300" />
-                <span>Cadastrar Nova Competição</span>
-              </button>
-            </div>
+          {/* Topo: Apenas o botão azul "+ Cadastrar Nova Competição" */}
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleAbrirNovaCompeticao}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 text-amber-300" />
+              <span>Cadastrar Nova Competição</span>
+            </button>
           </div>
 
           {/* Cards de Métricas Consolidadas da Categoria */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
             <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">
-                Total Arrecadado ({categoriaFiltro})
+                Total Arrecadado ({categoriaFiltro === 'TODAS' ? 'Geral' : categoriaFiltro})
               </span>
               <span className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
                 {formatarMoeda(estatisticasGerais.totalPago)}
@@ -730,7 +723,7 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
 
             <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">
-                Total a Receber ({categoriaFiltro})
+                Total a Receber ({categoriaFiltro === 'TODAS' ? 'Geral' : categoriaFiltro})
               </span>
               <span className="text-xl sm:text-2xl font-black font-mono text-rose-600 dark:text-rose-400 tabular-nums">
                 {formatarMoeda(estatisticasGerais.totalDevendo)}
@@ -844,6 +837,70 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
             )}
           </div>
 
+          {/* Aba dobrável de Categoria (começa fechada) logo acima da busca e lista de atletas */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xs overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setAbaCategoriaAberta((prev) => !prev)}
+              className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
+            >
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+                <span>📂</span>
+                <span>Categoria:</span>
+                <span className="font-black text-blue-600 dark:text-blue-400">
+                  {categoriaFiltro === 'TODAS' ? 'Geral' : categoriaFiltro}
+                </span>
+              </div>
+              {abaCategoriaAberta ? (
+                <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+              )}
+            </button>
+
+            {abaCategoriaAberta && (
+              <div className="p-3 pt-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCategoriaFiltro('TODAS');
+                      setAbaCategoriaAberta(false);
+                    }}
+                    className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold text-center transition-all cursor-pointer shadow-2xs ${
+                      categoriaFiltro === 'TODAS'
+                        ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
+                        : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    Geral ({atletas.length})
+                  </button>
+                  {categorias.map((cat) => {
+                    const totalCat = atletas.filter((a) => a.categoria === cat).length;
+                    const ativo = categoriaFiltro === cat;
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => {
+                          setCategoriaFiltro(cat);
+                          setAbaCategoriaAberta(false);
+                        }}
+                        className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold text-center transition-all cursor-pointer shadow-2xs ${
+                          ativo
+                            ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
+                            : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        {cat} ({totalCat})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Campo de Busca Rápida de Atleta */}
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -866,7 +923,8 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
             {atletasFiltrados.length === 0 ? (
               <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
                 <p className="text-sm font-medium text-slate-500">
-                  Nenhum atleta encontrado para a categoria {categoriaFiltro}.
+                  Nenhum atleta encontrado para a categoria{' '}
+                  {categoriaFiltro === 'TODAS' ? 'Geral' : categoriaFiltro}.
                 </p>
               </div>
             ) : (

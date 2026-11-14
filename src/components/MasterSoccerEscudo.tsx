@@ -6,17 +6,17 @@ interface MasterSoccerEscudoProps {
 }
 
 export const MasterSoccerEscudo: React.FC<MasterSoccerEscudoProps> = ({
-  className = 'w-10 h-10',
+  className = '',
   size = 48,
 }) => {
   return (
     <img
-      src="/assets/master_soccer_escudo.png"
+      src="/assets/master_soccer_escudo.png?v=3"
       alt="Escudo Oficial Master Soccer - Rio de Janeiro - Brasil"
       width={size}
       height={size}
-      className={`object-contain select-none shrink-0 ${className}`}
-      style={{ width: size, height: size, aspectRatio: '838 / 935' }}
+      className={`object-contain object-center select-none shrink-0 bg-transparent ${className}`}
+      style={{ width: size, height: size }}
       loading="eager"
       decoding="async"
     />

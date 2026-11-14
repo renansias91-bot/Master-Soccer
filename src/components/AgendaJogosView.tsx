@@ -102,6 +102,9 @@ const encontrarAvaliacaoDoAtletaNoJogo = (
   });
 };
 
+const STORAGE_KEY_AGENDA_CATEGORIA = 'mastersoccer_agenda_categoria_v1';
+const STORAGE_KEY_AGENDA_COMPETICAO = 'mastersoccer_agenda_competicao_v1';
+
 export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   jogos,
   atletas,
@@ -117,8 +120,28 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   jogoFocarInfo,
   onLimparJogoFocar,
 }) => {
-  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('TODAS');
-  const [competicaoFiltro, setCompeticaoFiltro] = useState<string>('TODAS');
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string>(() => {
+    try {
+      return (
+        localStorage.getItem(STORAGE_KEY_AGENDA_CATEGORIA) ||
+        sessionStorage.getItem(STORAGE_KEY_AGENDA_CATEGORIA) ||
+        'TODAS'
+      );
+    } catch {
+      return 'TODAS';
+    }
+  });
+  const [competicaoFiltro, setCompeticaoFiltro] = useState<string>(() => {
+    try {
+      return (
+        localStorage.getItem(STORAGE_KEY_AGENDA_COMPETICAO) ||
+        sessionStorage.getItem(STORAGE_KEY_AGENDA_COMPETICAO) ||
+        'TODAS'
+      );
+    } catch {
+      return 'TODAS';
+    }
+  });
   const [abaCategoriasAberta, setAbaCategoriasAberta] = useState<boolean>(false);
   const [abaCompeticoesAberta, setAbaCompeticoesAberta] = useState<boolean>(false);
   const [secaoProximosAberta, setSecaoProximosAberta] = useState<boolean>(true);
@@ -127,6 +150,20 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   const [jogoSelecionadoId, setJogoSelecionadoId] = useState<string | null>(null);
   const [jogoFallbackAberto, setJogoFallbackAberto] = useState<JogoAgenda | null>(null);
   const [modoLeitura, setModoLeitura] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_AGENDA_CATEGORIA, categoriaFiltro);
+      sessionStorage.setItem(STORAGE_KEY_AGENDA_CATEGORIA, categoriaFiltro);
+    } catch {}
+  }, [categoriaFiltro]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_AGENDA_COMPETICAO, competicaoFiltro);
+      sessionStorage.setItem(STORAGE_KEY_AGENDA_COMPETICAO, competicaoFiltro);
+    } catch {}
+  }, [competicaoFiltro]);
 
   const jogoSelecionadoParaAvaliar = useMemo(() => {
     if (!jogoSelecionadoId) return null;
@@ -264,8 +301,13 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       contagem[nomeComp] = (contagem[nomeComp] || 0) + 1;
     });
 
+    const existeEmAlgumJogo = jogos.some(
+      (j) => (j.tipo?.trim() || 'Amistoso').toLowerCase() === competicaoFiltro.trim().toLowerCase()
+    );
+
     if (
       competicaoFiltro !== 'TODAS' &&
+      existeEmAlgumJogo &&
       !Object.keys(contagem).some(
         (nome) => nome.trim().toLowerCase() === competicaoFiltro.trim().toLowerCase()
       )
@@ -276,10 +318,21 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     return Object.entries(contagem)
       .sort((a, b) => {
         if (b[1] !== a[1]) return b[1] - a[1];
-        return a[0].localeCompare(b[0]);
+        return a[0].localeCompare(b[0], 'pt-BR');
       })
       .map(([nome, count]) => ({ nome, count }));
-  }, [jogosDaCategoria, competicaoFiltro]);
+  }, [jogos, jogosDaCategoria, competicaoFiltro]);
+
+  // Se todos os jogos da competição selecionada foram apagados, volta para Geral ('TODAS')
+  useEffect(() => {
+    if (competicaoFiltro === 'TODAS') return;
+    const existeEmAlgumJogo = jogos.some(
+      (j) => (j.tipo?.trim() || 'Amistoso').toLowerCase() === competicaoFiltro.trim().toLowerCase()
+    );
+    if (!existeEmAlgumJogo) {
+      setCompeticaoFiltro('TODAS');
+    }
+  }, [jogos, competicaoFiltro]);
 
   // Filtra jogos por categoria, competição e busca por adversário com regra estrita de ordenação por data e hora:
   // 1º) Jogos que ainda vão acontecer (mais próximo primeiro: ex 06/11 às 14:30, 06/11 às 15:50, 14/11...)

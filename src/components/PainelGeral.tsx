@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Users,
   Award,
@@ -28,6 +28,9 @@ import {
 } from '../utils/dateUtils';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
+
+const STORAGE_KEY_PAINEL_CATEGORIA = 'mastersoccer_painel_categoria_v1';
+const STORAGE_KEY_PAINEL_COMPETICAO = 'mastersoccer_painel_competicao_v1';
 
 interface PainelGeralProps {
   atletas: Atleta[];
@@ -102,18 +105,52 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
   onNovaAvaliacao,
   onNavegarJogo,
 }) => {
-  // Estado da aba de filtro selecionada: 'GERAL' por padrão
-  const [categoriaAtiva, setCategoriaAtiva] = useState<string>('GERAL');
+  // Estado da aba de filtro selecionada: restaurado da memória ou 'GERAL' por padrão
+  const [categoriaAtiva, setCategoriaAtiva] = useState<string>(() => {
+    try {
+      return (
+        localStorage.getItem(STORAGE_KEY_PAINEL_CATEGORIA) ||
+        sessionStorage.getItem(STORAGE_KEY_PAINEL_CATEGORIA) ||
+        'GERAL'
+      );
+    } catch {
+      return 'GERAL';
+    }
+  });
 
-  // Estado do filtro de competição selecionado: 'Todas' por padrão
-  const [competicaoAtiva, setCompeticaoAtiva] = useState<string>('Todas');
+  // Estado do filtro de competição selecionado: restaurado da memória ou 'Todas' por padrão
+  const [competicaoAtiva, setCompeticaoAtiva] = useState<string>(() => {
+    try {
+      return (
+        localStorage.getItem(STORAGE_KEY_PAINEL_COMPETICAO) ||
+        sessionStorage.getItem(STORAGE_KEY_PAINEL_COMPETICAO) ||
+        'Todas'
+      );
+    } catch {
+      return 'Todas';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_PAINEL_CATEGORIA, categoriaAtiva);
+      sessionStorage.setItem(STORAGE_KEY_PAINEL_CATEGORIA, categoriaAtiva);
+    } catch {}
+  }, [categoriaAtiva]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_PAINEL_COMPETICAO, competicaoAtiva);
+      sessionStorage.setItem(STORAGE_KEY_PAINEL_COMPETICAO, competicaoAtiva);
+    } catch {}
+  }, [competicaoAtiva]);
 
   // Estado do ponto selecionado no gráfico (ao clicar / passar o mouse / toque)
   const [pontoAtivoIndex, setPontoAtivoIndex] = useState<number | null>(null);
 
-  // Jogos consolidados
+  // Jogos consolidados (usa jogosProps diretamente inclusive se estiver vazio [])
   const listaJogos = useMemo(() => {
-    if (jogosProps && jogosProps.length > 0) return jogosProps;
+    if (jogosProps !== undefined) return jogosProps;
     return storageService.getJogosAgenda();
   }, [jogosProps]);
 
@@ -147,25 +184,29 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
     return ['GERAL', ...arr];
   }, [categorias, atletas, listaJogos, avaliacoes]);
 
-  // Lista de competições existentes (com competições padrão e dinâmicas)
+  // Lista dinâmica de competições existentes (mesma regra da Agenda: somente competições com >= 1 jogo em qualquer categoria)
   const todasCompeticoes = useMemo(() => {
-    const compSet = new Set<string>([
-      'Amistoso',
-      'Campeonato',
-      'Copa do Mundo',
-      'Copa Rio de Janeiro',
-      'Torneio',
-    ]);
+    const contagem: Record<string, number> = {};
     listaJogos.forEach((j) => {
-      if (j.tipo && j.tipo.trim()) compSet.add(j.tipo.trim());
+      const nomeComp = j.tipo?.trim() || 'Amistoso';
+      contagem[nomeComp] = (contagem[nomeComp] || 0) + 1;
     });
-    avaliacoes.forEach((av) => {
-      if (av.competicao && av.competicao.trim()) compSet.add(av.competicao.trim());
-    });
-    const arr = Array.from(compSet);
-    arr.sort((a, b) => a.localeCompare(b));
+    const arr = Object.entries(contagem)
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0].localeCompare(b[0], 'pt-BR');
+      })
+      .map(([nome]) => nome);
     return ['Todas', ...arr];
-  }, [listaJogos, avaliacoes]);
+  }, [listaJogos]);
+
+  // Se o último jogo de uma competição selecionada foi apagado, volta automaticamente para 'Todas'
+  useEffect(() => {
+    if (competicaoAtiva !== 'Todas' && !todasCompeticoes.includes(competicaoAtiva)) {
+      setCompeticaoAtiva('Todas');
+    }
+  }, [competicaoAtiva, todasCompeticoes]);
 
   // =========================================================
   // CÁLCULO DE DESEMPENHO (V, E, D, GF, GS, APROVEITAMENTO, 5 PILARES & LINHAS DE EVOLUÇÃO)

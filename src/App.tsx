@@ -87,6 +87,38 @@ const getChaveScrollAba = (aba: AbaNavegacao): string => {
   }
 };
 
+const ABAS_VALIDAS: AbaNavegacao[] = [
+  'painel',
+  'jogo',
+  'escalacao',
+  'trofeus',
+  'financeiro',
+  'relatorio',
+  'testefisico',
+  'atletas',
+];
+
+const STORAGE_KEY_ABA_ATIVA = 'mastersoccer_aba_ativa_v1';
+const STORAGE_KEY_CATEGORIA_ATIVA = 'mastersoccer_categoria_ativa_v1';
+const STORAGE_KEY_JOGO_ESCALACAO = 'mastersoccer_jogo_escalacao_id_v1';
+
+const lerAbaDaUrlOuMemoria = (): AbaNavegacao => {
+  if (typeof window === 'undefined') return 'painel';
+  const hashLimpo = window.location.hash.replace(/^#\/?/, '').split('?')[0].trim().toLowerCase();
+  if (ABAS_VALIDAS.includes(hashLimpo as AbaNavegacao)) {
+    return hashLimpo as AbaNavegacao;
+  }
+  try {
+    const salvo =
+      localStorage.getItem(STORAGE_KEY_ABA_ATIVA) ||
+      sessionStorage.getItem(STORAGE_KEY_ABA_ATIVA);
+    if (salvo && ABAS_VALIDAS.includes(salvo as AbaNavegacao)) {
+      return salvo as AbaNavegacao;
+    }
+  } catch {}
+  return 'painel';
+};
+
 export default function App() {
   const isOnline = useOnlineStatus();
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
@@ -106,9 +138,19 @@ export default function App() {
   const [categorias, setCategorias] = useState<string[]>(() => storageService.getCategorias());
 
   // Navegação: Menu de Baixo (PAINEL, JOGO, ESCALAÇÃO, TROFÉUS) + Telas do Menu ☰ (Financeiro, Atletas, Teste Físico)
-  const [abaAtiva, setAbaAtiva] = useState<AbaNavegacao>('painel');
+  const [abaAtiva, setAbaAtiva] = useState<AbaNavegacao>(() => lerAbaDaUrlOuMemoria());
   const [subAbaGestaoAtletas, setSubAbaGestaoAtletas] = useState<'lista' | 'cadastro'>('lista');
-  const [categoriaAtiva, setCategoriaAtiva] = useState<string>('TODAS');
+  const [categoriaAtiva, setCategoriaAtiva] = useState<string>(() => {
+    try {
+      return (
+        localStorage.getItem(STORAGE_KEY_CATEGORIA_ATIVA) ||
+        sessionStorage.getItem(STORAGE_KEY_CATEGORIA_ATIVA) ||
+        'TODAS'
+      );
+    } catch {
+      return 'TODAS';
+    }
+  });
   const [jogoFocarInfo, setJogoFocarInfo] = useState<{
     jogoId?: string;
     categoria?: string;
@@ -148,7 +190,19 @@ export default function App() {
 
   const [isJogoModalOpen, setIsJogoModalOpen] = useState(false);
   const [jogoEditando, setJogoEditando] = useState<JogoAgenda | null>(null);
-  const [jogoSelecionadoParaEscalacaoId, setJogoSelecionadoParaEscalacaoId] = useState<string | undefined>();
+  const [jogoSelecionadoParaEscalacaoId, setJogoSelecionadoParaEscalacaoId] = useState<
+    string | undefined
+  >(() => {
+    try {
+      return (
+        localStorage.getItem(STORAGE_KEY_JOGO_ESCALACAO) ||
+        sessionStorage.getItem(STORAGE_KEY_JOGO_ESCALACAO) ||
+        undefined
+      );
+    } catch {
+      return undefined;
+    }
+  });
 
   const [isCategoriasModalOpen, setIsCategoriasModalOpen] = useState(false);
   const [isInstalarModalOpen, setIsInstalarModalOpen] = useState(false);
@@ -997,6 +1051,56 @@ export default function App() {
     }
   };
 
+  // Persistência da aba atual (localStorage, sessionStorage e URL #/<aba>)
+  useEffect(() => {
+    if (isRotaCadastroPublico) return;
+    try {
+      localStorage.setItem(STORAGE_KEY_ABA_ATIVA, abaAtiva);
+      sessionStorage.setItem(STORAGE_KEY_ABA_ATIVA, abaAtiva);
+    } catch {}
+    const hashDesejado = `#/${abaAtiva}`;
+    if (window.location.hash !== hashDesejado) {
+      try {
+        window.history.replaceState(null, '', hashDesejado);
+      } catch {
+        window.location.hash = hashDesejado;
+      }
+    }
+  }, [abaAtiva, isRotaCadastroPublico]);
+
+  // Suporte a navegação por hash na URL (#/jogo, #/escalacao, #/trofeus, #/painel)
+  useEffect(() => {
+    if (isRotaCadastroPublico) return;
+    const onHashChange = () => {
+      const hashLimpo = window.location.hash.replace(/^#\/?/, '').split('?')[0].trim().toLowerCase();
+      if (ABAS_VALIDAS.includes(hashLimpo as AbaNavegacao) && hashLimpo !== abaAtiva) {
+        setAbaAtiva(hashLimpo as AbaNavegacao);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [abaAtiva, isRotaCadastroPublico]);
+
+  // Persistência de categoriaAtiva e jogoSelecionadoParaEscalacaoId
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_CATEGORIA_ATIVA, categoriaAtiva);
+      sessionStorage.setItem(STORAGE_KEY_CATEGORIA_ATIVA, categoriaAtiva);
+    } catch {}
+  }, [categoriaAtiva]);
+
+  useEffect(() => {
+    try {
+      if (jogoSelecionadoParaEscalacaoId) {
+        localStorage.setItem(STORAGE_KEY_JOGO_ESCALACAO, jogoSelecionadoParaEscalacaoId);
+        sessionStorage.setItem(STORAGE_KEY_JOGO_ESCALACAO, jogoSelecionadoParaEscalacaoId);
+      } else {
+        localStorage.removeItem(STORAGE_KEY_JOGO_ESCALACAO);
+        sessionStorage.removeItem(STORAGE_KEY_JOGO_ESCALACAO);
+      }
+    } catch {}
+  }, [jogoSelecionadoParaEscalacaoId]);
+
   // Monitorar e salvar posição de rolagem contínua da aba atual
   useEffect(() => {
     const onScroll = () => {
@@ -1013,9 +1117,25 @@ export default function App() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [abaAtiva]);
 
-  // Transição de aba com memória de rolagem (sem window.scrollTo(0, 0))
+  // Transição de aba com memória de rolagem e persistência imediata (sem window.scrollTo(0, 0))
   const mudarAbaComMemoriaScroll = (novaAba: AbaNavegacao) => {
     if (novaAba === abaAtiva) return;
+
+    // Persistência síncrona imediata da nova aba e URL
+    try {
+      localStorage.setItem(STORAGE_KEY_ABA_ATIVA, novaAba);
+      sessionStorage.setItem(STORAGE_KEY_ABA_ATIVA, novaAba);
+    } catch {}
+    if (!isRotaCadastroPublico) {
+      const hashDesejado = `#/${novaAba}`;
+      if (window.location.hash !== hashDesejado) {
+        try {
+          window.history.replaceState(null, '', hashDesejado);
+        } catch {
+          window.location.hash = hashDesejado;
+        }
+      }
+    }
 
     // 1. Salvar rolagem da aba atual que está saindo
     const currentY = window.scrollY || document.documentElement.scrollTop || 0;
@@ -1101,14 +1221,14 @@ export default function App() {
       {/* MENU DE CIMA - FININHO, COLADO NO TOPO */}
       {/* ========================================================= */}
       <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800 shadow-2xs no-print w-full max-w-[100vw] overflow-x-hidden box-border">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-12 flex items-center justify-between gap-2.5 w-full max-w-full box-border">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-2.5 w-full max-w-full box-border">
           {/* Logo & Marca Master Soccer */}
           <div
             onClick={() => mudarAbaComMemoriaScroll('painel')}
-            className="flex items-center gap-2 cursor-pointer whitespace-nowrap shrink-0 group select-none"
+            className="flex items-center gap-2.5 cursor-pointer whitespace-nowrap shrink-0 group select-none"
           >
             <MasterSoccerEscudo
-              size={28}
+              size={38}
               className="group-hover:scale-105 transition-transform drop-shadow-2xs shrink-0"
             />
             <div className="flex items-center gap-1.5">
@@ -1660,8 +1780,8 @@ export default function App() {
             </button>
 
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center p-2 text-white shadow-md">
-                <MasterSoccerEscudo size={36} />
+              <div className="w-12 h-12 flex items-center justify-center shrink-0">
+                <MasterSoccerEscudo size={42} />
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">

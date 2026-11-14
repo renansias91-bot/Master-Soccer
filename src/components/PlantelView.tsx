@@ -351,8 +351,27 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   onVoltarParaAgenda,
 }) => {
   const [busca, setBusca] = useState('');
-  const [filtroCategoriaLista, setFiltroCategoriaLista] = useState<string>('TODAS');
-  const [abaSubEscalacao, setAbaSubEscalacao] = useState<'lista' | 'campinho'>('lista');
+  const [filtroCategoriaLista, setFiltroCategoriaLista] = useState<string>(() => {
+    try {
+      return (
+        localStorage.getItem('mastersoccer_escalacao_categoria_lista_v1') ||
+        sessionStorage.getItem('mastersoccer_escalacao_categoria_lista_v1') ||
+        'TODAS'
+      );
+    } catch {
+      return 'TODAS';
+    }
+  });
+  const [abaSubEscalacao, setAbaSubEscalacao] = useState<'lista' | 'campinho'>(() => {
+    try {
+      const saved =
+        localStorage.getItem('mastersoccer_escalacao_subaba_v1') ||
+        sessionStorage.getItem('mastersoccer_escalacao_subaba_v1');
+      return saved === 'campinho' ? 'campinho' : 'lista';
+    } catch {
+      return 'lista';
+    }
+  });
   const [formacao, setFormacao] = useState<string>('4-4-2 Losango');
   const [posicaoAberta, setPosicaoAberta] = useState<string | null>(null);
   const [modalTrocaAberto, setModalTrocaAberto] = useState<boolean>(false);
@@ -372,6 +391,20 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   // Estados para Modais de Súmula Oficial e Estratégia de Jogo
   const [modalSumulaAberto, setModalSumulaAberto] = useState(false);
   const [modalEstrategiaAberto, setModalEstrategiaAberto] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mastersoccer_escalacao_categoria_lista_v1', filtroCategoriaLista);
+      sessionStorage.setItem('mastersoccer_escalacao_categoria_lista_v1', filtroCategoriaLista);
+    } catch {}
+  }, [filtroCategoriaLista]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('mastersoccer_escalacao_subaba_v1', abaSubEscalacao);
+      sessionStorage.setItem('mastersoccer_escalacao_subaba_v1', abaSubEscalacao);
+    } catch {}
+  }, [abaSubEscalacao]);
 
   // Sincroniza quando jogos ou jogoSelecionadoId mudarem
   useEffect(() => {
