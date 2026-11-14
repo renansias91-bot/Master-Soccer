@@ -12,6 +12,7 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
 } from 'lucide-react';
 import {
   Atleta,
@@ -60,6 +61,9 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
     }
   });
   const [abaCategoriaAberta, setAbaCategoriaAberta] = useState<boolean>(false);
+  const [abaCompeticoesAberta, setAbaCompeticoesAberta] = useState<boolean>(false);
+  const [buscaCompeticao, setBuscaCompeticao] = useState<string>('');
+  const [competicaoChipFiltro, setCompeticaoChipFiltro] = useState<string>('TODAS');
   const [busca, setBusca] = useState<string>('');
   const [atletaSelecionadoId, setAtletaSelecionadoId] = useState<string | null>(null);
 
@@ -321,6 +325,27 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
 
   // Competições permanecem visíveis independentemente do filtro de categoria dos atletas
   const competicoesVisiveis = competicoesNormalizadas;
+
+  // Nomes únicos das competições cadastradas para os botões rápidos (chips)
+  const chipsCompeticoes = Array.from(
+    new Set(competicoesVisiveis.map((c) => c.nome.trim()).filter(Boolean))
+  );
+  const chipCompeticaoAtivo =
+    competicaoChipFiltro !== 'TODAS' && chipsCompeticoes.includes(competicaoChipFiltro)
+      ? competicaoChipFiltro
+      : 'TODAS';
+
+  // Competições filtradas dentro da aba (por chip rápido e campo de busca)
+  const competicoesFiltradasNaAba = competicoesVisiveis.filter((comp) => {
+    const matchChip =
+      chipCompeticaoAtivo === 'TODAS' || comp.nome.trim() === chipCompeticaoAtivo;
+    const termo = buscaCompeticao.trim().toLowerCase();
+    const matchBusca =
+      !termo ||
+      comp.nome.toLowerCase().includes(termo) ||
+      (comp.categoria && comp.categoria.toLowerCase().includes(termo));
+    return matchChip && matchBusca;
+  });
 
   return (
     <div className="space-y-6 pb-[120px] max-w-7xl mx-auto">
@@ -758,95 +783,181 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
             </div>
           </div>
 
-          {/* SEÇÃO DE COMPETIÇÕES CADASTRADAS (INSCRIÇÃO + TAXA DE JOGO SEPARADAS E EDITÁVEIS) */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
+          {/* SEÇÃO DOBRÁVEL DE COMPETIÇÕES CADASTRADAS (COMEÇA FECHADA; COM BUSCA, CHIPS, EDITAR E EXCLUIR) */}
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setAbaCompeticoesAberta((prev) => !prev)}
+              className="w-full min-h-[48px] px-4 py-3 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
+            >
+              <div className="flex items-center gap-2 min-w-0">
                 <Trophy className="w-5 h-5 text-amber-500 shrink-0" />
-                <h3 className="text-[15px] font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                <h3 className="text-[15px] font-black uppercase tracking-tight text-slate-900 dark:text-white truncate">
                   Competições ({competicoesVisiveis.length})
                 </h3>
               </div>
-              <span className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">
-                Cada competição possui Taxa de Inscrição (única) e Taxa de Jogo (por jogo) editáveis
-              </span>
-            </div>
+              {abaCompeticoesAberta ? (
+                <ChevronDown className="w-5 h-5 text-slate-600 dark:text-slate-300 shrink-0" />
+              ) : (
+                <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-300 shrink-0" />
+              )}
+            </button>
 
-            {competicoesVisiveis.length === 0 ? (
-              <div className="p-5 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-[14px] text-slate-600 dark:text-slate-300">
-                Nenhuma competição cadastrada ainda. Clique em <strong>Cadastrar Nova Competição</strong> ou crie um jogo na Agenda.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {competicoesVisiveis.map((comp) => (
-                  <div
-                    key={comp.id}
-                    className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex flex-col justify-between gap-3 shadow-2xs"
-                  >
-                    <div className="flex items-start justify-between gap-2.5">
-                      <div className="min-w-0 flex-1">
-                        <span className="inline-block text-[12px] font-bold uppercase px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
-                          {comp.categoria && comp.categoria !== 'TODAS' ? comp.categoria : 'Todas Categorias'}
-                        </span>
-                        <h4 className="text-[15px] font-black text-slate-900 dark:text-white mt-1.5 truncate">
-                          {comp.nome}
-                        </h4>
-                      </div>
+            {abaCompeticoesAberta && (
+              <div className="p-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3.5">
+                <p className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">
+                  Cada competição possui Taxa de Inscrição (única) e Taxa de Jogo (por jogo) editáveis
+                </p>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleAbrirEditarItem(comp)}
-                          className="w-9 h-9 inline-flex items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/70 transition cursor-pointer shadow-2xs"
-                          title="Editar competição e taxas"
-                          aria-label={`Editar competição ${comp.nome}`}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setItemParaApagar(comp)}
-                          className="w-9 h-9 inline-flex items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/70 transition cursor-pointer shadow-2xs"
-                          title="Apagar competição"
-                          aria-label={`Apagar competição ${comp.nome}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2.5 pt-2.5 border-t border-slate-200/80 dark:border-slate-700/80">
-                      <div className="bg-white dark:bg-slate-900 rounded-lg p-2.5 border border-slate-200 dark:border-slate-700">
-                        <span className="text-[14px] font-bold uppercase text-slate-600 dark:text-slate-300 block">
-                          Inscrição
-                        </span>
-                        <span className="text-[18px] font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
-                          {formatarMoeda(comp.valorInscricao)}
-                        </span>
-                      </div>
-                      <div className="bg-white dark:bg-slate-900 rounded-lg p-2.5 border border-slate-200 dark:border-slate-700">
-                        <span className="text-[14px] font-bold uppercase text-slate-600 dark:text-slate-300 block">
-                          Taxa de Jogo
-                        </span>
-                        <span className="text-[18px] font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
-                          {formatarMoeda(comp.valorJogo)}
-                        </span>
-                      </div>
-                    </div>
+                {competicoesVisiveis.length === 0 ? (
+                  <div className="p-5 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-[14px] text-slate-600 dark:text-slate-300">
+                    Nenhuma competição cadastrada ainda. Clique em <strong>Cadastrar Nova Competição</strong> ou crie um jogo na Agenda.
                   </div>
-                ))}
+                ) : (
+                  <>
+                    {/* Busca e chips rápidos dentro da aba Competições */}
+                    <div className="space-y-2.5">
+                      <div className="relative">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          type="text"
+                          value={buscaCompeticao}
+                          onChange={(e) => setBuscaCompeticao(e.target.value)}
+                          placeholder="Buscar competição..."
+                          className="w-full h-10 pl-10 pr-16 text-[14px] font-medium bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {buscaCompeticao && (
+                          <button
+                            type="button"
+                            onClick={() => setBuscaCompeticao('')}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[13px] font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                          >
+                            Limpar
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                        <button
+                          type="button"
+                          onClick={() => setCompeticaoChipFiltro('TODAS')}
+                          className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-[14px] font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer border ${
+                            chipCompeticaoAtivo === 'TODAS'
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                              : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          Todas
+                        </button>
+                        {chipsCompeticoes.map((nomeComp) => {
+                          const ativo = chipCompeticaoAtivo === nomeComp;
+                          return (
+                            <button
+                              key={nomeComp}
+                              type="button"
+                              onClick={() => setCompeticaoChipFiltro(nomeComp)}
+                              className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-[14px] font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer border ${
+                                ativo
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                  : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                              }`}
+                            >
+                              {nomeComp}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {competicoesFiltradasNaAba.length === 0 ? (
+                      <div className="p-5 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-[14px] text-slate-600 dark:text-slate-300 space-y-2">
+                        <p>Nenhuma competição encontrada para este filtro.</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBuscaCompeticao('');
+                            setCompeticaoChipFiltro('TODAS');
+                          }}
+                          className="min-h-[38px] px-3.5 py-1.5 rounded-lg text-[14px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition cursor-pointer"
+                        >
+                          Mostrar todas
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {competicoesFiltradasNaAba.map((comp) => (
+                          <div
+                            key={comp.id}
+                            className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex flex-col justify-between gap-3 shadow-2xs"
+                          >
+                            <div className="flex items-start justify-between gap-2.5">
+                              <div className="min-w-0 flex-1">
+                                <span className="inline-block text-[12px] font-bold uppercase px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                                  {comp.categoria && comp.categoria !== 'TODAS' ? comp.categoria : 'Todas Categorias'}
+                                </span>
+                                <h4 className="text-[15px] font-black text-slate-900 dark:text-white mt-1.5 truncate">
+                                  {comp.nome}
+                                </h4>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleAbrirEditarItem(comp)}
+                                  className="w-9 h-9 inline-flex items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/70 transition cursor-pointer shadow-2xs"
+                                  title="Editar competição e taxas"
+                                  aria-label={`Editar competição ${comp.nome}`}
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setItemParaApagar(comp)}
+                                  className="w-9 h-9 inline-flex items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/70 transition cursor-pointer shadow-2xs"
+                                  title="Apagar competição"
+                                  aria-label={`Apagar competição ${comp.nome}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2.5 pt-2.5 border-t border-slate-200/80 dark:border-slate-700/80">
+                              <div className="bg-white dark:bg-slate-900 rounded-lg p-2.5 border border-slate-200 dark:border-slate-700">
+                                <span className="text-[14px] font-bold uppercase text-slate-600 dark:text-slate-300 block">
+                                  Inscrição
+                                </span>
+                                <span className="text-[18px] font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
+                                  {formatarMoeda(comp.valorInscricao)}
+                                </span>
+                              </div>
+                              <div className="bg-white dark:bg-slate-900 rounded-lg p-2.5 border border-slate-200 dark:border-slate-700">
+                                <span className="text-[14px] font-bold uppercase text-slate-600 dark:text-slate-300 block">
+                                  Taxa de Jogo
+                                </span>
+                                <span className="text-[18px] font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
+                                  {formatarMoeda(comp.valorJogo)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>
 
-          {/* Aba dobrável de Categoria (começa fechada) logo acima da busca e lista de atletas */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xs overflow-hidden">
+          {/* Aba dobrável de Categoria (igual ao padrão do Jogo) logo acima da busca e lista de atletas */}
+          <div className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xs overflow-hidden">
             <button
               type="button"
               onClick={() => setAbaCategoriaAberta((prev) => !prev)}
-              className="w-full min-h-[44px] px-4 py-2.5 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
+              className="w-full min-h-[48px] px-4 py-3.5 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
             >
-              <div className="flex items-center gap-2 text-[14px] font-bold text-slate-800 dark:text-slate-100">
+              <div className="flex items-center gap-2.5 text-[15px] sm:text-base font-bold text-slate-800 dark:text-slate-100">
                 <span>📂</span>
                 <span>Categoria:</span>
                 <span className="font-black text-blue-600 dark:text-blue-400">
@@ -854,25 +965,25 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                 </span>
               </div>
               {abaCategoriaAberta ? (
-                <ChevronUp className="w-4 h-4 text-slate-600 shrink-0" />
+                <ChevronUp className="w-5 h-5 text-slate-500 shrink-0" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-slate-600 shrink-0" />
+                <ChevronDown className="w-5 h-5 text-slate-500 shrink-0" />
               )}
             </button>
 
             {abaCategoriaAberta && (
-              <div className="p-3 pt-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="p-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <button
                     type="button"
                     onClick={() => {
                       setCategoriaFiltro('TODAS');
                       setAbaCategoriaAberta(false);
                     }}
-                    className={`w-full min-h-[40px] py-2 px-3 rounded-lg text-[14px] font-semibold text-center transition-all cursor-pointer shadow-2xs ${
+                    className={`w-full min-h-[44px] py-3 px-3.5 rounded-xl text-[15px] font-bold text-center transition-all cursor-pointer shadow-2xs ${
                       categoriaFiltro === 'TODAS'
                         ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
-                        : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                   >
                     Geral ({atletas.length})
@@ -888,10 +999,10 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                           setCategoriaFiltro(cat);
                           setAbaCategoriaAberta(false);
                         }}
-                        className={`w-full min-h-[40px] py-2 px-3 rounded-lg text-[14px] font-semibold text-center transition-all cursor-pointer shadow-2xs ${
+                        className={`w-full min-h-[44px] py-3 px-3.5 rounded-xl text-[15px] font-bold text-center transition-all cursor-pointer shadow-2xs ${
                           ativo
                             ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
-                            : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                            : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                         }`}
                       >
                         {cat} ({totalCat})
@@ -903,23 +1014,32 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
             )}
           </div>
 
-          {/* Campo de Busca Rápida de Atleta */}
+          {/* Campo de Busca Rápida de Atleta (mesmo tamanho do campo de busca do Jogo) */}
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar atleta da categoria pelo nome ou apelido para ver ficha financeira..."
-              className="w-full h-10 pl-10 pr-4 text-[14px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Buscar atleta da categoria pelo nome ou apelido..."
+              className="w-full h-12 pl-11 pr-20 text-[15px] sm:text-base font-medium bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
             />
+            {busca && (
+              <button
+                type="button"
+                onClick={() => setBusca('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
+              >
+                Limpar
+              </button>
+            )}
           </div>
 
           {/* Lista de Atletas da Categoria (Mesma ordem alfabética do Plantel) */}
           <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[14px] font-bold text-slate-700 dark:text-slate-300 px-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[15px] sm:text-base font-bold text-slate-700 dark:text-slate-300 px-1">
               <span>Atletas ({atletasFiltrados.length}) — Ordem Alfabética</span>
-              <span className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">Clique para abrir o controle individual</span>
+              <span className="text-[14px] text-slate-500 dark:text-slate-400 font-medium">Clique para abrir o controle individual</span>
             </div>
 
             {atletasFiltrados.length === 0 ? (
