@@ -105,34 +105,33 @@ export interface AvaliacaoJogo {
 }
 
 export const TAGS_DESTAQUE_DISPONIVEIS = [
-  'Finalização',
-  'Pisada / Drible',
   'Visão de jogo',
-  'Passe entre linhas',
-  'Desmarque',
-  'Intensidade',
-  'Jogo aéreo',
-  'Proteção de bola',
+  'Passe vertical',
+  'Finalização precisa',
+  'Velocidade e arranque',
+  'Drible 1x1',
+  'Força',
+  'Bolas paradas',
   'Liderança',
-  'Comunicação',
+  'Passe entre linhas',
   'Retorno defensivo',
-  'Terminou as jogadas',
   'Realizou pisada',
+  'Terminou as jogadas',
 ] as const;
 
 export const TAGS_ATENCAO_DISPONIVEIS = [
-  'Pé não dominante',
-  'Jogo aéreo / Cabeceio',
-  'Proteção de bola de costas',
-  'Tomada de decisão em transição',
-  'Perda de bola na saída',
-  'Cobertura defensiva',
+  'Uso do pé não dominante',
+  'Paciência na linha de impedimento',
   'Intensidade no 2º tempo',
   'Controle emocional sob pressão',
-  'Concentração',
   'Comunicação em campo',
+  'Jogo aéreo / Cabeceio',
+  'Proteção de bola de costas',
+  'Perda de bola na saída',
+  'Cobertura defensiva',
+  'Concentração',
   'Fora da zona 14',
-  'Não pisou na área',
+  'Pisar na área',
 ] as const;
 
 export type TipoJogo = 'Amistoso' | 'Campeonato' | 'Torneio' | string;

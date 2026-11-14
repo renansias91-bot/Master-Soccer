@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Award, CheckCircle2, Info, Plus, Clock, Users, ArrowRight, Calendar } from 'lucide-react';
-import { Atleta, AvaliacaoJogo, NotasPilares } from '../types';
+import {
+  Atleta,
+  AvaliacaoJogo,
+  NotasPilares,
+  TAGS_DESTAQUE_DISPONIVEIS,
+  TAGS_ATENCAO_DISPONIVEIS,
+} from '../types';
 import { getDataAtualBrasil, formatarDataExibicao } from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
 
@@ -14,30 +20,6 @@ interface AvaliacaoModalProps {
   categoriaAtiva?: string;
   categoriasDisponiveis?: string[];
 }
-
-const SUGESTOES_PONTOS_FORTES = [
-  'Visão de jogo',
-  'Passe vertical',
-  'Drible no 1x1',
-  'Finalização precisa',
-  'Velocidade e arranque',
-  'Força nos duelos',
-  'Liderança em campo',
-  'Bolas paradas',
-  'Recomposição defensiva rápida',
-  'Inteligência tática',
-];
-
-const SUGESTOES_PONTOS_MELHORIA = [
-  'Uso do pé não dominante',
-  'Paciência na linha de impedimento',
-  'Intensidade no segundo tempo',
-  'Controle emocional sob pressão',
-  'Comunicação em campo',
-  'Jogo aéreo / Cabeceio',
-  'Tomada de decisão em transição',
-  'Proteção de bola de costas',
-];
 
 export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
   isOpen,
@@ -1025,14 +1007,14 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
             </div>
           </div>
 
-          {/* Pontos Fortes e Pontos de Melhoria (Atalhos rápidos) */}
+          {/* Pontos em Destaque e Pontos de Atenção (Atalhos rápidos) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1.5">
-                Pontos de Destaque no Jogo
+                Pontos em Destaque
               </label>
               <div className="flex flex-wrap gap-1.5">
-                {SUGESTOES_PONTOS_FORTES.map((tag) => {
+                {TAGS_DESTAQUE_DISPONIVEIS.map((tag) => {
                   const ativo = pontosFortes.includes(tag);
                   return (
                     <button
@@ -1055,10 +1037,10 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
 
             <div>
               <label className="block text-xs font-semibold text-amber-700 dark:text-amber-400 mb-1.5">
-                Pontos de Atenção / Aprimoramento
+                Pontos de Atenção
               </label>
               <div className="flex flex-wrap gap-1.5">
-                {SUGESTOES_PONTOS_MELHORIA.map((tag) => {
+                {TAGS_ATENCAO_DISPONIVEIS.map((tag) => {
                   const ativo = pontosMelhoria.includes(tag);
                   return (
                     <button

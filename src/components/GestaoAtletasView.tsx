@@ -1499,13 +1499,13 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                                         {av.pontosFortes && av.pontosFortes.length > 0 && (
                                           <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200">
-                                            <span className="font-bold block mb-1">✓ Pontos Positivos:</span>
+                                            <span className="font-bold block mb-1">✓ Pontos em Destaque:</span>
                                             <span className="text-[11px]">{av.pontosFortes.join(', ')}</span>
                                           </div>
                                         )}
                                         {av.pontosMelhoria && av.pontosMelhoria.length > 0 && (
                                           <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200">
-                                            <span className="font-bold block mb-1">⚠️ Pontos a Melhorar:</span>
+                                            <span className="font-bold block mb-1">⚠️ Pontos de Atenção:</span>
                                             <span className="text-[11px]">{av.pontosMelhoria.join(', ')}</span>
                                           </div>
                                         )}

@@ -1268,12 +1268,12 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                         ))}
                       </div>
 
-                      {/* Pontos Positivos e Pontos de Atenção */}
+                      {/* Pontos em Destaque e Pontos de Atenção */}
                       <div className="space-y-4 pt-3 border-t border-slate-200 dark:border-slate-800">
                         <div className="p-3.5 rounded-xl bg-[#F0FDF4] dark:bg-emerald-950/30 border border-[#BBF7D0] dark:border-emerald-800 space-y-2">
                           <div className="flex items-center justify-between">
                             <label className="text-xs font-bold uppercase tracking-wider text-[#15803D] dark:text-emerald-300 flex items-center gap-1.5">
-                              <span>✅</span> PONTOS POSITIVOS
+                              <span>✅</span> PONTOS EM DESTAQUE
                             </label>
                             {pontosFortes.length > 0 && (
                               <span className="text-[11px] font-bold text-[#15803D] dark:text-emerald-400">
@@ -1316,7 +1316,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                         <div className="p-3.5 rounded-xl bg-[#FEFCE8] dark:bg-amber-950/30 border border-[#FEF08A] dark:border-amber-800 space-y-2">
                           <div className="flex items-center justify-between">
                             <label className="text-xs font-bold uppercase tracking-wider text-[#713F12] dark:text-amber-200 flex items-center gap-1.5">
-                              <span>⚠️</span> PONTOS DE ATENÇÃO / APRIMORAMENTO
+                              <span>⚠️</span> PONTOS DE ATENÇÃO
                             </label>
                             {pontosMelhoria.length > 0 && (
                               <span className="text-[11px] font-bold text-[#713F12] dark:text-amber-300">

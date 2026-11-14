@@ -1403,7 +1403,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {atletasRanqueados.map(({ atleta, totalJogos, mediaGeral, melhorPilarNome }, index) => {
+            {atletasRanqueados.slice(0, 5).map(({ atleta, totalJogos, mediaGeral, melhorPilarNome }, index) => {
               const posicaoRanking = index + 1;
               const ehOuro = posicaoRanking === 1;
               const ehPrata = posicaoRanking === 2;

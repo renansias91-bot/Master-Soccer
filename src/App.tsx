@@ -102,23 +102,6 @@ const STORAGE_KEY_ABA_ATIVA = 'mastersoccer_aba_ativa_v1';
 const STORAGE_KEY_CATEGORIA_ATIVA = 'mastersoccer_categoria_ativa_v1';
 const STORAGE_KEY_JOGO_ESCALACAO = 'mastersoccer_jogo_escalacao_id_v1';
 
-const lerAbaDaUrlOuMemoria = (): AbaNavegacao => {
-  if (typeof window === 'undefined') return 'painel';
-  const hashLimpo = window.location.hash.replace(/^#\/?/, '').split('?')[0].trim().toLowerCase();
-  if (ABAS_VALIDAS.includes(hashLimpo as AbaNavegacao)) {
-    return hashLimpo as AbaNavegacao;
-  }
-  try {
-    const salvo =
-      localStorage.getItem(STORAGE_KEY_ABA_ATIVA) ||
-      sessionStorage.getItem(STORAGE_KEY_ABA_ATIVA);
-    if (salvo && ABAS_VALIDAS.includes(salvo as AbaNavegacao)) {
-      return salvo as AbaNavegacao;
-    }
-  } catch {}
-  return 'painel';
-};
-
 export default function App() {
   const isOnline = useOnlineStatus();
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
@@ -137,8 +120,8 @@ export default function App() {
   );
   const [categorias, setCategorias] = useState<string[]>(() => storageService.getCategorias());
 
-  // Navegação: Menu de Baixo (PAINEL, JOGO, ESCALAÇÃO, TROFÉUS) + Telas do Menu ☰ (Financeiro, Atletas, Teste Físico)
-  const [abaAtiva, setAbaAtiva] = useState<AbaNavegacao>(() => lerAbaDaUrlOuMemoria());
+  // Navegação: Sempre inicia no PAINEL ao abrir o aplicativo
+  const [abaAtiva, setAbaAtiva] = useState<AbaNavegacao>('painel');
   const [subAbaGestaoAtletas, setSubAbaGestaoAtletas] = useState<'lista' | 'cadastro'>('lista');
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>(() => {
     try {
@@ -1051,35 +1034,21 @@ export default function App() {
     }
   };
 
-  // Persistência da aba atual (localStorage, sessionStorage e URL #/<aba>)
+  // Ao abrir o app, garante abertura limpa no PAINEL e remove hashes/estados antigos de navegação
   useEffect(() => {
     if (isRotaCadastroPublico) return;
     try {
-      localStorage.setItem(STORAGE_KEY_ABA_ATIVA, abaAtiva);
-      sessionStorage.setItem(STORAGE_KEY_ABA_ATIVA, abaAtiva);
+      localStorage.removeItem(STORAGE_KEY_ABA_ATIVA);
+      sessionStorage.removeItem(STORAGE_KEY_ABA_ATIVA);
     } catch {}
-    const hashDesejado = `#/${abaAtiva}`;
-    if (window.location.hash !== hashDesejado) {
+    if (window.location.hash && !window.location.hash.toLowerCase().startsWith('#/cadastro-atleta')) {
       try {
-        window.history.replaceState(null, '', hashDesejado);
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
       } catch {
-        window.location.hash = hashDesejado;
+        window.location.hash = '';
       }
     }
-  }, [abaAtiva, isRotaCadastroPublico]);
-
-  // Suporte a navegação por hash na URL (#/jogo, #/escalacao, #/trofeus, #/painel)
-  useEffect(() => {
-    if (isRotaCadastroPublico) return;
-    const onHashChange = () => {
-      const hashLimpo = window.location.hash.replace(/^#\/?/, '').split('?')[0].trim().toLowerCase();
-      if (ABAS_VALIDAS.includes(hashLimpo as AbaNavegacao) && hashLimpo !== abaAtiva) {
-        setAbaAtiva(hashLimpo as AbaNavegacao);
-      }
-    };
-    window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
-  }, [abaAtiva, isRotaCadastroPublico]);
+  }, [isRotaCadastroPublico]);
 
   // Persistência de categoriaAtiva e jogoSelecionadoParaEscalacaoId
   useEffect(() => {
@@ -1117,25 +1086,9 @@ export default function App() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [abaAtiva]);
 
-  // Transição de aba com memória de rolagem e persistência imediata (sem window.scrollTo(0, 0))
+  // Transição de aba com memória de rolagem dentro da sessão atual
   const mudarAbaComMemoriaScroll = (novaAba: AbaNavegacao) => {
     if (novaAba === abaAtiva) return;
-
-    // Persistência síncrona imediata da nova aba e URL
-    try {
-      localStorage.setItem(STORAGE_KEY_ABA_ATIVA, novaAba);
-      sessionStorage.setItem(STORAGE_KEY_ABA_ATIVA, novaAba);
-    } catch {}
-    if (!isRotaCadastroPublico) {
-      const hashDesejado = `#/${novaAba}`;
-      if (window.location.hash !== hashDesejado) {
-        try {
-          window.history.replaceState(null, '', hashDesejado);
-        } catch {
-          window.location.hash = hashDesejado;
-        }
-      }
-    }
 
     // 1. Salvar rolagem da aba atual que está saindo
     const currentY = window.scrollY || document.documentElement.scrollTop || 0;
