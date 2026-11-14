@@ -1781,11 +1781,15 @@ export default function App() {
 
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 flex items-center justify-center shrink-0">
-                <MasterSoccerEscudo size={42} />
+                <img
+                  src="/icons/icon-192.png?v=4"
+                  alt="Ícone Master Soccer"
+                  className="w-12 h-12 rounded-xl object-contain shadow-xs"
+                />
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Instalar Master Soccer RJ
+                  Instalar Master Soccer
                 </h3>
                 <p className="text-xs text-slate-500">
                   Acesso rápido direto da tela inicial, funciona 100% offline

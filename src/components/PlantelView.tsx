@@ -289,12 +289,7 @@ function atletaCombinaComGrupoFormacao(
     case 'VOL':
       return base === 'VOL';
     case 'MEI':
-    case 'MEI-C':
-      return base === 'MEI';
-    case 'MEI-E':
-      return base === 'MEI' || (!possuiPE && base === 'PE');
-    case 'MEI-D':
-      return base === 'MEI' || (!possuiPD && base === 'PD');
+      return base === 'MEI' || (!possuiPE && base === 'PE') || (!possuiPD && base === 'PD');
     case 'PD':
       return base === 'PD';
     case 'PE':
@@ -306,6 +301,136 @@ function atletaCombinaComGrupoFormacao(
       return base === 'ATA';
     default:
       return false;
+  }
+}
+
+interface EstiloGrupoPosicao {
+  badgeBg: string;
+  closedBg: string;
+  closedText: string;
+  closedBorder: string;
+  closedLeftBar: string;
+  openBg: string;
+  openBorder: string;
+  chevronClosed: string;
+}
+
+function obterCoresGrupoPosicao(grupoKey: string): EstiloGrupoPosicao {
+  switch (grupoKey) {
+    case 'GOL':
+      return {
+        badgeBg: '#d97706',
+        closedBg: '#fef3c7',
+        closedText: '#78350f',
+        closedBorder: '#fcd34d',
+        closedLeftBar: '#d97706',
+        openBg: '#d97706',
+        openBorder: '#b45309',
+        chevronClosed: '#92400e',
+      };
+    case 'LD':
+      return {
+        badgeBg: '#0284c7',
+        closedBg: '#e0f2fe',
+        closedText: '#0c4a6e',
+        closedBorder: '#7dd3fc',
+        closedLeftBar: '#0284c7',
+        openBg: '#0284c7',
+        openBorder: '#0369a1',
+        chevronClosed: '#075985',
+      };
+    case 'LE':
+      return {
+        badgeBg: '#0d9488',
+        closedBg: '#ccfbf1',
+        closedText: '#134e4a',
+        closedBorder: '#5eead4',
+        closedLeftBar: '#0d9488',
+        openBg: '#0d9488',
+        openBorder: '#0f766e',
+        chevronClosed: '#115e59',
+      };
+    case 'ZAG':
+      return {
+        badgeBg: '#4f46e5',
+        closedBg: '#e0e7ff',
+        closedText: '#312e81',
+        closedBorder: '#a5b4fc',
+        closedLeftBar: '#4f46e5',
+        openBg: '#4f46e5',
+        openBorder: '#4338ca',
+        chevronClosed: '#3730a3',
+      };
+    case 'VOL':
+      return {
+        badgeBg: '#059669',
+        closedBg: '#d1fae5',
+        closedText: '#064e3b',
+        closedBorder: '#6ee7b7',
+        closedLeftBar: '#059669',
+        openBg: '#059669',
+        openBorder: '#047857',
+        chevronClosed: '#065f46',
+      };
+    case 'MEI':
+    case 'MEI-E':
+    case 'MEI-C':
+    case 'MEI-D':
+      return {
+        badgeBg: '#7c3aed',
+        closedBg: '#ede9fe',
+        closedText: '#4c1d95',
+        closedBorder: '#c4b5fd',
+        closedLeftBar: '#7c3aed',
+        openBg: '#7c3aed',
+        openBorder: '#6d28d9',
+        chevronClosed: '#5b21b6',
+      };
+    case 'PD':
+      return {
+        badgeBg: '#ea580c',
+        closedBg: '#ffedd5',
+        closedText: '#7c2d12',
+        closedBorder: '#fdba74',
+        closedLeftBar: '#ea580c',
+        openBg: '#ea580c',
+        openBorder: '#c2410c',
+        chevronClosed: '#9a3412',
+      };
+    case 'PE':
+      return {
+        badgeBg: '#c026d3',
+        closedBg: '#fae8ff',
+        closedText: '#701a75',
+        closedBorder: '#f0abfc',
+        closedLeftBar: '#c026d3',
+        openBg: '#c026d3',
+        openBorder: '#a21caf',
+        chevronClosed: '#86198f',
+      };
+    case 'ATA':
+      return {
+        badgeBg: '#e11d48',
+        closedBg: '#ffe4e6',
+        closedText: '#881337',
+        closedBorder: '#fda4af',
+        closedLeftBar: '#e11d48',
+        openBg: '#e11d48',
+        openBorder: '#be123c',
+        chevronClosed: '#9f1239',
+      };
+    case 'TODOS':
+    default:
+      return {
+        badgeBg: '#334155',
+        closedBg: '#f1f5f9',
+        closedText: '#0f172a',
+        closedBorder: '#cbd5e1',
+        closedLeftBar: '#334155',
+        openBg: '#1e293b',
+        openBorder: '#0f172a',
+        chevronClosed: '#334155',
+      };
   }
 }
 
@@ -523,8 +648,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
         const slotsDoGrupo = grupo.slots.map((s) => normalizarSlotId(s));
 
-        // Procura a 1ª vaga livre dentro das vagas deste grupo (1º marcado = -E / 1ª vaga; 2º marcado = -D / 2ª vaga)
-        const vagaLivre = slotsDoGrupo.find(
+        const slotsLivres = slotsDoGrupo.filter(
           (sid) =>
             !Object.entries(copy).some(
               ([id, info]) =>
@@ -533,6 +657,26 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                 normalizarSlotId(info.posicaoSlot || '') === sid
             )
         );
+
+        let vagaLivre: string | undefined;
+        if (slotsLivres.length > 0) {
+          const posLower = (atleta.posicao || '').toLowerCase();
+          const peLower = (atleta.pernaDominante || '').toLowerCase();
+          const prefEsquerda =
+            posLower.includes('esquerd') ||
+            posLower === 'pe' ||
+            peLower.includes('esquerd') ||
+            peLower.includes('canhot');
+          const prefDireita = posLower.includes('direit') || posLower === 'pd';
+
+          if (prefEsquerda) {
+            vagaLivre = slotsLivres.find((s) => s.endsWith('-E')) || slotsLivres[0];
+          } else if (prefDireita) {
+            vagaLivre = slotsLivres.find((s) => s.endsWith('-D')) || slotsLivres[0];
+          } else {
+            vagaLivre = slotsLivres[0];
+          }
+        }
 
         const targetSlotId = vagaLivre || slotsDoGrupo[slotsDoGrupo.length - 1];
 
@@ -1057,26 +1201,26 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
           </div>
 
           {/* Contadores: X titulares | Y reservas | Total: Z */}
-          <div className="flex items-center gap-1 text-[11px] font-bold">
-            <span className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
+          <div className="flex flex-wrap items-center gap-1.5 text-[15px] font-bold">
+            <span className="px-2.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
               {titularesCount} titulares
             </span>
-            <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+            <span className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
               {reservasCount} reservas
             </span>
-            <span className="px-2 py-1 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
+            <span className="px-2.5 py-1.5 rounded-xl bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
               Total: {totalConvocados}
             </span>
           </div>
         </div>
 
         {/* Direita: Bloquinho [Lista] [Campinho] */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setAbaSubEscalacao('lista')}
             style={abaSubEscalacao === 'lista' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-            className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs whitespace-nowrap ${
+            className={`min-h-[42px] px-4 py-2 rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs whitespace-nowrap ${
               abaSubEscalacao === 'lista'
                 ? 'bg-blue-600 text-white border-2 border-blue-600'
                 : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -1090,7 +1234,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
             type="button"
             onClick={() => setAbaSubEscalacao('campinho')}
             style={abaSubEscalacao === 'campinho' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-            className={`h-9 px-3.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs whitespace-nowrap ${
+            className={`min-h-[42px] px-4 py-2 rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs whitespace-nowrap ${
               abaSubEscalacao === 'campinho'
                 ? 'bg-blue-600 text-white border-2 border-blue-600'
                 : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -1120,12 +1264,12 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
       {/* Conteúdo: Lista Vertical por Posição (1 posição aberta por vez) ou Campinho */}
       {abaSubEscalacao === 'lista' ? (
-        <div className="space-y-3">
+        <div className="space-y-3.5">
           <div className="px-1 pt-1 flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+            <span className="text-base sm:text-lg font-black uppercase tracking-wider text-slate-800 dark:text-slate-100">
               ESCOLHA A POSIÇÃO ({formacao}):
             </span>
-            <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300">
+            <span className="text-base font-bold text-slate-600 dark:text-slate-300">
               {titularesCount}/11 vagas preenchidas
             </span>
           </div>
@@ -1135,40 +1279,57 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
               Nenhum atleta encontrado para os critérios pesquisados.
             </div>
           ) : (
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-3">
               {gruposPosicaoVisiveis.map((grupo) => {
                 const aberto = posicaoAberta === grupo.key;
-                const subtitulo =
-                  grupo.key === 'TODOS'
-                    ? `${grupo.sigla} - ${grupo.titulo} (${grupo.atletas.length})`
-                    : `${grupo.sigla} - ${grupo.titulo} (${grupo.atletas.length} ${
-                        grupo.atletas.length === 1 ? 'ATLETA' : 'ATLETAS'
-                      })`;
+                const cores = obterCoresGrupoPosicao(grupo.key);
+                const subtitulo = `${grupo.sigla} - ${grupo.titulo}`;
 
                 return (
                   <div
                     key={grupo.key}
-                    className={`rounded-2xl border overflow-hidden transition-all ${
-                      aberto
-                        ? 'border-blue-600 shadow-sm bg-white dark:bg-slate-900'
-                        : 'border-slate-200 dark:border-slate-700'
+                    style={{
+                      borderColor: aberto ? cores.openBorder : cores.closedBorder,
+                    }}
+                    className={`rounded-2xl border-2 overflow-hidden transition-all ${
+                      aberto ? 'shadow-md bg-white dark:bg-slate-900' : 'shadow-2xs'
                     }`}
                   >
-                    {/* Cabeçalho da Posição: AZUL/BRANCA quando aberta, CINZA CLARO/PRETA quando fechada */}
+                    {/* Cabeçalho da Posição: cores distintas por posição + altura e fonte maiores + sem quantidade */}
                     <button
                       type="button"
                       onClick={() => setPosicaoAberta(aberto ? null : grupo.key)}
                       style={
                         aberto
-                          ? { backgroundColor: '#2563eb', color: '#ffffff' }
-                          : { backgroundColor: '#f1f5f9', color: '#0f172a' }
+                          ? {
+                              backgroundColor: cores.openBg,
+                              color: '#ffffff',
+                            }
+                          : {
+                              backgroundColor: cores.closedBg,
+                              color: cores.closedText,
+                              borderLeftWidth: '8px',
+                              borderLeftColor: cores.closedLeftBar,
+                            }
                       }
-                      className="w-full px-4 py-4 flex items-center justify-between gap-3 text-left font-black text-sm sm:text-base uppercase tracking-wide transition-colors cursor-pointer"
+                      className="w-full min-h-[64px] px-4 sm:px-5 py-4 sm:py-5 flex items-center justify-between gap-3 text-left font-black text-base sm:text-lg uppercase tracking-wide transition-all cursor-pointer"
                     >
-                      <span className="truncate">{subtitulo}</span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          style={{
+                            backgroundColor: aberto ? 'rgba(255, 255, 255, 0.22)' : cores.badgeBg,
+                            color: '#ffffff',
+                          }}
+                          className="px-2.5 py-1 rounded-lg text-[15px] font-black tracking-wider shrink-0 shadow-2xs"
+                        >
+                          {grupo.sigla}
+                        </span>
+                        <span className="truncate">{subtitulo}</span>
+                      </div>
                       <ChevronDown
+                        style={{ color: aberto ? '#ffffff' : cores.chevronClosed }}
                         className={`w-6 h-6 shrink-0 transition-transform duration-200 ${
-                          aberto ? 'rotate-180 text-white' : 'text-slate-700'
+                          aberto ? 'rotate-180' : ''
                         }`}
                       />
                     </button>

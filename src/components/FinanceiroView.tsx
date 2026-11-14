@@ -328,16 +328,16 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
       {atletaAtivo ? (
         <div className="space-y-6">
           {/* Botão Voltar */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <button
               onClick={() => setAtletaSelecionadoId(null)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-all shadow-xs"
+              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 text-[15px] sm:text-base font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-all shadow-xs cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <ArrowLeft className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               <span>Voltar para Lista Financeira</span>
             </button>
 
-            <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">
+            <span className="text-base font-mono font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3.5 py-1.5 rounded-xl">
               {atletaAtivo.categoria}
             </span>
           </div>
@@ -530,9 +530,9 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                     <button
                       type="button"
                       onClick={handleAbrirNovaCompeticao}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
+                      className="min-h-[46px] inline-flex items-center justify-center gap-2 px-4 py-2.5 text-[15px] sm:text-base font-black text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer shrink-0"
                     >
-                      <Plus className="w-3.5 h-3.5 text-amber-300" />
+                      <Plus className="w-5 h-5 text-amber-300 stroke-[2.5]" />
                       <span>Cadastrar Nova Competição</span>
                     </button>
                   </div>
@@ -694,139 +694,141 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
         </div>
       ) : (
         /* VISÃO GERAL: BOTÃO NOVA COMPETIÇÃO + TOTAIS + COMPETIÇÕES + FILTRO E LISTA DE ATLETAS */
-        <div className="space-y-6">
-          {/* Topo: Apenas o botão azul "+ Cadastrar Nova Competição" */}
-          <div className="flex justify-end">
+        <div className="space-y-7">
+          {/* Topo: Botão azul grande e destacado "+ Cadastrar Nova Competição" */}
+          <div>
             <button
               type="button"
               onClick={handleAbrirNovaCompeticao}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
+              className="w-full min-h-[54px] inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-[17px] font-black text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.99] rounded-2xl shadow-md border-2 border-blue-500/40 transition-all cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5 text-amber-300" />
+              <Plus className="w-6 h-6 text-amber-300 stroke-[3]" />
               <span>Cadastrar Nova Competição</span>
             </button>
           </div>
 
           {/* Cards de Métricas Consolidadas da Categoria */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase block">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+              <span className="text-base font-bold text-slate-500 dark:text-slate-400 uppercase block">
                 Total Arrecadado ({categoriaFiltro === 'TODAS' ? 'Geral' : categoriaFiltro})
               </span>
-              <span className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+              <span className="text-2xl sm:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums block">
                 {formatarMoeda(estatisticasGerais.totalPago)}
               </span>
-              <span className="text-[11px] text-slate-500 block mt-1">
+              <span className="text-base text-slate-600 dark:text-slate-400 block">
                 Pagamentos confirmados
               </span>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase block">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+              <span className="text-base font-bold text-slate-500 dark:text-slate-400 uppercase block">
                 Total a Receber ({categoriaFiltro === 'TODAS' ? 'Geral' : categoriaFiltro})
               </span>
-              <span className="text-xl sm:text-2xl font-black font-mono text-rose-600 dark:text-rose-400 tabular-nums">
+              <span className="text-2xl sm:text-3xl font-black font-mono text-rose-600 dark:text-rose-400 tabular-nums block">
                 {formatarMoeda(estatisticasGerais.totalDevendo)}
               </span>
-              <span className="text-[11px] text-slate-500 block mt-1">
+              <span className="text-base text-slate-600 dark:text-slate-400 block">
                 Valores pendentes no ano
               </span>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase block">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+              <span className="text-base font-bold text-slate-500 dark:text-slate-400 uppercase block">
                 Mensalidades Pagas
               </span>
-              <span className="text-xl sm:text-2xl font-black font-mono text-blue-600 dark:text-blue-400 tabular-nums">
+              <span className="text-2xl sm:text-3xl font-black font-mono text-blue-600 dark:text-blue-400 tabular-nums block">
                 {estatisticasGerais.mensalidadesPagas}
               </span>
-              <span className="text-[11px] text-slate-500 block mt-1">
+              <span className="text-base text-slate-600 dark:text-slate-400 block">
                 Meses quitados pelos atletas
               </span>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase block">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
+              <span className="text-base font-bold text-slate-500 dark:text-slate-400 uppercase block">
                 Competições Ativas
               </span>
-              <span className="text-xl sm:text-2xl font-black font-mono text-amber-500 tabular-nums">
+              <span className="text-2xl sm:text-3xl font-black font-mono text-amber-500 tabular-nums block">
                 {competicoesVisiveis.length}
               </span>
-              <span className="text-[11px] text-slate-500 block mt-1">
+              <span className="text-base text-slate-600 dark:text-slate-400 block">
                 Inscrição e Taxa de Jogo
               </span>
             </div>
           </div>
 
           {/* SEÇÃO DE COMPETIÇÕES CADASTRADAS (INSCRIÇÃO + TAXA DE JOGO SEPARADAS E EDITÁVEIS) */}
-          <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-amber-500" />
-                <h3 className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white">
+          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <Trophy className="w-6 h-6 text-amber-500 shrink-0" />
+                <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
                   Competições ({competicoesVisiveis.length})
                 </h3>
               </div>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+              <span className="text-base text-slate-600 dark:text-slate-300 font-medium">
                 Cada competição possui Taxa de Inscrição (única) e Taxa de Jogo (por jogo) editáveis
               </span>
             </div>
 
             {competicoesVisiveis.length === 0 ? (
-              <div className="p-6 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-xs text-slate-500">
+              <div className="p-7 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-base text-slate-600 dark:text-slate-300">
                 Nenhuma competição cadastrada ainda. Clique em <strong>Cadastrar Nova Competição</strong> ou crie um jogo na Agenda.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {competicoesVisiveis.map((comp) => (
                   <div
                     key={comp.id}
-                    className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex flex-col justify-between gap-3"
+                    className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-200 dark:border-slate-700 flex flex-col justify-between gap-4 shadow-2xs"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="inline-block text-[15px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
                           {comp.categoria && comp.categoria !== 'TODAS' ? comp.categoria : 'Todas Categorias'}
                         </span>
-                        <h4 className="text-sm font-black text-slate-900 dark:text-white mt-1.5 truncate">
+                        <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-2 truncate">
                           {comp.nome}
                         </h4>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         <button
                           type="button"
                           onClick={() => handleAbrirEditarItem(comp)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-700 transition cursor-pointer"
+                          className="w-11 h-11 min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/70 transition cursor-pointer shadow-2xs"
                           title="Editar competição e taxas"
+                          aria-label={`Editar competição ${comp.nome}`}
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          <Edit2 className="w-5 h-5" />
                         </button>
                         <button
                           type="button"
                           onClick={() => setItemParaApagar(comp)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                          className="w-11 h-11 min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/70 transition cursor-pointer shadow-2xs"
                           title="Apagar competição"
+                          aria-label={`Apagar competição ${comp.nome}`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/70 dark:border-slate-700/70">
-                      <div className="bg-white dark:bg-slate-900 rounded-lg p-2 border border-slate-200/80 dark:border-slate-700">
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200/80 dark:border-slate-700/80">
+                      <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+                        <span className="text-base font-bold uppercase text-slate-600 dark:text-slate-300 block">
                           Inscrição
                         </span>
-                        <span className="text-xs font-black font-mono text-slate-900 dark:text-white">
+                        <span className="text-lg sm:text-xl font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
                           {formatarMoeda(comp.valorInscricao)}
                         </span>
                       </div>
-                      <div className="bg-white dark:bg-slate-900 rounded-lg p-2 border border-slate-200/80 dark:border-slate-700">
-                        <span className="text-[10px] font-bold uppercase text-slate-400 block">
+                      <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+                        <span className="text-base font-bold uppercase text-slate-600 dark:text-slate-300 block">
                           Taxa de Jogo
                         </span>
-                        <span className="text-xs font-black font-mono text-slate-900 dark:text-white">
+                        <span className="text-lg sm:text-xl font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
                           {formatarMoeda(comp.valorJogo)}
                         </span>
                       </div>
@@ -838,13 +840,13 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
           </div>
 
           {/* Aba dobrável de Categoria (começa fechada) logo acima da busca e lista de atletas */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xs overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xs overflow-hidden">
             <button
               type="button"
               onClick={() => setAbaCategoriaAberta((prev) => !prev)}
-              className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
+              className="w-full min-h-[52px] px-5 py-3.5 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
             >
-              <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+              <div className="flex items-center gap-2.5 text-base font-bold text-slate-800 dark:text-slate-100">
                 <span>📂</span>
                 <span>Categoria:</span>
                 <span className="font-black text-blue-600 dark:text-blue-400">
@@ -852,22 +854,22 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                 </span>
               </div>
               {abaCategoriaAberta ? (
-                <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" />
+                <ChevronUp className="w-5 h-5 text-slate-600 shrink-0" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                <ChevronDown className="w-5 h-5 text-slate-600 shrink-0" />
               )}
             </button>
 
             {abaCategoriaAberta && (
-              <div className="p-3 pt-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="p-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   <button
                     type="button"
                     onClick={() => {
                       setCategoriaFiltro('TODAS');
                       setAbaCategoriaAberta(false);
                     }}
-                    className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold text-center transition-all cursor-pointer shadow-2xs ${
+                    className={`w-full min-h-[46px] py-3 px-4 rounded-xl text-[15px] font-bold text-center transition-all cursor-pointer shadow-2xs ${
                       categoriaFiltro === 'TODAS'
                         ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
                         : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -886,7 +888,7 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                           setCategoriaFiltro(cat);
                           setAbaCategoriaAberta(false);
                         }}
-                        className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold text-center transition-all cursor-pointer shadow-2xs ${
+                        className={`w-full min-h-[46px] py-3 px-4 rounded-xl text-[15px] font-bold text-center transition-all cursor-pointer shadow-2xs ${
                           ativo
                             ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
                             : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -903,32 +905,32 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
 
           {/* Campo de Busca Rápida de Atleta */}
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar atleta da categoria pelo nome ou apelido para ver ficha financeira..."
-              className="w-full h-10 pl-10 pr-4 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-12 pl-12 pr-4 text-base bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Lista de Atletas da Categoria (Mesma ordem alfabética do Plantel) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 px-1">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-base font-bold text-slate-700 dark:text-slate-300 px-1">
               <span>Atletas ({atletasFiltrados.length}) — Ordem Alfabética</span>
-              <span className="text-slate-400">Clique para abrir o controle individual</span>
+              <span className="text-slate-500 dark:text-slate-400 font-medium">Clique para abrir o controle individual</span>
             </div>
 
             {atletasFiltrados.length === 0 ? (
               <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
-                <p className="text-sm font-medium text-slate-500">
+                <p className="text-base font-medium text-slate-500">
                   Nenhum atleta encontrado para a categoria{' '}
                   {categoriaFiltro === 'TODAS' ? 'Geral' : categoriaFiltro}.
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {atletasFiltrados.map((atleta) => {
                   const reg = getRegistro(atleta.id);
                   const resumo = storageService.calcularResumoAtleta(atleta, competicoesNormalizadas, reg);
@@ -937,11 +939,11 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                     <div
                       key={atleta.id}
                       onClick={() => setAtletaSelecionadoId(atleta.id)}
-                      className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:border-blue-500/60 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-3 group"
+                      className="p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-xs hover:border-blue-500/60 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-3.5 group"
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-xs text-blue-600">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-13 h-13 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-base text-blue-600">
                             {atleta.fotoUrl ? (
                               <img
                                 src={atleta.fotoUrl}
@@ -959,15 +961,15 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                           </div>
 
                           <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[15px] font-bold px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
                                 {atleta.categoria}
                               </span>
-                              <span className="text-xs text-slate-400 font-medium">
+                              <span className="text-base text-slate-500 dark:text-slate-400 font-medium">
                                 {atleta.posicao}
                               </span>
                             </div>
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-0.5 line-clamp-1">
+                            <h4 className="text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-1 line-clamp-1">
                               {atleta.nome}
                             </h4>
                           </div>
@@ -975,27 +977,27 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
 
                         {/* Badges de Valores */}
                         <div className="text-right shrink-0">
-                          <span className="text-[10px] text-slate-400 block font-medium">Total Pago</span>
-                          <span className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+                          <span className="text-base text-slate-500 dark:text-slate-400 block font-medium">Total Pago</span>
+                          <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
                             {formatarMoeda(resumo.totalPago)}
                           </span>
                         </div>
                       </div>
 
-                      <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-base">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300">
-                            <span className="w-2 h-2 rounded-full bg-blue-600" />
+                          <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
+                            <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
                             {resumo.mensalidadesPagasCount} de {resumo.mensalidadesTotalCount} mensalidades pagas
                           </span>
                           <span className="text-slate-300 dark:text-slate-700">·</span>
-                          <span className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300">
-                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
                             {resumo.competicoesPagasCount} de {resumo.competicoesTotalCount} taxas pagas
                           </span>
                         </div>
 
-                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400 group-hover:underline">
+                        <span className="text-base font-bold text-blue-600 dark:text-blue-400 group-hover:underline">
                           Abrir ficha →
                         </span>
                       </div>
@@ -1114,17 +1116,17 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                 </p>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsModalNovaCompeticaoOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+                  className="min-h-[44px] px-4 py-2.5 text-[15px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all cursor-pointer"
+                  className="min-h-[44px] px-5 py-2.5 text-[15px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all cursor-pointer"
                 >
                   {itemEditando ? 'Salvar Alterações' : 'Salvar Competição'}
                 </button>
@@ -1140,7 +1142,7 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
             <button
               onClick={() => setIsModalMensalidadeOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="absolute top-4 right-4 p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -1150,10 +1152,10 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                 <DollarSign className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                   Editar Valor da Mensalidade
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-base text-slate-500 dark:text-slate-400">
                   {atletaAtivo
                     ? `Valor cobrado por mês de ${atletaAtivo.nome.split(' ')[0]}`
                     : 'Valor padrão por mês para os atletas'}
@@ -1163,7 +1165,7 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
 
             <form onSubmit={handleSalvarValorMensalidade} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-base font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Valor da Mensalidade (R$)
                 </label>
                 <input
@@ -1173,21 +1175,21 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                   required
                   value={valorMensalidadeInput}
                   onChange={(e) => setValorMensalidadeInput(e.target.value)}
-                  className="w-full px-3.5 py-2 text-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-bold"
+                  className="w-full px-3.5 py-2.5 text-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono font-bold"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsModalMensalidadeOpen(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+                  className="min-h-[44px] px-4 py-2.5 text-[15px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-all"
+                  className="min-h-[44px] px-5 py-2.5 text-[15px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-all cursor-pointer"
                 >
                   Salvar Valor
                 </button>
@@ -1206,16 +1208,16 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                   Apagar Competição
                 </h3>
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-base text-slate-500 font-medium">
                   {itemParaApagar.nome} (Inscrição {formatarMoeda(itemParaApagar.valorInscricao)} · Jogo {formatarMoeda(itemParaApagar.valorJogo)})
                 </p>
               </div>
             </div>
 
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 my-4">
+            <p className="text-base font-semibold text-slate-800 dark:text-slate-100 my-4">
               Tem certeza que deseja apagar esta competição?
             </p>
 
@@ -1223,14 +1225,14 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
               <button
                 type="button"
                 onClick={() => setItemParaApagar(null)}
-                className="py-2.5 px-4 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition"
+                className="min-h-[44px] py-2.5 px-4 rounded-xl text-[15px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition cursor-pointer"
               >
                 NÃO
               </button>
               <button
                 type="button"
                 onClick={handleConfirmarExclusaoItem}
-                className="py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-98 transition shadow-xs"
+                className="min-h-[44px] py-2.5 px-4 rounded-xl text-[15px] font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-98 transition shadow-xs cursor-pointer"
               >
                 SIM
               </button>
