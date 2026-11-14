@@ -791,7 +791,12 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             {onNavegarEscalacao && (
               <button
                 type="button"
-                onClick={() => onNavegarEscalacao(jogoSelecionadoParaAvaliar.id)}
+                onClick={() => {
+                  const id = jogoSelecionadoParaAvaliar.id;
+                  setJogoSelecionadoId(null);
+                  setJogoFallbackAberto(null);
+                  onNavegarEscalacao(id);
+                }}
                 className="px-3 py-1 rounded-lg bg-blue-600 text-white font-bold text-[11px] cursor-pointer"
               >
                 Montar Escalação
@@ -807,7 +812,12 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             {onNavegarEscalacao && (
               <button
                 type="button"
-                onClick={() => onNavegarEscalacao(jogoSelecionadoParaAvaliar.id)}
+                onClick={() => {
+                  const id = jogoSelecionadoParaAvaliar.id;
+                  setJogoSelecionadoId(null);
+                  setJogoFallbackAberto(null);
+                  onNavegarEscalacao(id);
+                }}
                 className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-xs cursor-pointer"
               >
                 Montar Escalação do Jogo

@@ -52,7 +52,7 @@ interface PlantelViewProps {
   jogos: JogoAgenda[];
   onSalvarJogo: (jogo: JogoAgenda) => Promise<void> | void;
   jogoSelecionadoId?: string;
-  onSelecionarJogoId?: (id: string) => void;
+  onSelecionarJogoId?: (id: string | undefined) => void;
   onVoltarParaAgenda?: () => void;
 }
 
@@ -832,6 +832,28 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
     }
   };
 
+  // Sair sem deixar o jogo preso na memória (botão "← Voltar")
+  const handleVoltarParaJogos = () => {
+    setPosicaoAberta(null);
+    setBusca('');
+    setSalvandoFeedback(null);
+    setJogoAtivoId('');
+    onSelecionarJogoId?.(undefined);
+    onVoltarParaAgenda?.();
+  };
+
+  // Limpar escalação montada (0/11), limpar jogo selecionado e voltar para JOGOS sem apagar o jogo nem salvar sozinho
+  const handleDesfazerELimparEscalacao = () => {
+    setEscalacaoMap({});
+    setFormacao('4-4-2 Losango');
+    setPosicaoAberta(null);
+    setBusca('');
+    setSalvandoFeedback(null);
+    setJogoAtivoId('');
+    onSelecionarJogoId?.(undefined);
+    onVoltarParaAgenda?.();
+  };
+
   // Contagem de escalados
   const totalConvocados = Object.keys(escalacaoMap).length;
   const titularesCount = Object.values(escalacaoMap).filter((e) => e.titular).length;
@@ -943,34 +965,129 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
 
 
+  // Lista ordenada de jogos para escolher quando o usuário abre a aba ESCALAÇÃO direto no menu inferior
+  const jogosDisponiveisOrdenados = useMemo(() => {
+    return [...jogos].sort((a, b) => {
+      const realA = a.realizado ? 1 : 0;
+      const realB = b.realizado ? 1 : 0;
+      if (realA !== realB) return realA - realB;
+      return (a.dataJogo || '').localeCompare(b.dataJogo || '');
+    });
+  }, [jogos]);
+
   // Se o usuário entrar direto na aba ESCALAÇÃO sem ter selecionado um jogo antes na Agenda:
   if (!jogoAtivo) {
     return (
-      <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
-        <div className="p-10 sm:p-14 text-center bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-800 space-y-4 max-w-lg mx-auto my-8 shadow-xs">
-          <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center mx-auto shadow-2xs">
-            <Calendar className="w-8 h-8" />
-          </div>
-          <div className="space-y-1.5">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-              Selecione um jogo na Agenda para montar a escalação
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-              Abra a aba Jogo, encontre a partida desejada e clique no botão [Escalação] para escalar titulares e reservas.
+      <div className="space-y-4 pb-[120px] w-full max-w-full box-border">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+              Escolha um Jogo para Montar a Escalação
+            </h2>
+            <p className="text-[14px] text-slate-600 dark:text-slate-300 font-medium mt-0.5">
+              Selecione abaixo a partida desejada ou volte para a Agenda de Jogos.
             </p>
           </div>
           {onVoltarParaAgenda && (
             <button
               type="button"
-              onClick={onVoltarParaAgenda}
+              onClick={handleVoltarParaJogos}
               style={{ backgroundColor: '#2563eb' }}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition shadow-xs cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[14px] font-bold text-white hover:bg-blue-700 active:scale-98 transition shadow-xs cursor-pointer shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Ir para Agenda</span>
+              <span>Ir para Jogos</span>
             </button>
           )}
         </div>
+
+        {jogosDisponiveisOrdenados.length === 0 ? (
+          <div className="p-10 text-center bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-800 space-y-3">
+            <Calendar className="w-10 h-10 text-blue-600 mx-auto" />
+            <p className="text-[15px] font-bold text-slate-700 dark:text-slate-200">
+              Nenhum jogo cadastrado na agenda ainda.
+            </p>
+            <p className="text-[14px] text-slate-500 dark:text-slate-400">
+              Cadastre uma partida na aba JOGO para montar a escalação.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3">
+            {jogosDisponiveisOrdenados.map((jogo) => {
+              const escObj = jogo.escalacao || {};
+              const items = Object.values(escObj);
+              const qtdTitulares = items.filter((i) => i?.titular).length;
+              const qtdReservas = items.filter((i) => i && !i.titular).length;
+              const temEscalacao = qtdTitulares + qtdReservas > 0;
+
+              return (
+                <div
+                  key={jogo.id}
+                  onClick={() => {
+                    setJogoAtivoId(jogo.id);
+                    onSelecionarJogoId?.(jogo.id);
+                  }}
+                  className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-2xs hover:border-blue-500 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                >
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[13px] font-black px-2.5 py-0.5 rounded-lg bg-blue-600 text-white">
+                        {jogo.categoria}
+                      </span>
+                      {jogo.tipo && (
+                        <span className="text-[13px] font-black px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300/60">
+                          {jogo.tipo}
+                        </span>
+                      )}
+                      <span
+                        className={`text-[13px] font-bold px-2.5 py-0.5 rounded-lg border ${
+                          temEscalacao
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                            : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                        }`}
+                      >
+                        {temEscalacao
+                          ? `Escalação pronta (${qtdTitulares} tit · ${qtdReservas} res)`
+                          : 'Escalação pendente (0/11)'}
+                      </span>
+                    </div>
+
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
+                      {jogo.adversario.startsWith('vs') ? jogo.adversario : `vs ${jogo.adversario}`}
+                    </h3>
+
+                    <div className="text-[14px] text-slate-600 dark:text-slate-300 font-medium flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">
+                        🗓️ {formatarDataExibicao(jogo.dataJogo)}
+                        {jogo.hora ? ` às ${jogo.hora}` : ''}
+                      </span>
+                      {jogo.local && (
+                        <>
+                          <span className="text-slate-400">·</span>
+                          <span>{jogo.local}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setJogoAtivoId(jogo.id);
+                      onSelecionarJogoId?.(jogo.id);
+                    }}
+                    style={{ backgroundColor: '#2563eb' }}
+                    className="min-h-[42px] px-4 py-2 rounded-xl text-[14px] font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center justify-center gap-1.5 shadow-xs shrink-0 cursor-pointer"
+                  >
+                    <Users className="w-4 h-4 shrink-0" />
+                    <span>Montar Escalação</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }
@@ -1007,25 +1124,31 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         </div>
       </div>
 
-      {/* 2. LINHA DE BOTÕES NO TOPO: [← Voltar] [Salvar Escalação do Jogo] [Estratégia de Jogo] [Súmula] */}
+      {/* 2. LINHA DE BOTÕES NO TOPO: [← Voltar] [↩️ Desfazer / Limpar] [Salvar Escalação do Jogo] [Estratégia de Jogo] [Súmula] */}
       <div className="flex items-center gap-2 w-full flex-wrap">
-        {onVoltarParaAgenda && (
-          <button
-            type="button"
-            onClick={onVoltarParaAgenda}
-            className="px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs active:scale-95"
-            title="Voltar para a Agenda de Jogos"
-          >
-            <ArrowLeft className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-            <span>← Voltar</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleVoltarParaJogos}
+          className="min-h-[42px] px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs active:scale-95"
+          title="Voltar para a Agenda de Jogos"
+        >
+          <span>← Voltar</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDesfazerELimparEscalacao}
+          className="min-h-[42px] px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-300 dark:border-rose-800 transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs active:scale-95"
+          title="Limpar escalação montada, limpar seleção e voltar para Jogos"
+        >
+          <span>↩️ Desfazer / Limpar</span>
+        </button>
 
         <button
           type="button"
           onClick={handleSalvarEscalacao}
           style={{ backgroundColor: '#2563eb' }}
-          className="flex-1 min-w-[210px] inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm md:text-base font-black text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap"
+          className="min-h-[42px] flex-1 min-w-[210px] inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm md:text-base font-black text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap"
         >
           <Save className="w-4 h-4 text-amber-300 shrink-0" />
           <span>Salvar Escalação do Jogo ({totalConvocados} convocados)</span>

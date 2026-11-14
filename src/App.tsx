@@ -175,17 +175,7 @@ export default function App() {
   const [jogoEditando, setJogoEditando] = useState<JogoAgenda | null>(null);
   const [jogoSelecionadoParaEscalacaoId, setJogoSelecionadoParaEscalacaoId] = useState<
     string | undefined
-  >(() => {
-    try {
-      return (
-        localStorage.getItem(STORAGE_KEY_JOGO_ESCALACAO) ||
-        sessionStorage.getItem(STORAGE_KEY_JOGO_ESCALACAO) ||
-        undefined
-      );
-    } catch {
-      return undefined;
-    }
-  });
+  >(undefined);
 
   const [isCategoriasModalOpen, setIsCategoriasModalOpen] = useState(false);
   const [isInstalarModalOpen, setIsInstalarModalOpen] = useState(false);
@@ -1034,12 +1024,14 @@ export default function App() {
     }
   };
 
-  // Ao abrir o app, garante abertura limpa no PAINEL e remove hashes/estados antigos de navegação
+  // Ao abrir o app, garante abertura limpa no PAINEL e remove hashes/estados antigos de navegação e escalação
   useEffect(() => {
     if (isRotaCadastroPublico) return;
     try {
       localStorage.removeItem(STORAGE_KEY_ABA_ATIVA);
       sessionStorage.removeItem(STORAGE_KEY_ABA_ATIVA);
+      localStorage.removeItem(STORAGE_KEY_JOGO_ESCALACAO);
+      sessionStorage.removeItem(STORAGE_KEY_JOGO_ESCALACAO);
     } catch {}
     if (window.location.hash && !window.location.hash.toLowerCase().startsWith('#/cadastro-atleta')) {
       try {
@@ -1050,25 +1042,13 @@ export default function App() {
     }
   }, [isRotaCadastroPublico]);
 
-  // Persistência de categoriaAtiva e jogoSelecionadoParaEscalacaoId
+  // Persistência de categoriaAtiva
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_CATEGORIA_ATIVA, categoriaAtiva);
       sessionStorage.setItem(STORAGE_KEY_CATEGORIA_ATIVA, categoriaAtiva);
     } catch {}
   }, [categoriaAtiva]);
-
-  useEffect(() => {
-    try {
-      if (jogoSelecionadoParaEscalacaoId) {
-        localStorage.setItem(STORAGE_KEY_JOGO_ESCALACAO, jogoSelecionadoParaEscalacaoId);
-        sessionStorage.setItem(STORAGE_KEY_JOGO_ESCALACAO, jogoSelecionadoParaEscalacaoId);
-      } else {
-        localStorage.removeItem(STORAGE_KEY_JOGO_ESCALACAO);
-        sessionStorage.removeItem(STORAGE_KEY_JOGO_ESCALACAO);
-      }
-    } catch {}
-  }, [jogoSelecionadoParaEscalacaoId]);
 
   // Monitorar e salvar posição de rolagem contínua da aba atual
   useEffect(() => {
@@ -1089,6 +1069,11 @@ export default function App() {
   // Transição de aba com memória de rolagem dentro da sessão atual
   const mudarAbaComMemoriaScroll = (novaAba: AbaNavegacao) => {
     if (novaAba === abaAtiva) return;
+
+    // Ao sair da tela de Escalação sem salvar, limpa o jogo selecionado para não ficar preso na memória
+    if (abaAtiva === 'escalacao' && novaAba !== 'escalacao') {
+      setJogoSelecionadoParaEscalacaoId(undefined);
+    }
 
     // 1. Salvar rolagem da aba atual que está saindo
     const currentY = window.scrollY || document.documentElement.scrollTop || 0;
@@ -1145,6 +1130,7 @@ export default function App() {
 
   const handleNavegarPlantel = (categoria?: string) => {
     if (categoria) setCategoriaAtiva(categoria);
+    setJogoSelecionadoParaEscalacaoId(undefined);
     mudarAbaComMemoriaScroll('escalacao');
   };
 
@@ -1503,7 +1489,10 @@ export default function App() {
             onSalvarJogo={handleSalvarJogo}
             jogoSelecionadoId={jogoSelecionadoParaEscalacaoId}
             onSelecionarJogoId={setJogoSelecionadoParaEscalacaoId}
-            onVoltarParaAgenda={() => mudarAbaComMemoriaScroll('jogo')}
+            onVoltarParaAgenda={() => {
+              setJogoSelecionadoParaEscalacaoId(undefined);
+              mudarAbaComMemoriaScroll('jogo');
+            }}
           />
         </div>
 
@@ -1613,7 +1602,10 @@ export default function App() {
 
           {/* 3. ESCALAÇÃO */}
           <button
-            onClick={() => mudarAbaComMemoriaScroll('escalacao')}
+            onClick={() => {
+              setJogoSelecionadoParaEscalacaoId(undefined);
+              mudarAbaComMemoriaScroll('escalacao');
+            }}
             className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all ${
               abaAtiva === 'escalacao'
                 ? 'font-black bg-blue-50/90 dark:bg-blue-950/50 shadow-2xs'
