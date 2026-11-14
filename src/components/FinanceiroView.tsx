@@ -694,141 +694,141 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
         </div>
       ) : (
         /* VISÃO GERAL: BOTÃO NOVA COMPETIÇÃO + TOTAIS + COMPETIÇÕES + FILTRO E LISTA DE ATLETAS */
-        <div className="space-y-7">
-          {/* Topo: Botão azul grande e destacado "+ Cadastrar Nova Competição" */}
-          <div>
+        <div className="space-y-5">
+          {/* Topo: Botão azul médio e fácil de achar "+ Cadastrar Nova Competição" */}
+          <div className="flex justify-start sm:justify-end">
             <button
               type="button"
               onClick={handleAbrirNovaCompeticao}
-              className="w-full min-h-[54px] inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-[17px] font-black text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.99] rounded-2xl shadow-md border-2 border-blue-500/40 transition-all cursor-pointer"
+              className="w-full sm:w-auto min-h-[42px] inline-flex items-center justify-center gap-2 px-5 py-2 text-[14px] font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.99] rounded-xl shadow-xs border border-blue-500/40 transition-all cursor-pointer"
             >
-              <Plus className="w-6 h-6 text-amber-300 stroke-[3]" />
+              <Plus className="w-4 h-4 text-amber-300 stroke-[2.5]" />
               <span>Cadastrar Nova Competição</span>
             </button>
           </div>
 
           {/* Cards de Métricas Consolidadas da Categoria */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
-              <span className="text-base font-bold text-slate-500 dark:text-slate-400 uppercase block">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-1">
+              <span className="text-[14px] font-bold text-slate-500 dark:text-slate-400 uppercase block leading-snug">
                 Total Arrecadado ({categoriaFiltro === 'TODAS' ? 'Geral' : categoriaFiltro})
               </span>
-              <span className="text-2xl sm:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums block">
+              <span className="text-[18px] font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums block">
                 {formatarMoeda(estatisticasGerais.totalPago)}
               </span>
-              <span className="text-base text-slate-600 dark:text-slate-400 block">
+              <span className="text-[13px] text-slate-500 dark:text-slate-400 block">
                 Pagamentos confirmados
               </span>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
-              <span className="text-base font-bold text-slate-500 dark:text-slate-400 uppercase block">
+            <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-1">
+              <span className="text-[14px] font-bold text-slate-500 dark:text-slate-400 uppercase block leading-snug">
                 Total a Receber ({categoriaFiltro === 'TODAS' ? 'Geral' : categoriaFiltro})
               </span>
-              <span className="text-2xl sm:text-3xl font-black font-mono text-rose-600 dark:text-rose-400 tabular-nums block">
+              <span className="text-[18px] font-black font-mono text-rose-600 dark:text-rose-400 tabular-nums block">
                 {formatarMoeda(estatisticasGerais.totalDevendo)}
               </span>
-              <span className="text-base text-slate-600 dark:text-slate-400 block">
+              <span className="text-[13px] text-slate-500 dark:text-slate-400 block">
                 Valores pendentes no ano
               </span>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
-              <span className="text-base font-bold text-slate-500 dark:text-slate-400 uppercase block">
+            <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-1">
+              <span className="text-[14px] font-bold text-slate-500 dark:text-slate-400 uppercase block leading-snug">
                 Mensalidades Pagas
               </span>
-              <span className="text-2xl sm:text-3xl font-black font-mono text-blue-600 dark:text-blue-400 tabular-nums block">
+              <span className="text-[18px] font-black font-mono text-blue-600 dark:text-blue-400 tabular-nums block">
                 {estatisticasGerais.mensalidadesPagas}
               </span>
-              <span className="text-base text-slate-600 dark:text-slate-400 block">
+              <span className="text-[13px] text-slate-500 dark:text-slate-400 block">
                 Meses quitados pelos atletas
               </span>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-xs space-y-1">
-              <span className="text-base font-bold text-slate-500 dark:text-slate-400 uppercase block">
+            <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-1">
+              <span className="text-[14px] font-bold text-slate-500 dark:text-slate-400 uppercase block leading-snug">
                 Competições Ativas
               </span>
-              <span className="text-2xl sm:text-3xl font-black font-mono text-amber-500 tabular-nums block">
+              <span className="text-[18px] font-black font-mono text-amber-500 tabular-nums block">
                 {competicoesVisiveis.length}
               </span>
-              <span className="text-base text-slate-600 dark:text-slate-400 block">
+              <span className="text-[13px] text-slate-500 dark:text-slate-400 block">
                 Inscrição e Taxa de Jogo
               </span>
             </div>
           </div>
 
           {/* SEÇÃO DE COMPETIÇÕES CADASTRADAS (INSCRIÇÃO + TAXA DE JOGO SEPARADAS E EDITÁVEIS) */}
-          <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <Trophy className="w-6 h-6 text-amber-500 shrink-0" />
-                <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-500 shrink-0" />
+                <h3 className="text-[15px] font-black uppercase tracking-tight text-slate-900 dark:text-white">
                   Competições ({competicoesVisiveis.length})
                 </h3>
               </div>
-              <span className="text-base text-slate-600 dark:text-slate-300 font-medium">
+              <span className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">
                 Cada competição possui Taxa de Inscrição (única) e Taxa de Jogo (por jogo) editáveis
               </span>
             </div>
 
             {competicoesVisiveis.length === 0 ? (
-              <div className="p-7 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-base text-slate-600 dark:text-slate-300">
+              <div className="p-5 text-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-[14px] text-slate-600 dark:text-slate-300">
                 Nenhuma competição cadastrada ainda. Clique em <strong>Cadastrar Nova Competição</strong> ou crie um jogo na Agenda.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {competicoesVisiveis.map((comp) => (
                   <div
                     key={comp.id}
-                    className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-200 dark:border-slate-700 flex flex-col justify-between gap-4 shadow-2xs"
+                    className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex flex-col justify-between gap-3 shadow-2xs"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start justify-between gap-2.5">
                       <div className="min-w-0 flex-1">
-                        <span className="inline-block text-[15px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                        <span className="inline-block text-[12px] font-bold uppercase px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
                           {comp.categoria && comp.categoria !== 'TODAS' ? comp.categoria : 'Todas Categorias'}
                         </span>
-                        <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-2 truncate">
+                        <h4 className="text-[15px] font-black text-slate-900 dark:text-white mt-1.5 truncate">
                           {comp.nome}
                         </h4>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
                           onClick={() => handleAbrirEditarItem(comp)}
-                          className="w-11 h-11 min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/70 transition cursor-pointer shadow-2xs"
+                          className="w-9 h-9 inline-flex items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/70 transition cursor-pointer shadow-2xs"
                           title="Editar competição e taxas"
                           aria-label={`Editar competição ${comp.nome}`}
                         >
-                          <Edit2 className="w-5 h-5" />
+                          <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => setItemParaApagar(comp)}
-                          className="w-11 h-11 min-w-[40px] min-h-[40px] inline-flex items-center justify-center rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/70 transition cursor-pointer shadow-2xs"
+                          className="w-9 h-9 inline-flex items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/70 transition cursor-pointer shadow-2xs"
                           title="Apagar competição"
                           aria-label={`Apagar competição ${comp.nome}`}
                         >
-                          <Trash2 className="w-5 h-5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200/80 dark:border-slate-700/80">
-                      <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
-                        <span className="text-base font-bold uppercase text-slate-600 dark:text-slate-300 block">
+                    <div className="grid grid-cols-2 gap-2.5 pt-2.5 border-t border-slate-200/80 dark:border-slate-700/80">
+                      <div className="bg-white dark:bg-slate-900 rounded-lg p-2.5 border border-slate-200 dark:border-slate-700">
+                        <span className="text-[14px] font-bold uppercase text-slate-600 dark:text-slate-300 block">
                           Inscrição
                         </span>
-                        <span className="text-lg sm:text-xl font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
+                        <span className="text-[18px] font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
                           {formatarMoeda(comp.valorInscricao)}
                         </span>
                       </div>
-                      <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
-                        <span className="text-base font-bold uppercase text-slate-600 dark:text-slate-300 block">
+                      <div className="bg-white dark:bg-slate-900 rounded-lg p-2.5 border border-slate-200 dark:border-slate-700">
+                        <span className="text-[14px] font-bold uppercase text-slate-600 dark:text-slate-300 block">
                           Taxa de Jogo
                         </span>
-                        <span className="text-lg sm:text-xl font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
+                        <span className="text-[18px] font-black font-mono text-slate-900 dark:text-white mt-0.5 block">
                           {formatarMoeda(comp.valorJogo)}
                         </span>
                       </div>
@@ -840,13 +840,13 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
           </div>
 
           {/* Aba dobrável de Categoria (começa fechada) logo acima da busca e lista de atletas */}
-          <div className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xs overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xs overflow-hidden">
             <button
               type="button"
               onClick={() => setAbaCategoriaAberta((prev) => !prev)}
-              className="w-full min-h-[52px] px-5 py-3.5 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
+              className="w-full min-h-[44px] px-4 py-2.5 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
             >
-              <div className="flex items-center gap-2.5 text-base font-bold text-slate-800 dark:text-slate-100">
+              <div className="flex items-center gap-2 text-[14px] font-bold text-slate-800 dark:text-slate-100">
                 <span>📂</span>
                 <span>Categoria:</span>
                 <span className="font-black text-blue-600 dark:text-blue-400">
@@ -854,22 +854,22 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                 </span>
               </div>
               {abaCategoriaAberta ? (
-                <ChevronUp className="w-5 h-5 text-slate-600 shrink-0" />
+                <ChevronUp className="w-4 h-4 text-slate-600 shrink-0" />
               ) : (
-                <ChevronDown className="w-5 h-5 text-slate-600 shrink-0" />
+                <ChevronDown className="w-4 h-4 text-slate-600 shrink-0" />
               )}
             </button>
 
             {abaCategoriaAberta && (
-              <div className="p-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="p-3 pt-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       setCategoriaFiltro('TODAS');
                       setAbaCategoriaAberta(false);
                     }}
-                    className={`w-full min-h-[46px] py-3 px-4 rounded-xl text-[15px] font-bold text-center transition-all cursor-pointer shadow-2xs ${
+                    className={`w-full min-h-[40px] py-2 px-3 rounded-lg text-[14px] font-semibold text-center transition-all cursor-pointer shadow-2xs ${
                       categoriaFiltro === 'TODAS'
                         ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
                         : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -888,7 +888,7 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                           setCategoriaFiltro(cat);
                           setAbaCategoriaAberta(false);
                         }}
-                        className={`w-full min-h-[46px] py-3 px-4 rounded-xl text-[15px] font-bold text-center transition-all cursor-pointer shadow-2xs ${
+                        className={`w-full min-h-[40px] py-2 px-3 rounded-lg text-[14px] font-semibold text-center transition-all cursor-pointer shadow-2xs ${
                           ativo
                             ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
                             : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -905,32 +905,32 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
 
           {/* Campo de Busca Rápida de Atleta */}
           <div className="relative">
-            <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar atleta da categoria pelo nome ou apelido para ver ficha financeira..."
-              className="w-full h-12 pl-12 pr-4 text-base bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-10 pl-10 pr-4 text-[14px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Lista de Atletas da Categoria (Mesma ordem alfabética do Plantel) */}
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-base font-bold text-slate-700 dark:text-slate-300 px-1">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[14px] font-bold text-slate-700 dark:text-slate-300 px-1">
               <span>Atletas ({atletasFiltrados.length}) — Ordem Alfabética</span>
-              <span className="text-slate-500 dark:text-slate-400 font-medium">Clique para abrir o controle individual</span>
+              <span className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">Clique para abrir o controle individual</span>
             </div>
 
             {atletasFiltrados.length === 0 ? (
-              <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
-                <p className="text-base font-medium text-slate-500">
+              <div className="p-10 text-center bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-800">
+                <p className="text-[14px] font-medium text-slate-500">
                   Nenhum atleta encontrado para a categoria{' '}
                   {categoriaFiltro === 'TODAS' ? 'Geral' : categoriaFiltro}.
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {atletasFiltrados.map((atleta) => {
                   const reg = getRegistro(atleta.id);
                   const resumo = storageService.calcularResumoAtleta(atleta, competicoesNormalizadas, reg);
@@ -939,11 +939,11 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                     <div
                       key={atleta.id}
                       onClick={() => setAtletaSelecionadoId(atleta.id)}
-                      className="p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-xs hover:border-blue-500/60 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between gap-3.5 group"
+                      className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs hover:border-blue-500/60 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between gap-2.5 group"
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3.5">
-                          <div className="w-13 h-13 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-base text-blue-600">
+                      <div className="flex items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-11 h-11 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-[14px] text-blue-600">
                             {atleta.fotoUrl ? (
                               <img
                                 src={atleta.fotoUrl}
@@ -960,16 +960,16 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
                             )}
                           </div>
 
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-[15px] font-bold px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[12px] font-bold px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
                                 {atleta.categoria}
                               </span>
-                              <span className="text-base text-slate-500 dark:text-slate-400 font-medium">
+                              <span className="text-[13px] text-slate-500 dark:text-slate-400 font-medium">
                                 {atleta.posicao}
                               </span>
                             </div>
-                            <h4 className="text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-1 line-clamp-1">
+                            <h4 className="text-[15px] font-extrabold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-0.5 line-clamp-1">
                               {atleta.nome}
                             </h4>
                           </div>
@@ -977,27 +977,27 @@ export const FinanceiroView: React.FC<FinanceiroViewProps> = ({
 
                         {/* Badges de Valores */}
                         <div className="text-right shrink-0">
-                          <span className="text-base text-slate-500 dark:text-slate-400 block font-medium">Total Pago</span>
-                          <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
+                          <span className="text-[12px] text-slate-500 dark:text-slate-400 block font-medium">Total Pago</span>
+                          <span className="text-[16px] font-black font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
                             {formatarMoeda(resumo.totalPago)}
                           </span>
                         </div>
                       </div>
 
-                      <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-base">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
-                            <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                      <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[13px]">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300">
+                            <span className="w-2 h-2 rounded-full bg-blue-600" />
                             {resumo.mensalidadesPagasCount} de {resumo.mensalidadesTotalCount} mensalidades pagas
                           </span>
                           <span className="text-slate-300 dark:text-slate-700">·</span>
-                          <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
-                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                          <span className="inline-flex items-center gap-1 font-semibold text-slate-700 dark:text-slate-300">
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />
                             {resumo.competicoesPagasCount} de {resumo.competicoesTotalCount} taxas pagas
                           </span>
                         </div>
 
-                        <span className="text-base font-bold text-blue-600 dark:text-blue-400 group-hover:underline">
+                        <span className="text-[13px] font-bold text-blue-600 dark:text-blue-400 group-hover:underline">
                           Abrir ficha →
                         </span>
                       </div>

@@ -546,26 +546,26 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
   };
 
   return (
-    <div className="space-y-7 pb-[120px] w-full max-w-full box-border">
+    <div className="space-y-5 pb-[120px] w-full max-w-full box-border">
       {/* ========================================================= */}
       {/* BANNER DE BOAS-VINDAS MASTER SOCCER (AZUL E OURO) */}
       {/* ========================================================= */}
-      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white rounded-3xl p-6 sm:p-9 shadow-md flex flex-col items-center justify-center text-center gap-4 border-2 border-blue-800/80 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-blue-900 text-white rounded-2xl p-5 sm:p-6 shadow-md flex flex-col items-center justify-center text-center gap-3 border border-blue-800/80 relative overflow-hidden">
         {/* Glow sutil de fundo dourado */}
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="flex flex-col items-center gap-4 z-10 max-w-2xl">
-          <MasterSoccerEscudo size={96} className="drop-shadow-lg shrink-0" />
-          <div className="space-y-2.5 flex flex-col items-center text-center">
+        <div className="flex flex-col items-center gap-3 z-10 max-w-2xl">
+          <MasterSoccerEscudo size={74} className="drop-shadow-lg shrink-0" />
+          <div className="space-y-1.5 flex flex-col items-center text-center">
             <div className="flex items-center justify-center gap-2">
-              <span className="text-base font-black text-amber-400 tracking-wider uppercase font-mono bg-blue-950/90 px-3.5 py-1.5 rounded-xl border border-amber-400/40">
+              <span className="text-[13px] font-black text-amber-400 tracking-wider uppercase font-mono bg-blue-950/90 px-3 py-1 rounded-lg border border-amber-400/40">
                 Master Soccer · Rio de Janeiro
               </span>
             </div>
-            <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-white leading-tight">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white leading-tight">
               Controle & Avaliação das Categorias de Base
             </h2>
-            <p className="text-base sm:text-lg text-slate-200 leading-relaxed font-medium">
+            <p className="text-[14px] sm:text-[15px] text-slate-200 leading-relaxed font-medium">
               Monitoramento dos atletas com notas estruturadas nos 5 pilares fundamentais, estatísticas
               oficiais e pareceres pós-jogo.
             </p>
@@ -576,24 +576,24 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
       {/* ========================================================= */}
       {/* 2 & 3. SEÇÃO DESEMPENHO (ABAS DE FILTRO + GRÁFICO + PILARES) */}
       {/* ========================================================= */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-8 border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-7">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
         {/* Topo da Seção: Título e Abas de Filtro GERAL | SUB-15 | SUB-16 | SUB-17 ... */}
-        <div className="flex flex-col gap-5 pb-5 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex flex-col gap-3">
             <div>
-              <div className="flex items-center gap-2.5">
-                <Activity className="w-6 h-6 text-blue-600 shrink-0" />
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+              <div className="flex items-center gap-2">
+                <Activity className="w-5 h-5 text-blue-600 shrink-0" />
+                <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
                   Desempenho da Equipe
                 </h3>
               </div>
-              <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 font-medium mt-1">
+              <p className="text-[14px] text-slate-600 dark:text-slate-300 font-medium mt-0.5">
                 Resultados, aproveitamento e média dos 5 pilares das partidas avaliadas
               </p>
             </div>
 
             {/* Abas de Filtro de Categoria */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2">
               {todasCategorias.map((cat) => {
                 const ativo = categoriaAtiva === cat;
                 return (
@@ -604,10 +604,10 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                       setCategoriaAtiva(cat);
                       setPontoAtivoIndex(null);
                     }}
-                    className={`min-h-[46px] px-5 py-3 rounded-2xl text-[15px] sm:text-base font-extrabold transition-all cursor-pointer shadow-xs active:scale-98 ${
+                    className={`min-h-[40px] px-4 py-2 rounded-xl text-[14px] font-bold transition-all cursor-pointer shadow-2xs active:scale-98 ${
                       ativo
-                        ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400/50'
-                        : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700'
+                        ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/40'
+                        : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
                     }`}
                     style={ativo ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
                   >
@@ -620,12 +620,12 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
 
           {/* Filtro de Competição - BOTÕES IGUAIS AOS DE CATEGORIA */}
           {todasCompeticoes.length > 0 && (
-            <div className="space-y-3 pt-4 border-t border-slate-100 dark:border-slate-800/60">
-              <div className="flex items-center gap-2 text-base font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
-                <Trophy className="w-5 h-5 text-amber-500 shrink-0" />
+            <div className="space-y-2.5 pt-3 border-t border-slate-100 dark:border-slate-800/60">
+              <div className="flex items-center gap-2 text-[14px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
                 <span>COMPETIÇÃO:</span>
               </div>
-              <div className="flex flex-wrap gap-2.5">
+              <div className="flex flex-wrap gap-2">
                 {todasCompeticoes.map((comp) => {
                   const ativo = competicaoAtiva === comp;
                   return (
@@ -636,10 +636,10 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                         setCompeticaoAtiva(comp);
                         setPontoAtivoIndex(null);
                       }}
-                      className={`min-h-[46px] px-5 py-3 rounded-2xl text-[15px] sm:text-base font-bold transition-all cursor-pointer shadow-xs active:scale-98 ${
+                      className={`min-h-[40px] px-4 py-2 rounded-xl text-[14px] font-bold transition-all cursor-pointer shadow-2xs active:scale-98 ${
                         ativo
                           ? 'bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-400/40'
-                          : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-2 border-slate-200 dark:border-slate-700'
+                          : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
                       }`}
                       style={
                         ativo
@@ -659,22 +659,22 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
         {/* ========================================================= */}
         {/* GRÁFICO E NÚMEROS DE DESEMPENHO + PENTÁGONO */}
         {/* ========================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
           {/* COLUNA ESQUERDA: Aproveitamento, Barras V/E/D e Tabela de Números (7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
+          <div className="lg:col-span-7 space-y-5">
             {/* Card de Destaque: Aproveitamento % */}
-            <div className="p-6 sm:p-7 rounded-2xl bg-gradient-to-br from-blue-50 via-white to-blue-50/50 dark:from-slate-850 dark:via-slate-850 dark:to-blue-950/30 border-2 border-blue-200 dark:border-blue-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-              <div className="space-y-2">
-                <span className="text-base font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 block">
+            <div className="p-4 sm:p-5 rounded-xl bg-gradient-to-br from-blue-50 via-white to-blue-50/50 dark:from-slate-850 dark:via-slate-850 dark:to-blue-950/30 border border-blue-200 dark:border-blue-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+              <div className="space-y-1">
+                <span className="text-[14px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 block">
                   Aproveitamento {categoriaAtiva === 'GERAL' ? 'Geral' : `Categoria ${categoriaAtiva}`}
                 </span>
-                <div className="text-4xl sm:text-5xl font-black font-mono text-slate-900 dark:text-white tabular-nums flex flex-wrap items-baseline gap-2.5">
+                <div className="text-3xl sm:text-4xl font-black font-mono text-slate-900 dark:text-white tabular-nums flex flex-wrap items-baseline gap-2">
                   <span>{estatisticasDesempenho.aproveitamentoPct}%</span>
-                  <span className="text-base font-bold text-slate-600 dark:text-slate-300 font-sans">
+                  <span className="text-[14px] font-bold text-slate-600 dark:text-slate-300 font-sans">
                     dos pontos disputados
                   </span>
                 </div>
-                <p className="text-base text-slate-700 dark:text-slate-300 font-medium">
+                <p className="text-[14px] text-slate-600 dark:text-slate-300 font-medium">
                   {estatisticasDesempenho.totalJogos > 0
                     ? `Calculado sobre ${estatisticasDesempenho.totalJogos} ${
                         estatisticasDesempenho.totalJogos === 1 ? 'partida avaliada' : 'partidas avaliadas'
@@ -686,7 +686,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
               {/* Selo visual de status do aproveitamento */}
               <div className="shrink-0">
                 <div
-                  className={`px-5 py-3 rounded-2xl text-base font-black border-2 flex items-center gap-2 shadow-2xs ${
+                  className={`px-4 py-2 rounded-xl text-[14px] font-black border flex items-center gap-1.5 shadow-2xs ${
                     estatisticasDesempenho.aproveitamentoPct >= 70
                       ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
                       : estatisticasDesempenho.aproveitamentoPct >= 45
@@ -694,7 +694,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                       : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800'
                   }`}
                 >
-                  <Percent className="w-5 h-5" />
+                  <Percent className="w-4 h-4" />
                   <span>
                     {estatisticasDesempenho.aproveitamentoPct >= 70
                       ? 'Excelente Desempenho'
@@ -707,10 +707,10 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
             </div>
 
             {/* GRÁFICO DE EVOLUÇÃO (V / E / D) - LINHAS: VITÓRIAS, EMPATES E DERROTAS ACUMULADAS */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-850 border-2 border-slate-200 dark:border-slate-800 space-y-5 shadow-2xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h4 className="text-base sm:text-lg font-black uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-blue-600 shrink-0" />
+            <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-4 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <h4 className="text-[15px] font-black uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-blue-600 shrink-0" />
                   <span>
                     GRÁFICO DE EVOLUÇÃO (V / E / D) - {estatisticasDesempenho.totalJogos}{' '}
                     {estatisticasDesempenho.totalJogos === 1 ? 'jogo' : 'jogos'}
@@ -718,32 +718,32 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 </h4>
 
                 {/* Legenda em cima do gráfico: [— Vitórias] [-- Empates] [-- Derrotas] */}
-                <div className="flex flex-wrap items-center gap-4 text-base font-bold shrink-0">
-                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                    <span className="w-4 h-1.5 bg-emerald-600 dark:bg-emerald-400 inline-block rounded-full" />
+                <div className="flex flex-wrap items-center gap-3 text-[14px] font-bold shrink-0">
+                  <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                    <span className="w-3.5 h-1 bg-emerald-600 dark:bg-emerald-400 inline-block rounded-full" />
                     <span>Vitórias</span>
                   </div>
-                  <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                    <span className="w-4 border-t-2 border-dashed border-amber-500 dark:border-amber-400 inline-block" />
+                  <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                    <span className="w-3.5 border-t-2 border-dashed border-amber-500 dark:border-amber-400 inline-block" />
                     <span>Empates</span>
                   </div>
-                  <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
-                    <span className="w-4 border-t-2 border-dashed border-rose-600 dark:border-rose-400 inline-block" />
+                  <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
+                    <span className="w-3.5 border-t-2 border-dashed border-rose-600 dark:border-rose-400 inline-block" />
                     <span>Derrotas</span>
                   </div>
                 </div>
               </div>
 
               {/* Informação / Tooltip da partida selecionada ou ativa */}
-              <div className="min-h-[48px] flex items-center">
+              <div className="min-h-[42px] flex items-center">
                 {pontoAtivo ? (
-                  <div className="w-full flex flex-wrap items-center gap-2.5 p-3.5 rounded-xl bg-blue-50/90 dark:bg-slate-800/90 border border-blue-200 dark:border-slate-700 text-base font-extrabold text-slate-800 dark:text-slate-200 shadow-2xs">
+                  <div className="w-full flex flex-wrap items-center gap-2 p-3 rounded-xl bg-blue-50/90 dark:bg-slate-800/90 border border-blue-200 dark:border-slate-700 text-[14px] font-bold text-slate-800 dark:text-slate-200 shadow-2xs">
                     <span className="text-slate-900 dark:text-white font-black">
                       {pontoAtivo.adversarioComVs}
                     </span>
                     <span className="text-slate-400">•</span>
                     <span
-                      className={`px-2.5 py-0.5 rounded-lg font-black text-base ${
+                      className={`px-2 py-0.5 rounded-md font-black text-[13px] ${
                         pontoAtivo.resultadoTipo === 'V'
                           ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
                           : pontoAtivo.resultadoTipo === 'E'
@@ -767,36 +767,36 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                     </span>
                   </div>
                 ) : (
-                  <div className="text-base text-slate-500 dark:text-slate-400 italic">
+                  <div className="text-[14px] text-slate-500 dark:text-slate-400 italic">
                     Toque ou passe o mouse em um ponto do gráfico para ver detalhes da partida.
                   </div>
                 )}
               </div>
 
-              {/* GRÁFICO DE LINHAS 260px OU EMPTY STATE */}
+              {/* GRÁFICO DE LINHAS OU EMPTY STATE */}
               {estatisticasDesempenho.partidasEvolucao.length === 0 ? (
-                <div className="h-[240px] flex flex-col items-center justify-center p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
-                  <HelpCircle className="w-9 h-9 text-slate-400 dark:text-slate-600 mb-2" />
-                  <p className="text-base font-bold text-slate-600 dark:text-slate-300">
+                <div className="h-[220px] flex flex-col items-center justify-center p-5 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/40">
+                  <HelpCircle className="w-8 h-8 text-slate-400 dark:text-slate-600 mb-2" />
+                  <p className="text-[15px] font-bold text-slate-600 dark:text-slate-300">
                     Sem jogos avaliados neste filtro.
                   </p>
-                  <p className="text-base text-slate-500 dark:text-slate-400 mt-1">
+                  <p className="text-[14px] text-slate-500 dark:text-slate-400 mt-1">
                     Cadastre partidas na Agenda ou avalie atletas nesta categoria / competição para visualizar o gráfico.
                   </p>
                 </div>
               ) : (
-                <div className="relative w-full h-[250px] overflow-hidden select-none bg-slate-50/50 dark:bg-slate-900/30 rounded-xl p-1.5 border border-slate-100 dark:border-slate-800/80">
+                <div className="relative w-full h-[230px] overflow-hidden select-none bg-slate-50/50 dark:bg-slate-900/30 rounded-xl p-1.5 border border-slate-100 dark:border-slate-800/80">
                   {(() => {
                     const partidas = estatisticasDesempenho.partidasEvolucao;
                     const N = partidas.length;
                     const maxY = Math.max(1, N);
 
                     const width = 560;
-                    const height = 245;
+                    const height = 235;
                     const plotLeft = 40;
                     const plotRight = 520;
                     const plotTop = 20;
-                    const plotBottom = 172;
+                    const plotBottom = 165;
                     const plotWidth = plotRight - plotLeft;
                     const plotHeight = plotBottom - plotTop;
 
@@ -852,7 +852,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                                 x={plotLeft - 7}
                                 y={y + 4}
                                 textAnchor="end"
-                                className="text-[12px] font-bold fill-slate-600 dark:fill-slate-400 select-none"
+                                className="text-[11px] font-bold fill-slate-600 dark:fill-slate-400 select-none"
                               >
                                 {val}
                               </text>
@@ -938,9 +938,9 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
 
                               <text
                                 x={pt.x}
-                                y={plotBottom + 20}
+                                y={plotBottom + 19}
                                 textAnchor="middle"
-                                className={`text-[12px] font-black select-none pointer-events-none ${
+                                className={`text-[11px] font-black select-none pointer-events-none ${
                                   isAtivo
                                     ? 'fill-blue-600 dark:fill-blue-400'
                                     : 'fill-slate-800 dark:fill-slate-200'
@@ -952,9 +952,9 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                               </text>
                               <text
                                 x={pt.x}
-                                y={plotBottom + 36}
+                                y={plotBottom + 34}
                                 textAnchor="middle"
-                                className={`text-[12px] font-bold select-none pointer-events-none ${
+                                className={`text-[11px] font-bold select-none pointer-events-none ${
                                   isAtivo
                                     ? 'fill-blue-600 dark:fill-blue-400'
                                     : 'fill-slate-600 dark:fill-slate-400'
@@ -967,7 +967,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                                 x={pt.x - 24}
                                 y={plotTop - 10}
                                 width={48}
-                                height={plotHeight + 52}
+                                height={plotHeight + 50}
                                 fill="transparent"
                                 className="cursor-pointer"
                                 onClick={() => setPontoAtivoIndex(pt.index)}
@@ -986,17 +986,17 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
               )}
 
               {/* RESUMO MANTIDO ABAIXO DO GRÁFICO (VITÓRIAS, EMPATES, DERROTAS) */}
-              <div className="space-y-3.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="space-y-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
                 {/* 1. Vitórias */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-base font-bold">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[14px] font-bold">
                     <span className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                      <span className="w-3 h-3 rounded-full bg-emerald-600 inline-block" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
                       Vitórias
                     </span>
                     <span className="font-mono text-slate-900 dark:text-slate-100 font-black">
                       {estatisticasDesempenho.vitorias}{' '}
-                      <span className="text-base text-slate-500 font-sans font-bold">
+                      <span className="text-[13px] text-slate-500 font-sans font-bold">
                         (
                         {estatisticasDesempenho.totalJogos > 0
                           ? Math.round(
@@ -1007,7 +1007,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                       </span>
                     </span>
                   </div>
-                  <div className="w-full h-3.5 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden">
+                  <div className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden">
                     <div
                       style={{
                         width: `${
@@ -1023,15 +1023,15 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 </div>
 
                 {/* 2. Empates */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-base font-bold">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[14px] font-bold">
                     <span className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                      <span className="w-3 h-3 rounded-full bg-amber-500 inline-block" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
                       Empates
                     </span>
                     <span className="font-mono text-slate-900 dark:text-slate-100 font-black">
                       {estatisticasDesempenho.empates}{' '}
-                      <span className="text-base text-slate-500 font-sans font-bold">
+                      <span className="text-[13px] text-slate-500 font-sans font-bold">
                         (
                         {estatisticasDesempenho.totalJogos > 0
                           ? Math.round(
@@ -1042,7 +1042,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                       </span>
                     </span>
                   </div>
-                  <div className="w-full h-3.5 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden">
+                  <div className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden">
                     <div
                       style={{
                         width: `${
@@ -1058,15 +1058,15 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 </div>
 
                 {/* 3. Derrotas */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-base font-bold">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[14px] font-bold">
                     <span className="flex items-center gap-2 text-rose-700 dark:text-rose-400">
-                      <span className="w-3 h-3 rounded-full bg-rose-600 inline-block" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block" />
                       Derrotas
                     </span>
                     <span className="font-mono text-slate-900 dark:text-slate-100 font-black">
                       {estatisticasDesempenho.derrotas}{' '}
-                      <span className="text-base text-slate-500 font-sans font-bold">
+                      <span className="text-[13px] text-slate-500 font-sans font-bold">
                         (
                         {estatisticasDesempenho.totalJogos > 0
                           ? Math.round(
@@ -1077,7 +1077,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                       </span>
                     </span>
                   </div>
-                  <div className="w-full h-3.5 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden">
+                  <div className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-lg overflow-hidden">
                     <div
                       style={{
                         width: `${
@@ -1098,44 +1098,44 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 1ª linha: Nº DE JOGOS | VITÓRIAS | GOLS FEITOS | SALDO DE GOL
                 2ª linha: EMPATES | GOLS SOFRIDOS | DERROTAS | APROVEITAMENTO (azul destacado)
             */}
-            <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-3">
               {/* 1. Nº de Jogos */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border-2 border-slate-200 dark:border-slate-800 shadow-2xs space-y-1">
-                <span className="text-base font-extrabold uppercase text-slate-500 dark:text-slate-400 block tracking-tight">
+              <div className="p-3.5 rounded-xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-1">
+                <span className="text-[13px] font-extrabold uppercase text-slate-500 dark:text-slate-400 block tracking-tight">
                   Nº de Jogos
                 </span>
-                <span className="text-3xl sm:text-4xl font-black font-mono text-slate-900 dark:text-white tabular-nums block">
+                <span className="text-2xl font-black font-mono text-slate-900 dark:text-white tabular-nums block">
                   {estatisticasDesempenho.totalJogos}
                 </span>
               </div>
 
               {/* 2. Vitórias */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border-2 border-emerald-200 dark:border-emerald-900/60 shadow-2xs space-y-1">
-                <span className="text-base font-extrabold uppercase text-emerald-800 dark:text-emerald-300 block tracking-tight">
+              <div className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/60 shadow-2xs space-y-1">
+                <span className="text-[13px] font-extrabold uppercase text-emerald-800 dark:text-emerald-300 block tracking-tight">
                   Vitórias
                 </span>
-                <span className="text-3xl sm:text-4xl font-black font-mono text-emerald-700 dark:text-emerald-400 tabular-nums block">
+                <span className="text-2xl font-black font-mono text-emerald-700 dark:text-emerald-400 tabular-nums block">
                   {estatisticasDesempenho.vitorias}
                 </span>
               </div>
 
               {/* 3. Gols Feitos */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-blue-50/70 dark:bg-blue-950/20 border-2 border-blue-200 dark:border-blue-900/60 shadow-2xs space-y-1">
-                <span className="text-base font-extrabold uppercase text-blue-800 dark:text-blue-300 block tracking-tight">
+              <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/60 shadow-2xs space-y-1">
+                <span className="text-[13px] font-extrabold uppercase text-blue-800 dark:text-blue-300 block tracking-tight">
                   Gols Feitos
                 </span>
-                <span className="text-3xl sm:text-4xl font-black font-mono text-blue-700 dark:text-blue-400 tabular-nums block">
+                <span className="text-2xl font-black font-mono text-blue-700 dark:text-blue-400 tabular-nums block">
                   {estatisticasDesempenho.golsFeitos}
                 </span>
               </div>
 
               {/* 4. Saldo de Gol */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-850 border-2 border-slate-200 dark:border-slate-800 shadow-2xs space-y-1">
-                <span className="text-base font-extrabold uppercase text-slate-600 dark:text-slate-300 block tracking-tight">
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-1">
+                <span className="text-[13px] font-extrabold uppercase text-slate-600 dark:text-slate-300 block tracking-tight">
                   Saldo de Gol
                 </span>
                 <span
-                  className={`text-3xl sm:text-4xl font-black font-mono tabular-nums block ${
+                  className={`text-2xl font-black font-mono tabular-nums block ${
                     estatisticasDesempenho.saldoGols > 0
                       ? 'text-emerald-600'
                       : estatisticasDesempenho.saldoGols < 0
@@ -1150,41 +1150,41 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
               </div>
 
               {/* 5. Empates */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border-2 border-amber-200 dark:border-amber-900/60 shadow-2xs space-y-1">
-                <span className="text-base font-extrabold uppercase text-amber-800 dark:text-amber-300 block tracking-tight">
+              <div className="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/60 shadow-2xs space-y-1">
+                <span className="text-[13px] font-extrabold uppercase text-amber-800 dark:text-amber-300 block tracking-tight">
                   Empates
                 </span>
-                <span className="text-3xl sm:text-4xl font-black font-mono text-amber-700 dark:text-amber-400 tabular-nums block">
+                <span className="text-2xl font-black font-mono text-amber-700 dark:text-amber-400 tabular-nums block">
                   {estatisticasDesempenho.empates}
                 </span>
               </div>
 
               {/* 6. Gols Sofridos */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-2xs space-y-1">
-                <span className="text-base font-extrabold uppercase text-slate-600 dark:text-slate-300 block tracking-tight">
+              <div className="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs space-y-1">
+                <span className="text-[13px] font-extrabold uppercase text-slate-600 dark:text-slate-300 block tracking-tight">
                   Gols Sofridos
                 </span>
-                <span className="text-3xl sm:text-4xl font-black font-mono text-slate-800 dark:text-slate-200 tabular-nums block">
+                <span className="text-2xl font-black font-mono text-slate-800 dark:text-slate-200 tabular-nums block">
                   {estatisticasDesempenho.golsSofridos}
                 </span>
               </div>
 
               {/* 7. Derrotas */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/20 border-2 border-rose-200 dark:border-rose-900/60 shadow-2xs space-y-1">
-                <span className="text-base font-extrabold uppercase text-rose-800 dark:text-rose-300 block tracking-tight">
+              <div className="p-3.5 rounded-xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/60 shadow-2xs space-y-1">
+                <span className="text-[13px] font-extrabold uppercase text-rose-800 dark:text-rose-300 block tracking-tight">
                   Derrotas
                 </span>
-                <span className="text-3xl sm:text-4xl font-black font-mono text-rose-700 dark:text-rose-400 tabular-nums block">
+                <span className="text-2xl font-black font-mono text-rose-700 dark:text-rose-400 tabular-nums block">
                   {estatisticasDesempenho.derrotas}
                 </span>
               </div>
 
               {/* 8. Aproveitamento (destacado em azul) */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-blue-600 text-white shadow-sm space-y-1">
-                <span className="text-base font-extrabold uppercase text-blue-100 block tracking-tight">
+              <div className="p-3.5 rounded-xl bg-blue-600 text-white shadow-sm space-y-1">
+                <span className="text-[13px] font-extrabold uppercase text-blue-100 block tracking-tight">
                   Aproveitamento
                 </span>
-                <span className="text-3xl sm:text-4xl font-black font-mono tabular-nums block">
+                <span className="text-2xl font-black font-mono tabular-nums block">
                   {estatisticasDesempenho.aproveitamentoPct}%
                 </span>
               </div>
@@ -1192,60 +1192,60 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
           </div>
 
           {/* COLUNA DIREITA: O Pentágono dos 5 Pilares (5 cols) */}
-          <div className="lg:col-span-5 bg-slate-50/80 dark:bg-slate-850 rounded-2xl p-6 sm:p-7 border-2 border-slate-200 dark:border-slate-800 flex flex-col items-center justify-between gap-4 shadow-2xs">
-            <div className="w-full flex flex-wrap items-start justify-between gap-3 mb-2">
+          <div className="lg:col-span-5 bg-slate-50/80 dark:bg-slate-850 rounded-xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-between gap-3 shadow-2xs">
+            <div className="w-full flex flex-wrap items-start justify-between gap-2.5 mb-1">
               <div>
-                <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
                   Média dos 5 Pilares
                 </h4>
-                <p className="text-base text-slate-600 dark:text-slate-300 font-medium mt-0.5">
+                <p className="text-[14px] text-slate-600 dark:text-slate-300 font-medium mt-0.5">
                   {categoriaAtiva === 'GERAL' ? 'Balanço Geral de todas as categorias' : `Média exclusiva ${categoriaAtiva}`}
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-base font-bold text-slate-500 dark:text-slate-400 block uppercase">
+                <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 block uppercase">
                   Média Geral
                 </span>
-                <span className="text-lg sm:text-xl font-mono font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-3.5 py-1 rounded-xl border border-blue-200 dark:border-blue-800 inline-block mt-0.5">
+                <span className="text-base sm:text-lg font-mono font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-3 py-0.5 rounded-lg border border-blue-200 dark:border-blue-800 inline-block mt-0.5">
                   {estatisticasDesempenho.mediaGeralPilares.toFixed(1)} / 10
                 </span>
               </div>
             </div>
 
             {/* Gráfico Pentagonal (RadarChart) */}
-            <div className="py-2 flex items-center justify-center">
-              <RadarChart notas={estatisticasDesempenho.mediasPilares} size={290} />
+            <div className="py-1 flex items-center justify-center">
+              <RadarChart notas={estatisticasDesempenho.mediasPilares} size={245} />
             </div>
 
             {/* Valores numéricos dos 5 Pilares: TÉC, TÁT, FÍS, MEN, DISC */}
-            <div className="w-full grid grid-cols-3 sm:grid-cols-5 gap-2 text-center pt-4 border-t border-slate-200 dark:border-slate-700">
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-base font-bold text-slate-500 dark:text-slate-400 block">TÉC</span>
-                <span className="text-lg sm:text-xl font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
+            <div className="w-full grid grid-cols-3 sm:grid-cols-5 gap-2 text-center pt-3 border-t border-slate-200 dark:border-slate-700">
+              <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 block">TÉC</span>
+                <span className="text-[16px] font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
                   {estatisticasDesempenho.mediasPilares.tecnica.toFixed(1)}
                 </span>
               </div>
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-base font-bold text-slate-500 dark:text-slate-400 block">TÁT</span>
-                <span className="text-lg sm:text-xl font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
+              <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 block">TÁT</span>
+                <span className="text-[16px] font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
                   {estatisticasDesempenho.mediasPilares.tatica.toFixed(1)}
                 </span>
               </div>
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-base font-bold text-slate-500 dark:text-slate-400 block">FÍS</span>
-                <span className="text-lg sm:text-xl font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
+              <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 block">FÍS</span>
+                <span className="text-[16px] font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
                   {estatisticasDesempenho.mediasPilares.fisica.toFixed(1)}
                 </span>
               </div>
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-base font-bold text-slate-500 dark:text-slate-400 block">MEN</span>
-                <span className="text-lg sm:text-xl font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
+              <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 block">MEN</span>
+                <span className="text-[16px] font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
                   {estatisticasDesempenho.mediasPilares.mental.toFixed(1)}
                 </span>
               </div>
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-base font-bold text-slate-500 dark:text-slate-400 block">DISC</span>
-                <span className="text-lg sm:text-xl font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
+              <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
+                <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 block">DISC</span>
+                <span className="text-[16px] font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
                   {estatisticasDesempenho.mediasPilares.disciplinar.toFixed(1)}
                 </span>
               </div>
@@ -1257,15 +1257,15 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
       {/* ========================================================= */}
       {/* 5 & 6. SEÇÃO PRÓXIMOS JOGOS (3 PRÓXIMOS EM ORDEM CRONOLÓGICA) */}
       {/* ========================================================= */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-8 border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-6 h-6 text-blue-600 shrink-0" />
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <Calendar className="w-5 h-5 text-blue-600 shrink-0" />
             <div>
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+              <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
                 Próximos Jogos
               </h3>
-              <p className="text-base text-slate-600 dark:text-slate-300 font-medium mt-0.5">
+              <p className="text-[14px] text-slate-600 dark:text-slate-300 font-medium mt-0.5">
                 {categoriaAtiva === 'GERAL' && competicaoAtiva === 'Todas'
                   ? 'Próximas 3 partidas de qualquer categoria por ordem de data e hora'
                   : categoriaAtiva === 'GERAL'
@@ -1287,20 +1287,20 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 onNovaAvaliacao();
               }
             }}
-            className="text-[15px] sm:text-base font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition self-start sm:self-auto cursor-pointer py-1.5"
+            className="text-[14px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition self-start sm:self-auto cursor-pointer py-1"
           >
             <span>Ver Agenda Completa</span>
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
         {proximosJogos.length === 0 ? (
-          <div className="p-8 text-center bg-slate-50/70 dark:bg-slate-850 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 space-y-3">
-            <Calendar className="w-9 h-9 text-slate-400 mx-auto" />
-            <h4 className="text-lg font-bold text-slate-700 dark:text-slate-200">
+          <div className="p-6 text-center bg-slate-50/70 dark:bg-slate-850 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 space-y-2.5">
+            <Calendar className="w-8 h-8 text-slate-400 mx-auto" />
+            <h4 className="text-base font-bold text-slate-700 dark:text-slate-200">
               Nenhum próximo jogo para este filtro
             </h4>
-            <p className="text-base text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            <p className="text-[14px] text-slate-500 dark:text-slate-400 max-w-md mx-auto">
               {categoriaAtiva === 'GERAL' && competicaoAtiva === 'Todas'
                 ? 'Não há partidas futuras agendadas no momento.'
                 : `Não há partidas futuras para ${
@@ -1309,14 +1309,14 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
             </p>
             <button
               onClick={onNovaAvaliacao}
-              className="mt-2 inline-flex items-center gap-2 px-5 py-3 text-[15px] sm:text-base font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-xs cursor-pointer"
+              className="mt-1 inline-flex items-center gap-2 px-4 py-2 text-[14px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-xs cursor-pointer"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               <span>Agendar Novo Jogo</span>
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
             {proximosJogos.map((jogo, index) => {
               const dataAmigavel = formatarDataAmigavelJogo(jogo.dataJogo, jogo.hora);
 
@@ -1324,29 +1324,29 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 <div
                   key={jogo.id}
                   onClick={() => (onNavegarJogo ? onNavegarJogo(jogo.id, jogo.categoria, jogo.tipo) : onNovaAvaliacao())}
-                  className="p-5 sm:p-6 rounded-2xl bg-slate-50/90 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border-2 border-slate-200/90 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-600 transition-all cursor-pointer flex flex-col justify-between space-y-4 shadow-2xs group"
+                  className="p-4 rounded-xl bg-slate-50/90 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-600 transition-all cursor-pointer flex flex-col justify-between space-y-3 shadow-2xs group"
                 >
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[15px] font-black px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[13px] font-black px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                           {jogo.categoria}
                         </span>
-                        <span className="text-[15px] font-bold px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                        <span className="text-[13px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300">
                           {jogo.tipo}
                         </span>
                       </div>
-                      <span className="text-[15px] font-extrabold text-slate-500 uppercase tracking-wider">
+                      <span className="text-[13px] font-extrabold text-slate-500 uppercase tracking-wider">
                         #{index + 1} Próximo
                       </span>
                     </div>
 
-                    <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
+                    <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-snug">
                       Master Soccer {jogo.adversario.startsWith('vs') ? jogo.adversario : `vs ${jogo.adversario}`}
                     </h4>
                   </div>
 
-                  <div className="space-y-2 text-base text-slate-700 dark:text-slate-300 font-medium pt-3 border-t border-slate-200/70 dark:border-slate-700/70">
+                  <div className="space-y-1.5 text-[14px] text-slate-700 dark:text-slate-300 font-medium pt-2.5 border-t border-slate-200/70 dark:border-slate-700/70">
                     <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-bold">
                       <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
                       <span>{dataAmigavel}</span>
@@ -1374,35 +1374,35 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
       {/* ========================================================= */}
       {/* 7. SEÇÃO DESEMPENHO DOS JOGADORES / DESTAQUES DA TEMPORADA */}
       {/* ========================================================= */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-8 border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <div className="flex items-center gap-2.5">
-              <Trophy className="w-6 h-6 text-amber-500 shrink-0" />
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-amber-500 shrink-0" />
+              <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
                 Desempenho dos Jogadores / Destaques da Temporada
               </h3>
             </div>
-            <p className="text-base text-slate-600 dark:text-slate-300 font-medium mt-1">
+            <p className="text-[14px] text-slate-600 dark:text-slate-300 font-medium mt-0.5">
               Classificação geral dos atletas do melhor para o pior ({categoriaAtiva})
             </p>
           </div>
 
           <button
             onClick={() => onNavegarPlantel(categoriaAtiva === 'GERAL' ? 'TODAS' : categoriaAtiva)}
-            className="text-[15px] sm:text-base font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition cursor-pointer self-start sm:self-auto py-1.5"
+            className="text-[14px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition cursor-pointer self-start sm:self-auto py-1"
           >
             <span>Ver Plantel Completo</span>
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
         {atletasRanqueados.length === 0 ? (
-          <div className="p-8 text-center text-base text-slate-500 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+          <div className="p-6 text-center text-[14px] text-slate-500 bg-slate-50 dark:bg-slate-850 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
             Nenhum atleta encontrado nesta categoria.
           </div>
         ) : (
-          <div className="space-y-3.5">
+          <div className="space-y-3">
             {atletasRanqueados.map(({ atleta, totalJogos, mediaGeral, melhorPilarNome }, index) => {
               const posicaoRanking = index + 1;
               const ehOuro = posicaoRanking === 1;
@@ -1413,11 +1413,11 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 <div
                   key={atleta.id}
                   onClick={() => onSelecionarAtleta(atleta)}
-                  className="p-4 sm:p-5 rounded-2xl bg-slate-50/90 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border-2 border-slate-200/90 dark:border-slate-700/80 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs hover:border-blue-400 group"
+                  className="p-3.5 sm:p-4 rounded-xl bg-slate-50/90 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-700/80 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs hover:border-blue-400 group"
                 >
-                  <div className="flex items-center gap-3.5">
+                  <div className="flex items-center gap-3">
                     <div
-                      className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center font-black text-base shrink-0 shadow-2xs ${
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-black text-[14px] shrink-0 shadow-2xs ${
                         ehOuro
                           ? 'bg-amber-400 text-slate-950 border border-amber-300'
                           : ehPrata
@@ -1430,7 +1430,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                       {ehOuro ? '1º' : ehPrata ? '2º' : ehBronze ? '3º' : `${posicaoRanking}º`}
                     </div>
 
-                    <div className="w-13 h-13 rounded-2xl bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 flex items-center justify-center font-black text-base text-slate-800 dark:text-slate-100 border-2 border-slate-300 dark:border-slate-600">
+                    <div className="w-11 h-11 rounded-xl bg-slate-200 dark:bg-slate-700 overflow-hidden shrink-0 flex items-center justify-center font-black text-[14px] text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-600">
                       {atleta.fotoUrl ? (
                         <img src={atleta.fotoUrl} alt={atleta.nome} className="w-full h-full object-cover" />
                       ) : (
@@ -1440,17 +1440,17 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
 
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[15px] font-black text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-lg border border-blue-200/70">
+                        <span className="text-[13px] font-black text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md border border-blue-200/70">
                           {atleta.categoria}
                         </span>
-                        <h4 className="text-lg sm:text-xl font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight group-hover:underline">
+                        <h4 className="text-base sm:text-lg font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight group-hover:underline">
                           {atleta.apelido || atleta.nome.split(' ')[0]}
                         </h4>
                       </div>
-                      <p className="text-base font-semibold text-slate-800 dark:text-slate-200 mt-0.5">
+                      <p className="text-[14px] font-semibold text-slate-800 dark:text-slate-200 mt-0.5">
                         {atleta.nome}
                       </p>
-                      <div className="flex flex-wrap items-center gap-2 text-base text-slate-600 dark:text-slate-300 mt-0.5 font-medium">
+                      <div className="flex flex-wrap items-center gap-1.5 text-[13px] sm:text-[14px] text-slate-600 dark:text-slate-300 mt-0.5 font-medium">
                         <span className="font-semibold text-slate-800 dark:text-slate-200">{atleta.posicao}</span>
                         <span>·</span>
                         <span>Pé: {atleta.pernaDominante}</span>
@@ -1470,18 +1470,18 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
 
                   <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-700/60">
                     <div className="text-left sm:text-right">
-                      <span className="text-base text-slate-500 dark:text-slate-400 block font-bold uppercase tracking-wider">
+                      <span className="text-[12px] text-slate-500 dark:text-slate-400 block font-bold uppercase tracking-wider">
                         Média Geral
                       </span>
                       <span
-                        className={`text-lg sm:text-xl font-mono font-black px-3.5 py-1.5 rounded-xl border tabular-nums shadow-2xs inline-block ${getCorNota(
+                        className={`text-base sm:text-lg font-mono font-black px-3 py-1 rounded-lg border tabular-nums shadow-2xs inline-block ${getCorNota(
                           mediaGeral
                         )}`}
                       >
                         {totalJogos > 0 ? mediaGeral.toFixed(1) : '--'}
                       </span>
                     </div>
-                    <ArrowRight className="w-6 h-6 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                    <ArrowRight className="w-5 h-5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
                   </div>
                 </div>
               );
@@ -1489,13 +1489,13 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
           </div>
         )}
 
-        <div className="pt-4 border-t-2 border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-base text-slate-600 dark:text-slate-300 font-medium">
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5 text-[14px] text-slate-600 dark:text-slate-300 font-medium">
           <span>Critérios técnicos padronizados de 1 a 10 pela comissão</span>
           <button
             onClick={() => storageService.exportarAvaliacoesCsv()}
-            className="inline-flex items-center gap-2 text-[15px] sm:text-base text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer py-1.5"
+            className="inline-flex items-center gap-1.5 text-[14px] text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer py-1"
           >
-            <Download className="w-5 h-5" />
+            <Download className="w-4 h-4" />
             <span>Baixar Planilha CSV</span>
           </button>
         </div>

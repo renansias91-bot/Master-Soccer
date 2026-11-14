@@ -316,122 +316,29 @@ interface EstiloGrupoPosicao {
 }
 
 function obterCoresGrupoPosicao(grupoKey: string): EstiloGrupoPosicao {
-  switch (grupoKey) {
-    case 'GOL':
-      return {
-        badgeBg: '#d97706',
-        closedBg: '#fef3c7',
-        closedText: '#78350f',
-        closedBorder: '#fcd34d',
-        closedLeftBar: '#d97706',
-        openBg: '#d97706',
-        openBorder: '#b45309',
-        chevronClosed: '#92400e',
-      };
-    case 'LD':
-      return {
-        badgeBg: '#0284c7',
-        closedBg: '#e0f2fe',
-        closedText: '#0c4a6e',
-        closedBorder: '#7dd3fc',
-        closedLeftBar: '#0284c7',
-        openBg: '#0284c7',
-        openBorder: '#0369a1',
-        chevronClosed: '#075985',
-      };
-    case 'LE':
-      return {
-        badgeBg: '#0d9488',
-        closedBg: '#ccfbf1',
-        closedText: '#134e4a',
-        closedBorder: '#5eead4',
-        closedLeftBar: '#0d9488',
-        openBg: '#0d9488',
-        openBorder: '#0f766e',
-        chevronClosed: '#115e59',
-      };
-    case 'ZAG':
-      return {
-        badgeBg: '#4f46e5',
-        closedBg: '#e0e7ff',
-        closedText: '#312e81',
-        closedBorder: '#a5b4fc',
-        closedLeftBar: '#4f46e5',
-        openBg: '#4f46e5',
-        openBorder: '#4338ca',
-        chevronClosed: '#3730a3',
-      };
-    case 'VOL':
-      return {
-        badgeBg: '#059669',
-        closedBg: '#d1fae5',
-        closedText: '#064e3b',
-        closedBorder: '#6ee7b7',
-        closedLeftBar: '#059669',
-        openBg: '#059669',
-        openBorder: '#047857',
-        chevronClosed: '#065f46',
-      };
-    case 'MEI':
-    case 'MEI-E':
-    case 'MEI-C':
-    case 'MEI-D':
-      return {
-        badgeBg: '#7c3aed',
-        closedBg: '#ede9fe',
-        closedText: '#4c1d95',
-        closedBorder: '#c4b5fd',
-        closedLeftBar: '#7c3aed',
-        openBg: '#7c3aed',
-        openBorder: '#6d28d9',
-        chevronClosed: '#5b21b6',
-      };
-    case 'PD':
-      return {
-        badgeBg: '#ea580c',
-        closedBg: '#ffedd5',
-        closedText: '#7c2d12',
-        closedBorder: '#fdba74',
-        closedLeftBar: '#ea580c',
-        openBg: '#ea580c',
-        openBorder: '#c2410c',
-        chevronClosed: '#9a3412',
-      };
-    case 'PE':
-      return {
-        badgeBg: '#c026d3',
-        closedBg: '#fae8ff',
-        closedText: '#701a75',
-        closedBorder: '#f0abfc',
-        closedLeftBar: '#c026d3',
-        openBg: '#c026d3',
-        openBorder: '#a21caf',
-        chevronClosed: '#86198f',
-      };
-    case 'ATA':
-      return {
-        badgeBg: '#e11d48',
-        closedBg: '#ffe4e6',
-        closedText: '#881337',
-        closedBorder: '#fda4af',
-        closedLeftBar: '#e11d48',
-        openBg: '#e11d48',
-        openBorder: '#be123c',
-        chevronClosed: '#9f1239',
-      };
-    case 'TODOS':
-    default:
-      return {
-        badgeBg: '#334155',
-        closedBg: '#f1f5f9',
-        closedText: '#0f172a',
-        closedBorder: '#cbd5e1',
-        closedLeftBar: '#334155',
-        openBg: '#1e293b',
-        openBorder: '#0f172a',
-        chevronClosed: '#334155',
-      };
+  if (grupoKey === 'TODOS') {
+    return {
+      badgeBg: 'rgba(255, 255, 255, 0.2)',
+      closedBg: '#1e3a8a',
+      closedText: '#ffffff',
+      closedBorder: '#1e3a8a',
+      closedLeftBar: '#facc15',
+      openBg: '#0f295c',
+      openBorder: '#0f295c',
+      chevronClosed: '#ffffff',
+    };
   }
+
+  return {
+    badgeBg: '#1e3a8a',
+    closedBg: '#f0f6ff',
+    closedText: '#1e3a8a',
+    closedBorder: '#1e3a8a',
+    closedLeftBar: '#1e3a8a',
+    openBg: '#1d4ed8',
+    openBorder: '#1e3a8a',
+    chevronClosed: '#1e3a8a',
+  };
 }
 
 function obterNomePosicaoPorSlot(slotId: string, formacaoAtual: string): string {
@@ -1201,14 +1108,14 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
           </div>
 
           {/* Contadores: X titulares | Y reservas | Total: Z */}
-          <div className="flex flex-wrap items-center gap-1.5 text-[15px] font-bold">
-            <span className="px-2.5 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
+          <div className="flex flex-wrap items-center gap-1.5 text-[14px] font-bold">
+            <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/50">
               {titularesCount} titulares
             </span>
-            <span className="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+            <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
               {reservasCount} reservas
             </span>
-            <span className="px-2.5 py-1.5 rounded-xl bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
+            <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold">
               Total: {totalConvocados}
             </span>
           </div>
@@ -1220,7 +1127,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
             type="button"
             onClick={() => setAbaSubEscalacao('lista')}
             style={abaSubEscalacao === 'lista' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-            className={`min-h-[42px] px-4 py-2 rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs whitespace-nowrap ${
+            className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-[14px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs whitespace-nowrap ${
               abaSubEscalacao === 'lista'
                 ? 'bg-blue-600 text-white border-2 border-blue-600'
                 : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -1234,7 +1141,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
             type="button"
             onClick={() => setAbaSubEscalacao('campinho')}
             style={abaSubEscalacao === 'campinho' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
-            className={`min-h-[42px] px-4 py-2 rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs whitespace-nowrap ${
+            className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-[14px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs whitespace-nowrap ${
               abaSubEscalacao === 'campinho'
                 ? 'bg-blue-600 text-white border-2 border-blue-600'
                 : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -1264,22 +1171,22 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
       {/* Conteúdo: Lista Vertical por Posição (1 posição aberta por vez) ou Campinho */}
       {abaSubEscalacao === 'lista' ? (
-        <div className="space-y-3.5">
+        <div className="space-y-3">
           <div className="px-1 pt-1 flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-base sm:text-lg font-black uppercase tracking-wider text-slate-800 dark:text-slate-100">
+            <span className="text-[15px] font-black uppercase tracking-wider text-slate-800 dark:text-slate-100">
               ESCOLHA A POSIÇÃO ({formacao}):
             </span>
-            <span className="text-base font-bold text-slate-600 dark:text-slate-300">
+            <span className="text-[14px] font-bold text-slate-600 dark:text-slate-300">
               {titularesCount}/11 vagas preenchidas
             </span>
           </div>
 
           {gruposPosicaoVisiveis.length === 0 ? (
-            <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-base text-slate-400">
+            <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-[15px] text-slate-400">
               Nenhum atleta encontrado para os critérios pesquisados.
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               {gruposPosicaoVisiveis.map((grupo) => {
                 const aberto = posicaoAberta === grupo.key;
                 const cores = obterCoresGrupoPosicao(grupo.key);
@@ -1291,11 +1198,11 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                     style={{
                       borderColor: aberto ? cores.openBorder : cores.closedBorder,
                     }}
-                    className={`rounded-2xl border-2 overflow-hidden transition-all ${
+                    className={`rounded-xl border-2 overflow-hidden transition-all ${
                       aberto ? 'shadow-md bg-white dark:bg-slate-900' : 'shadow-2xs'
                     }`}
                   >
-                    {/* Cabeçalho da Posição: cores distintas por posição + altura e fonte maiores + sem quantidade */}
+                    {/* Cabeçalho da Posição: padrão único Master Soccer (TODOS em azul marinho e posições em fundo claro + borda azul) */}
                     <button
                       type="button"
                       onClick={() => setPosicaoAberta(aberto ? null : grupo.key)}
@@ -1308,19 +1215,17 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                           : {
                               backgroundColor: cores.closedBg,
                               color: cores.closedText,
-                              borderLeftWidth: '8px',
-                              borderLeftColor: cores.closedLeftBar,
                             }
                       }
-                      className="w-full min-h-[64px] px-4 sm:px-5 py-4 sm:py-5 flex items-center justify-between gap-3 text-left font-black text-base sm:text-lg uppercase tracking-wide transition-all cursor-pointer"
+                      className="w-full min-h-[50px] px-4 py-3 flex items-center justify-between gap-3 text-left font-black text-[15px] uppercase tracking-wide transition-all cursor-pointer"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <span
                           style={{
                             backgroundColor: aberto ? 'rgba(255, 255, 255, 0.22)' : cores.badgeBg,
                             color: '#ffffff',
                           }}
-                          className="px-2.5 py-1 rounded-lg text-[15px] font-black tracking-wider shrink-0 shadow-2xs"
+                          className="px-2.5 py-0.5 rounded-md text-[13px] font-black tracking-wider shrink-0 shadow-2xs"
                         >
                           {grupo.sigla}
                         </span>
@@ -1328,7 +1233,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                       </div>
                       <ChevronDown
                         style={{ color: aberto ? '#ffffff' : cores.chevronClosed }}
-                        className={`w-6 h-6 shrink-0 transition-transform duration-200 ${
+                        className={`w-5 h-5 shrink-0 transition-transform duration-200 ${
                           aberto ? 'rotate-180' : ''
                         }`}
                       />

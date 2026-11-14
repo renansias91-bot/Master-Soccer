@@ -647,19 +647,19 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     const pronta = titulares === 11;
 
     return (
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {pronta ? (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[14px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>Escalação pronta</span>
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-            <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[14px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>Escalação pendente</span>
           </span>
         )}
-        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+        <div className="text-[14px] text-slate-600 dark:text-slate-300 font-semibold">
           {titulares === 0 && reservas === 0
             ? '0 titulares • 0 reservas'
             : `${titulares} titulares definidos • ${reservas} reservas`}
@@ -1413,42 +1413,42 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         <div
           id={`card-jogo-${jogo.id}`}
           key={jogo.id}
-          className="bg-gray-50 dark:bg-slate-850 rounded-2xl border border-slate-300 dark:border-slate-700 p-4 sm:p-5 shadow-xs transition-all flex flex-col justify-between gap-3 group"
+          className="bg-gray-50 dark:bg-slate-850 rounded-2xl border-2 border-slate-300 dark:border-slate-700 p-4 sm:p-5 shadow-xs transition-all flex flex-col justify-between gap-4 group"
         >
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {/* Topo do card: Categoria à esquerda + selo verde ✅ Jogo Realizado ao lado, e competição à direita */}
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                <span className="text-[13px] sm:text-[14px] font-bold px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">
                   {jogo.categoria}
                 </span>
-                <span className="bg-green-100 text-green-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-[11px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                <span className="bg-green-100 text-green-800 dark:bg-emerald-950/60 dark:text-emerald-300 text-[13px] sm:text-[14px] font-bold px-3 py-1 rounded-lg inline-flex items-center gap-1.5">
                   <span>✅</span>
                   <span>Jogo Realizado</span>
                 </span>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shrink-0">
+              <span className="text-[13px] sm:text-[14px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shrink-0">
                 {jogo.tipo}
               </span>
             </div>
 
-            <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+            <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
               {placarExibicao}
             </h4>
 
-            <div className="space-y-1 text-xs text-slate-500 dark:text-slate-400 font-medium">
-              <div className="flex items-center gap-1.5 font-mono font-semibold">
+            <div className="space-y-1.5 text-[15px] text-slate-600 dark:text-slate-300 font-medium">
+              <div className="flex items-center gap-1.5 font-mono font-semibold flex-wrap">
                 <span className="shrink-0">✅</span>
                 <span>{dataAmigavel}</span>
                 <span>•</span>
-                <span className="font-semibold text-slate-700 dark:text-slate-300">Resultado final</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">Resultado final</span>
               </div>
               {jogo.local && (
                 <div>
                   <span>{jogo.local}</span>
                 </div>
               )}
-              <div className="text-blue-600 dark:text-blue-400 font-semibold text-[11px] pt-0.5">
+              <div className="text-blue-600 dark:text-blue-400 font-bold text-[14px] pt-0.5">
                 {totalAvsDoJogo} {totalAvsDoJogo === 1 ? 'atleta avaliado' : 'atletas avaliados'}
               </div>
             </div>
@@ -1456,22 +1456,22 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             <div className="pt-1">{renderStatusEscalacao(jogo)}</div>
           </div>
 
-          <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-700">
             <button
               type="button"
               onClick={() => onExcluirJogo(jogo.id, placarExibicao)}
-              className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition active:scale-98 cursor-pointer"
+              className="min-w-[42px] min-h-[42px] p-2.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200/70 dark:border-rose-900/50 transition active:scale-98 flex items-center justify-center cursor-pointer"
               title="Excluir este jogo, escalação e avaliações"
               aria-label="Excluir jogo"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-5 h-5" />
             </button>
 
             <button
               type="button"
               onClick={() => handleAbrirAvaliacaoJogo(jogo, true)}
               style={{ backgroundColor: '#2563eb' }}
-              className="px-4 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+              className="min-h-[42px] px-4 py-2 rounded-xl text-[15px] font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             >
               <span>Ver avaliação &gt;</span>
             </button>
@@ -1487,36 +1487,36 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       <div
         id={`card-jogo-${jogo.id}`}
         key={jogo.id}
-        className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs hover:border-blue-500/40 transition-all flex flex-col justify-between gap-3 group"
+        className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs hover:border-blue-500/40 transition-all flex flex-col justify-between gap-4 group"
       >
         <div>
           {/* Linha 1: selo azul categoria + agendinha 🗓️ Próximo Jogo à esquerda, competição à direita */}
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[13px] sm:text-[14px] font-bold px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                 {jogo.categoria}
               </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 inline-flex items-center gap-1">
+              <span className="text-[13px] sm:text-[14px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 inline-flex items-center gap-1.5">
                 <span>🗓️</span>
                 <span>Próximo Jogo</span>
               </span>
             </div>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shrink-0">
+            <span className="text-[13px] sm:text-[14px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shrink-0">
               {jogo.tipo}
             </span>
           </div>
 
           {/* Linha 2: vs Magé em negrito */}
-          <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+          <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
             {jogo.adversario}
           </h4>
 
           {/* Linha 3 & 4: selo Escalação pendente em laranja, ou Escalação pronta em verde + 0 titulares • 0 reservas */}
-          <div className="mt-2.5 space-y-1">{renderStatusEscalacao(jogo)}</div>
+          <div className="mt-3 space-y-1.5">{renderStatusEscalacao(jogo)}</div>
 
           {/* Linha 5: data com agendinha 🗓️ + texto simples do local (sem ícone) */}
-          <div className="space-y-1 text-xs text-slate-600 dark:text-slate-400 mt-2.5">
-            <div className="flex items-center gap-1.5 font-mono font-semibold">
+          <div className="space-y-1 text-[15px] text-slate-600 dark:text-slate-300 mt-3 font-medium">
+            <div className="flex items-center gap-1.5 font-mono font-semibold text-slate-800 dark:text-slate-200">
               <span className="shrink-0">🗓️</span>
               <span>{dataAmigavel}</span>
             </div>
@@ -1529,18 +1529,18 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         </div>
 
         {/* Linha 6: apenas [Editar] [Escalação] [Lixeira] [Avaliar >] */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => {
                 ultimoJogoAbertoIdRef.current = jogo.id;
                 onEditarJogo(jogo);
               }}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1 transition cursor-pointer"
+              className="min-h-[42px] px-3.5 py-2 rounded-xl text-[15px] font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-1.5 transition cursor-pointer"
               title="Editar data, hora, adversário e local"
             >
-              <Edit className="w-3.5 h-3.5 text-slate-500" />
+              <Edit className="w-4 h-4 text-slate-600 dark:text-slate-300" />
               <span>Editar</span>
             </button>
 
@@ -1551,10 +1551,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                   ultimoJogoAbertoIdRef.current = jogo.id;
                   onNavegarEscalacao(jogo.id);
                 }}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200/60 dark:border-blue-800 flex items-center gap-1 transition cursor-pointer"
+                className="min-h-[42px] px-3.5 py-2 rounded-xl text-[15px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800 flex items-center gap-1.5 transition cursor-pointer"
                 title="Montar escalação do jogo"
               >
-                <Users className="w-3.5 h-3.5 text-blue-600" />
+                <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span>Escalação</span>
               </button>
             )}
@@ -1562,11 +1562,11 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             <button
               type="button"
               onClick={() => onExcluirJogo(jogo.id, `${jogo.adversario} (${jogo.categoria})`)}
-              className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+              className="min-w-[42px] min-h-[42px] p-2.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200/70 dark:border-rose-900/50 flex items-center justify-center transition cursor-pointer"
               title="Excluir este jogo"
               aria-label="Excluir jogo"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-5 h-5" />
             </button>
           </div>
 
@@ -1574,7 +1574,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
             type="button"
             onClick={() => handleAbrirAvaliacaoJogo(jogo, false)}
             style={{ backgroundColor: '#2563eb' }}
-            className="px-4 py-1.5 rounded-xl text-xs font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1 shadow-xs cursor-pointer"
+            className="min-h-[42px] px-4 py-2 rounded-xl text-[15px] font-bold text-white hover:bg-blue-700 active:scale-98 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
             title="Avaliar os jogadores desta partida"
           >
             <span>Avaliar &gt;</span>
@@ -1588,19 +1588,19 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   // RENDERIZAÇÃO 2: LISTA DE JOGOS DA AGENDA
   // ==========================================
   return (
-    <div className="space-y-6 pb-[120px] w-full max-w-full box-border">
+    <div className="space-y-5 pb-[120px] w-full max-w-full box-border">
       {/* 1) TOPO DA PÁGINA: Título Agenda de Jogos, subtítulo e botão azul [+ Novo Jogo] em largura total */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3.5">
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
               Agenda de Jogos
             </h2>
-            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+            <span className="text-[13px] px-2.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
               {jogos.length} no calendário
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-[14px] text-slate-600 dark:text-slate-300 mt-1">
             Cadastre os jogos na agenda, monte a escalação e avalie os atletas diretamente dentro de cada partida
           </p>
         </div>
@@ -1609,23 +1609,23 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         <button
           onClick={onNovoJogo}
           style={{ backgroundColor: '#2563eb' }}
-          className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 text-sm font-bold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer border border-blue-500/40"
+          className="w-full min-h-[46px] inline-flex items-center justify-center gap-2 py-3 px-4 text-[15px] sm:text-base font-extrabold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer border border-blue-500/40"
         >
-          <Plus className="w-4 h-4 text-amber-300" />
+          <Plus className="w-5 h-5 text-amber-300" />
           <span>+ Novo Jogo</span>
         </button>
       </div>
 
       {/* 2) ABAS DOBRÁVEIS DE FILTRO (CATEGORIAS E COMPETIÇÃO — COMEÇAM FECHADAS) */}
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         {/* Aba 1: Categorias */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xs overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xs overflow-hidden">
           <button
             type="button"
             onClick={() => setAbaCategoriasAberta((prev) => !prev)}
-            className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
+            className="w-full min-h-[48px] px-4 py-3.5 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
           >
-            <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+            <div className="flex items-center gap-2.5 text-[15px] sm:text-base font-bold text-slate-800 dark:text-slate-100">
               <span>📂</span>
               <span>Categorias:</span>
               <span className="font-black text-blue-600 dark:text-blue-400">
@@ -1633,22 +1633,22 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               </span>
             </div>
             {abaCategoriasAberta ? (
-              <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" />
+              <ChevronUp className="w-5 h-5 text-slate-500 shrink-0" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+              <ChevronDown className="w-5 h-5 text-slate-500 shrink-0" />
             )}
           </button>
 
           {abaCategoriasAberta && (
-            <div className="p-3 pt-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="p-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
+              <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => {
                     handleTrocarCategoriaFiltro('TODAS');
                     setAbaCategoriasAberta(false);
                   }}
-                  className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-2xs ${
+                  className={`w-full min-h-[44px] py-3 px-3.5 rounded-xl text-[15px] font-bold text-center transition-all cursor-pointer shadow-2xs ${
                     categoriaFiltro === 'TODAS'
                       ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
                       : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -1667,7 +1667,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                         handleTrocarCategoriaFiltro(cat);
                         setAbaCategoriasAberta(false);
                       }}
-                      className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-2xs ${
+                      className={`w-full min-h-[44px] py-3 px-3.5 rounded-xl text-[15px] font-bold text-center transition-all cursor-pointer shadow-2xs ${
                         ativo
                           ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
                           : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -1683,13 +1683,13 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         </div>
 
         {/* Aba 2: Competição */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xs overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xs overflow-hidden">
           <button
             type="button"
             onClick={() => setAbaCompeticoesAberta((prev) => !prev)}
-            className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
+            className="w-full min-h-[48px] px-4 py-3.5 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
           >
-            <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+            <div className="flex items-center gap-2.5 text-[15px] sm:text-base font-bold text-slate-800 dark:text-slate-100">
               <span>🏆</span>
               <span>Competição:</span>
               <span className="font-black text-blue-600 dark:text-blue-400">
@@ -1697,15 +1697,15 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               </span>
             </div>
             {abaCompeticoesAberta ? (
-              <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" />
+              <ChevronUp className="w-5 h-5 text-slate-500 shrink-0" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+              <ChevronDown className="w-5 h-5 text-slate-500 shrink-0" />
             )}
           </button>
 
           {abaCompeticoesAberta && (
-            <div className="p-3 pt-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="p-3.5 pt-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
+              <div className="grid grid-cols-2 gap-2.5">
                 {/* Botão [Geral] */}
                 <button
                   type="button"
@@ -1713,7 +1713,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                     handleTrocarCompeticaoFiltro('TODAS');
                     setAbaCompeticoesAberta(false);
                   }}
-                  className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-2xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[44px] ${
+                  className={`w-full min-h-[44px] py-3 px-3.5 rounded-xl text-[15px] font-bold text-center transition-all cursor-pointer shadow-2xs flex items-center justify-center break-words leading-tight whitespace-normal ${
                     competicaoFiltro === 'TODAS'
                       ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
                       : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -1733,7 +1733,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                         handleTrocarCompeticaoFiltro(comp.nome);
                         setAbaCompeticoesAberta(false);
                       }}
-                      className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-2xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[44px] ${
+                      className={`w-full min-h-[44px] py-3 px-3.5 rounded-xl text-[15px] font-bold text-center transition-all cursor-pointer shadow-2xs flex items-center justify-center break-words leading-tight whitespace-normal ${
                         ativo
                           ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
                           : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -1751,19 +1751,19 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
       {/* 3) CAMPO DE BUSCA DE ADVERSÁRIO EM LARGURA TOTAL */}
       <div className="relative">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           type="text"
           value={buscaAdversario}
           onChange={(e) => setBuscaAdversario(e.target.value)}
           placeholder="Buscar adversário..."
-          className="w-full h-11 pl-10 pr-16 text-xs sm:text-sm font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
+          className="w-full h-12 pl-11 pr-20 text-[15px] sm:text-base font-medium bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 shadow-2xs"
         />
         {buscaAdversario && (
           <button
             type="button"
             onClick={() => setBuscaAdversario('')}
-            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
           >
             Limpar
           </button>
@@ -1785,13 +1785,13 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               }).length;
 
               return (
-                <div className="flex flex-wrap items-center gap-2 pb-1.5 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white">
+                    <h3 className="text-[15px] sm:text-base font-black uppercase tracking-wider text-slate-900 dark:text-white">
                       {competicaoFiltro} ({jogosFiltrados.length})
                     </h3>
                   </div>
-                  <div className="text-xs font-bold">
+                  <div className="text-[14px] font-bold">
                     {pendentes === 0 ? (
                       <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">
                         • Tudo pronto
@@ -1811,7 +1811,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           return (
             <div className="space-y-3">
               {cabecalhoCompeticao}
-              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-xs">
+              <div className="p-10 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 text-slate-500 text-[15px]">
                 {buscaAdversario
                   ? `Nenhum jogo encontrado para "${buscaAdversario}"${
                       competicaoFiltro !== 'TODAS' ? ` em ${competicaoFiltro}` : ''
@@ -1830,15 +1830,15 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
             {/* Seção 1: PRÓXIMOS JOGOS — destaque azul escuro, começa ABERTA */}
             {proximosJogosFiltrados.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 <button
                   type="button"
                   onClick={() => setSecaoProximosAberta((prev) => !prev)}
                   style={{ backgroundColor: '#1e3a8a', color: '#ffffff' }}
-                  className="w-full px-4 py-3.5 rounded-2xl border border-blue-800 shadow-sm flex items-center justify-between gap-2 text-left transition hover:opacity-95 cursor-pointer"
+                  className="w-full min-h-[48px] px-4 py-3.5 rounded-2xl border border-blue-800 shadow-sm flex items-center justify-between gap-2 text-left transition hover:opacity-95 cursor-pointer"
                 >
-                  <div className="flex items-center gap-2 text-xs sm:text-sm font-black uppercase tracking-wider text-white">
-                    <span className="text-base leading-none">⚽</span>
+                  <div className="flex items-center gap-2.5 text-[15px] sm:text-base font-black uppercase tracking-wider text-white">
+                    <span className="text-lg leading-none">⚽</span>
                     <span>Próximos Jogos ({proximosJogosFiltrados.length})</span>
                   </div>
                   {secaoProximosAberta ? (
@@ -1849,7 +1849,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                 </button>
 
                 {secaoProximosAberta && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {proximosJogosFiltrados.map((jogo) => renderCardJogo(jogo))}
                   </div>
                 )}
@@ -1858,14 +1858,14 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
             {/* Seção 2: JOGOS QUE JÁ ACONTECERAM — destaque cinza/verde claro, começa FECHADA */}
             {jogosRealizadosFiltrados.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 <button
                   type="button"
                   onClick={() => setSecaoRealizadosAberta((prev) => !prev)}
-                  className="w-full px-4 py-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100/80 dark:hover:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100 shadow-xs flex items-center justify-between gap-2 text-left transition cursor-pointer"
+                  className="w-full min-h-[48px] px-4 py-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100/80 dark:hover:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100 shadow-xs flex items-center justify-between gap-2 text-left transition cursor-pointer"
                 >
-                  <div className="flex items-center gap-2 text-xs sm:text-sm font-black uppercase tracking-wider">
-                    <span className="text-base leading-none">✅</span>
+                  <div className="flex items-center gap-2.5 text-[15px] sm:text-base font-black uppercase tracking-wider">
+                    <span className="text-lg leading-none">✅</span>
                     <span>Jogos que Já Aconteceram ({jogosRealizadosFiltrados.length})</span>
                   </div>
                   {secaoRealizadosAberta ? (
@@ -1876,7 +1876,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                 </button>
 
                 {secaoRealizadosAberta && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {jogosRealizadosFiltrados.map((jogo) => renderCardJogo(jogo))}
                   </div>
                 )}
