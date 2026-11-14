@@ -166,11 +166,13 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
             className="p-5 sm:p-7 space-y-4 bg-white text-slate-900"
           >
             {/* Cabeçalho Oficial */}
-            <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3">
+            <div className="sumula-cabecalho flex items-center justify-between border-b-2 border-slate-900 pb-3">
               <div className="flex items-center gap-3">
-                <MasterSoccerEscudo size={46} />
+                <div className="sumula-escudo shrink-0">
+                  <MasterSoccerEscudo size={46} />
+                </div>
                 <div>
-                  <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight" style={{ color: '#020617' }}>
+                  <h2 className="sumula-titulo text-lg sm:text-xl font-black uppercase tracking-tight" style={{ color: '#020617' }}>
                     MASTER SOCCER RJ
                   </h2>
                   <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: '#475569' }}>
@@ -186,59 +188,120 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
               </div>
             </div>
 
-            {/* Dados da Partida */}
+            {/* Dados da Partida (Na tela: preenchido / Na impressão: linhas em branco para preencher à mão) */}
             <div
-              className="rounded-xl p-3.5 text-xs"
+              className="sumula-dados-partida rounded-xl p-3.5 text-xs"
               style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1' }}
             >
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5">
-                <div>
-                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                    Partida:
-                  </span>
-                  <span className="font-black text-sm" style={{ color: '#0f172a' }}>
-                    Master Soccer vs {adversarioLimpo}
-                  </span>
+              {/* Pré-visualização na tela (mantida preenchida) */}
+              <div className="sumula-screen-only">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5">
+                  <div>
+                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                      Partida:
+                    </span>
+                    <span className="font-black text-sm" style={{ color: '#0f172a' }}>
+                      Master Soccer vs {adversarioLimpo}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                      Campeonato:
+                    </span>
+                    <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                      {jogo.tipo || 'Campeonato'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                      Categoria:
+                    </span>
+                    <span className="font-black text-sm" style={{ color: '#1d4ed8' }}>
+                      {jogo.categoria}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                      Data:
+                    </span>
+                    <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                      {formatarDataExibicao(jogo.dataJogo)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                      Horário:
+                    </span>
+                    <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                      {jogo.hora || '___:___'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                      Local:
+                    </span>
+                    <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                      {jogo.local || '______________________'}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                    Campeonato:
-                  </span>
-                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
-                    {jogo.tipo || 'Campeonato'}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                    Categoria:
-                  </span>
-                  <span className="font-black text-sm" style={{ color: '#1d4ed8' }}>
-                    {jogo.categoria}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                    Data:
-                  </span>
-                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
-                    {formatarDataExibicao(jogo.dataJogo)}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                    Horário:
-                  </span>
-                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
-                    {jogo.hora || '___:___'}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                    Local:
-                  </span>
-                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
-                    {jogo.local || '______________________'}
-                  </span>
+              </div>
+
+              {/* Versão para Impressão / PDF: cabeçalho em branco para preencher à mão */}
+              <div className="sumula-print-only">
+                <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-[10px]">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
+                      PARTIDA:
+                    </span>
+                    <span
+                      className="flex-1 inline-block h-3"
+                      style={{ borderBottom: '1px solid #0f172a' }}
+                    />
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
+                      CAMPEONATO:
+                    </span>
+                    <span
+                      className="flex-1 inline-block h-3"
+                      style={{ borderBottom: '1px solid #0f172a' }}
+                    />
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
+                      CATEGORIA:
+                    </span>
+                    <span
+                      className="flex-1 inline-block h-3"
+                      style={{ borderBottom: '1px solid #0f172a' }}
+                    />
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
+                      DATA:
+                    </span>
+                    <span className="font-mono font-bold tracking-wider" style={{ color: '#0f172a' }}>
+                      ___ / ___ / _____
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
+                      HORÁRIO:
+                    </span>
+                    <span className="font-mono font-bold tracking-wider" style={{ color: '#0f172a' }}>
+                      ___ : ___
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
+                      LOCAL:
+                    </span>
+                    <span
+                      className="flex-1 inline-block h-3"
+                      style={{ borderBottom: '1px solid #0f172a' }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -246,7 +309,7 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
             {/* Tabela de 25 Linhas (ou mais se > 25 atletas) */}
             <div>
               <table
-                className="w-full text-left border-collapse text-xs"
+                className="sumula-tabela w-full text-left border-collapse text-xs"
                 style={{ border: '1.5px solid #334155' }}
               >
                 <thead>
@@ -310,6 +373,7 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
                           style={{ border: '1px solid #94a3b8' }}
                         >
                           <div
+                            className="sumula-celula-caixa"
                             style={{
                               border: '1px solid #64748b',
                               backgroundColor: '#ffffff',
@@ -343,6 +407,7 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
                           style={{ border: '1px solid #94a3b8' }}
                         >
                           <div
+                            className="sumula-celula-caixa"
                             style={{
                               border: '1px solid #64748b',
                               backgroundColor: '#ffffff',
@@ -361,23 +426,24 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
             </div>
 
             {/* Assinaturas Capitão, Técnico e Espaço para Arbitragem */}
-            <div className="print-break-inside-avoid pt-4 space-y-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-3 text-center text-xs">
+            <div className="sumula-assinaturas print-break-inside-avoid pt-4 space-y-5">
+              <div className="sumula-assinaturas-grid grid grid-cols-1 sm:grid-cols-2 gap-6 pt-3 text-center text-xs">
                 <div>
                   <div
-                    className="pb-1 mb-1 h-8"
+                    className="sumula-linha-assinatura pb-1 mb-1 h-8"
                     style={{ borderBottom: '1.5px solid #0f172a' }}
                   />
                   <div className="font-black uppercase text-[11px]" style={{ color: '#0f172a' }}>
                     Assinatura do Capitão
                   </div>
                   <div className="text-[10px]" style={{ color: '#64748b' }}>
-                    Master Soccer RJ · {jogo.categoria}
+                    Master Soccer RJ
+                    <span className="sumula-screen-only"> · {jogo.categoria}</span>
                   </div>
                 </div>
                 <div>
                   <div
-                    className="pb-1 mb-1 h-8"
+                    className="sumula-linha-assinatura pb-1 mb-1 h-8"
                     style={{ borderBottom: '1.5px solid #0f172a' }}
                   />
                   <div className="font-black uppercase text-[11px]" style={{ color: '#0f172a' }}>
@@ -391,39 +457,41 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
 
               {/* Espaço Reservado para Arbitragem */}
               <div
-                className="rounded-xl p-3.5 space-y-4"
+                className="sumula-arbitragem-box rounded-xl p-3.5 space-y-4"
                 style={{ border: '1.5px solid #334155', backgroundColor: '#f8fafc' }}
               >
-                <div className="flex items-center justify-between border-b border-slate-300 pb-1.5">
+                <div className="flex items-center justify-between border-b border-slate-300 pb-1">
                   <span className="text-[11px] font-black uppercase tracking-wide" style={{ color: '#0f172a' }}>
                     Espaço Reservado para Arbitragem
                   </span>
                   <span className="text-[10px] font-semibold" style={{ color: '#64748b' }}>
-                    Placar Final: Master Soccer _____ x _____ {adversarioLimpo}
+                    Placar Final: Master Soccer _____ x _____ {' '}
+                    <span className="sumula-screen-only">{adversarioLimpo}</span>
+                    <span className="sumula-print-only-inline">______________</span>
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2 text-xs">
+                <div className="sumula-arbitragem-grid grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2 text-xs">
                   <div>
-                    <div className="h-7" style={{ borderBottom: '1px solid #475569' }} />
-                    <div className="text-[10px] font-bold uppercase mt-1" style={{ color: '#334155' }}>
+                    <div className="sumula-arbitragem-linha h-7" style={{ borderBottom: '1px solid #475569' }} />
+                    <div className="text-[10px] font-bold uppercase mt-0.5" style={{ color: '#334155' }}>
                       Nome / Assinatura do Árbitro Principal
                     </div>
                   </div>
                   <div>
-                    <div className="h-7" style={{ borderBottom: '1px solid #475569' }} />
-                    <div className="text-[10px] font-bold uppercase mt-1" style={{ color: '#334155' }}>
+                    <div className="sumula-arbitragem-linha h-7" style={{ borderBottom: '1px solid #475569' }} />
+                    <div className="text-[10px] font-bold uppercase mt-0.5" style={{ color: '#334155' }}>
                       Auxiliares / Representante / Federação
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-1">
-                  <div className="text-[10px] font-bold uppercase mb-1" style={{ color: '#475569' }}>
+                <div className="pt-0.5">
+                  <div className="text-[10px] font-bold uppercase mb-0.5" style={{ color: '#475569' }}>
                     Observações da Arbitragem:
                   </div>
-                  <div className="h-5" style={{ borderBottom: '1px dashed #94a3b8' }} />
-                  <div className="h-5" style={{ borderBottom: '1px dashed #94a3b8' }} />
+                  <div className="sumula-obs-linha h-5" style={{ borderBottom: '1px dashed #94a3b8' }} />
+                  <div className="sumula-obs-linha h-5" style={{ borderBottom: '1px dashed #94a3b8' }} />
                 </div>
               </div>
             </div>

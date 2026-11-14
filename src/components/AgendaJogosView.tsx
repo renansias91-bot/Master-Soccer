@@ -119,6 +119,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 }) => {
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('TODAS');
   const [competicaoFiltro, setCompeticaoFiltro] = useState<string>('TODAS');
+  const [abaCategoriasAberta, setAbaCategoriasAberta] = useState<boolean>(false);
+  const [abaCompeticoesAberta, setAbaCompeticoesAberta] = useState<boolean>(false);
+  const [secaoProximosAberta, setSecaoProximosAberta] = useState<boolean>(true);
+  const [secaoRealizadosAberta, setSecaoRealizadosAberta] = useState<boolean>(false);
   const [buscaAdversario, setBuscaAdversario] = useState<string>('');
   const [jogoSelecionadoId, setJogoSelecionadoId] = useState<string | null>(null);
   const [jogoFallbackAberto, setJogoFallbackAberto] = useState<JogoAgenda | null>(null);
@@ -153,6 +157,11 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     setBuscaAdversario('');
 
     if (jogoId) {
+      if (jogoAlvo?.realizado) {
+        setSecaoRealizadosAberta(true);
+      } else {
+        setSecaoProximosAberta(true);
+      }
       const timer = setTimeout(() => {
         const el = document.getElementById(`card-jogo-${jogoId}`);
         if (el) {
@@ -255,24 +264,22 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       contagem[nomeComp] = (contagem[nomeComp] || 0) + 1;
     });
 
+    if (
+      competicaoFiltro !== 'TODAS' &&
+      !Object.keys(contagem).some(
+        (nome) => nome.trim().toLowerCase() === competicaoFiltro.trim().toLowerCase()
+      )
+    ) {
+      contagem[competicaoFiltro] = 0;
+    }
+
     return Object.entries(contagem)
-      .filter(([_, count]) => count > 0)
       .sort((a, b) => {
         if (b[1] !== a[1]) return b[1] - a[1];
         return a[0].localeCompare(b[0]);
       })
       .map(([nome, count]) => ({ nome, count }));
-  }, [jogosDaCategoria]);
-
-  // Se a competição selecionada não existir mais após troca de categoria, volta para 'TODAS'
-  useEffect(() => {
-    if (competicaoFiltro !== 'TODAS') {
-      const existe = competicoesDisponiveis.some((c) => c.nome === competicaoFiltro);
-      if (!existe) {
-        setCompeticaoFiltro('TODAS');
-      }
-    }
-  }, [competicoesDisponiveis, competicaoFiltro]);
+  }, [jogosDaCategoria, competicaoFiltro]);
 
   // Filtra jogos por categoria, competição e busca por adversário com regra estrita de ordenação por data e hora:
   // 1º) Jogos que ainda vão acontecer (mais próximo primeiro: ex 06/11 às 14:30, 06/11 às 15:50, 14/11...)
@@ -280,7 +287,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   const jogosFiltrados = useMemo(() => {
     const filtrados = jogosDaCategoria.filter((j) => {
       const compNome = j.tipo?.trim() || 'Amistoso';
-      const matchComp = competicaoFiltro === 'TODAS' || compNome === competicaoFiltro;
+      const matchComp =
+        competicaoFiltro === 'TODAS' ||
+        compNome.toLowerCase() === competicaoFiltro.trim().toLowerCase();
       const matchBusca =
         !buscaAdversario.trim() ||
         j.adversario.toLowerCase().includes(buscaAdversario.trim().toLowerCase());
@@ -1554,80 +1563,140 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         </button>
       </div>
 
-      {/* 2) FILTRO 1 - POR CATEGORIA - EM BOTÕES QUE QUEBRAM DE LINHA (GRID 2 COLUNAS) */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <button
-          type="button"
-          onClick={() => handleTrocarCategoriaFiltro('TODAS')}
-          className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs ${
-            categoriaFiltro === 'TODAS'
-              ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
-              : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-          }`}
-        >
-          Todos os Jogos ({jogos.length})
-        </button>
-        {categoriasFiltroLista.map((cat) => {
-          const count = jogos.filter((j) => j.categoria === cat).length;
-          const ativo = categoriaFiltro === cat;
-          return (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => handleTrocarCategoriaFiltro(cat)}
-              className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs ${
-                ativo
-                  ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
-                  : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              {cat} ({count})
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 3) FILTRO 2 - POR COMPETIÇÃO - EM BOTÕES QUE QUEBRAM DE LINHA (GRID 2 COLUNAS) */}
-      <div className="space-y-1.5">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block px-0.5">
-          Competição
-        </span>
-        <div className="grid grid-cols-2 gap-2.5">
-          {/* Botão [Todas] */}
+      {/* 2) ABAS DOBRÁVEIS DE FILTRO (CATEGORIAS E COMPETIÇÃO — COMEÇAM FECHADAS) */}
+      <div className="space-y-2.5">
+        {/* Aba 1: Categorias */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xs overflow-hidden">
           <button
             type="button"
-            onClick={() => handleTrocarCompeticaoFiltro('TODAS')}
-            className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[46px] ${
-              competicaoFiltro === 'TODAS'
-                ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
-                : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
+            onClick={() => setAbaCategoriasAberta((prev) => !prev)}
+            className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
           >
-            Todas ({totalJogosNaCategoria})
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+              <span>📂</span>
+              <span>Categorias:</span>
+              <span className="font-black text-blue-600 dark:text-blue-400">
+                {categoriaFiltro === 'TODAS' ? 'Geral' : categoriaFiltro}
+              </span>
+            </div>
+            {abaCategoriasAberta ? (
+              <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+            )}
           </button>
 
-          {/* Botões de cada competição ordenada por quantidade, da maior para a menor */}
-          {competicoesDisponiveis.map((comp) => {
-            const ativo = competicaoFiltro === comp.nome;
-            return (
-              <button
-                key={comp.nome}
-                type="button"
-                onClick={() => handleTrocarCompeticaoFiltro(comp.nome)}
-                className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[46px] ${
-                  ativo
-                    ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
-                    : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
-              >
-                <span>{comp.nome} ({comp.count})</span>
-              </button>
-            );
-          })}
+          {abaCategoriasAberta && (
+            <div className="p-3 pt-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleTrocarCategoriaFiltro('TODAS');
+                    setAbaCategoriasAberta(false);
+                  }}
+                  className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-2xs ${
+                    categoriaFiltro === 'TODAS'
+                      ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
+                      : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  Geral ({jogos.length})
+                </button>
+                {categoriasFiltroLista.map((cat) => {
+                  const count = jogos.filter((j) => j.categoria === cat).length;
+                  const ativo = categoriaFiltro === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        handleTrocarCategoriaFiltro(cat);
+                        setAbaCategoriasAberta(false);
+                      }}
+                      className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-2xs ${
+                        ativo
+                          ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
+                          : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      {cat} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Aba 2: Competição */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xs overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setAbaCompeticoesAberta((prev) => !prev)}
+            className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition cursor-pointer"
+          >
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+              <span>🏆</span>
+              <span>Competição:</span>
+              <span className="font-black text-blue-600 dark:text-blue-400">
+                {competicaoFiltro === 'TODAS' ? 'Geral' : competicaoFiltro}
+              </span>
+            </div>
+            {abaCompeticoesAberta ? (
+              <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+            )}
+          </button>
+
+          {abaCompeticoesAberta && (
+            <div className="p-3 pt-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30">
+              <div className="grid grid-cols-2 gap-2">
+                {/* Botão [Geral] */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleTrocarCompeticaoFiltro('TODAS');
+                    setAbaCompeticoesAberta(false);
+                  }}
+                  className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-2xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[44px] ${
+                    competicaoFiltro === 'TODAS'
+                      ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
+                      : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  Geral ({totalJogosNaCategoria})
+                </button>
+
+                {/* Botões de cada competição ordenada por quantidade */}
+                {competicoesDisponiveis.map((comp) => {
+                  const ativo = competicaoFiltro === comp.nome;
+                  return (
+                    <button
+                      key={comp.nome}
+                      type="button"
+                      onClick={() => {
+                        handleTrocarCompeticaoFiltro(comp.nome);
+                        setAbaCompeticoesAberta(false);
+                      }}
+                      className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold text-center transition-all cursor-pointer shadow-2xs flex items-center justify-center break-words leading-tight whitespace-normal min-h-[44px] ${
+                        ativo
+                          ? 'bg-blue-600 text-white border border-blue-600 shadow-sm'
+                          : 'bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <span>{comp.nome} ({comp.count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 4) CAMPO DE BUSCA DE ADVERSÁRIO EM LARGURA TOTAL */}
+      {/* 3) CAMPO DE BUSCA DE ADVERSÁRIO EM LARGURA TOTAL */}
       <div className="relative">
         <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
@@ -1648,7 +1717,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         )}
       </div>
 
-      {/* 5) LISTA DE JOGOS SEPARADA EM PRÓXIMOS JOGOS (🗓️) E JOGOS QUE JÁ ACONTECERAM (✅) */}
+      {/* 4) LISTA DE JOGOS DOBRÁVEL: PRÓXIMOS JOGOS (AZUL ESCURO, ABERTA) E JOGOS QUE JÁ ACONTECERAM (CINZA/VERDE CLARO, FECHADA) */}
       {(() => {
         const proximosJogosFiltrados = jogosFiltrados.filter((j) => !j.realizado);
         const jogosRealizadosFiltrados = jogosFiltrados.filter((j) => Boolean(j.realizado));
@@ -1703,36 +1772,61 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         }
 
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {cabecalhoCompeticao}
 
-            {/* Seção 1: PRÓXIMOS JOGOS — ícone agendinha 🗓️ */}
+            {/* Seção 1: PRÓXIMOS JOGOS — destaque azul escuro, começa ABERTA */}
             {proximosJogosFiltrados.length > 0 && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2 px-0.5">
-                  <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                    <span className="text-base leading-none">🗓️</span>
-                    <span>PRÓXIMOS JOGOS ({proximosJogosFiltrados.length})</span>
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  {proximosJogosFiltrados.map((jogo) => renderCardJogo(jogo))}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setSecaoProximosAberta((prev) => !prev)}
+                  style={{ backgroundColor: '#1e3a8a', color: '#ffffff' }}
+                  className="w-full px-4 py-3.5 rounded-2xl border border-blue-800 shadow-sm flex items-center justify-between gap-2 text-left transition hover:opacity-95 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 text-xs sm:text-sm font-black uppercase tracking-wider text-white">
+                    <span className="text-base leading-none">⚽</span>
+                    <span>Próximos Jogos ({proximosJogosFiltrados.length})</span>
+                  </div>
+                  {secaoProximosAberta ? (
+                    <ChevronUp className="w-5 h-5 text-white shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-white shrink-0" />
+                  )}
+                </button>
+
+                {secaoProximosAberta && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {proximosJogosFiltrados.map((jogo) => renderCardJogo(jogo))}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Seção 2: JOGOS QUE JÁ ACONTECERAM — selo check ✅ */}
+            {/* Seção 2: JOGOS QUE JÁ ACONTECERAM — destaque cinza/verde claro, começa FECHADA */}
             {jogosRealizadosFiltrados.length > 0 && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2 px-0.5">
-                  <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSecaoRealizadosAberta((prev) => !prev)}
+                  className="w-full px-4 py-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100/80 dark:hover:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-950 dark:text-emerald-100 shadow-xs flex items-center justify-between gap-2 text-left transition cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 text-xs sm:text-sm font-black uppercase tracking-wider">
                     <span className="text-base leading-none">✅</span>
-                    <span>JOGOS QUE JÁ ACONTECERAM ({jogosRealizadosFiltrados.length})</span>
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  {jogosRealizadosFiltrados.map((jogo) => renderCardJogo(jogo))}
-                </div>
+                    <span>Jogos que Já Aconteceram ({jogosRealizadosFiltrados.length})</span>
+                  </div>
+                  {secaoRealizadosAberta ? (
+                    <ChevronUp className="w-5 h-5 text-emerald-700 dark:text-emerald-300 shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-emerald-700 dark:text-emerald-300 shrink-0" />
+                  )}
+                </button>
+
+                {secaoRealizadosAberta && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    {jogosRealizadosFiltrados.map((jogo) => renderCardJogo(jogo))}
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -79,9 +79,9 @@ export const FormularioAtletaCadastro: React.FC<FormularioAtletaCadastroProps> =
 }) => {
   const opcoesCategoria = useMemo(() => {
     const base = categorias && categorias.length > 0 ? categorias : CATEGORIAS_PADRAO;
-    const unicas = Array.from(
-      new Set([...CATEGORIAS_PADRAO, ...base])
-    ).filter((c) => c && c !== 'TODAS' && c !== 'GERAL');
+    const unicas = Array.from(new Set(base)).filter(
+      (c) => c && c !== 'TODAS' && c !== 'GERAL'
+    );
     return unicas;
   }, [categorias]);
 

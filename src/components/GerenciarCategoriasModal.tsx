@@ -21,7 +21,7 @@ interface GerenciarCategoriasModalProps {
   categorias: string[];
   atletas: Atleta[];
   jogos: JogoAgenda[];
-  onSalvarCategorias: (categorias: string[]) => void;
+  onSalvarCategorias: (categorias: string[]) => Promise<void> | void;
   onRenomearCategoria: (antiga: string, nova: string, manterAntigaVazia?: boolean) => Promise<void>;
   onViradaDeAno: (plano: { origem: string; destino: string; qtdAtletas: number }[]) => Promise<void>;
   onExcluirCategoriaComMigracao: (catExcluir: string, catDestino: string) => Promise<void>;
@@ -147,10 +147,10 @@ export const GerenciarCategoriasModal: React.FC<GerenciarCategoriasModalProps> =
   if (!isOpen) return null;
 
   // 1. Adicionar nova categoria
-  const handleAdicionar = (e: React.FormEvent) => {
+  const handleAdicionar = async (e: React.FormEvent) => {
     e.preventDefault();
     const nomeLimpo = novaCategoria.trim().toUpperCase();
-    if (!nomeLimpo) return;
+    if (!nomeLimpo || salvando) return;
 
     if (categorias.includes(nomeLimpo)) {
       setErro(`A categoria ${nomeLimpo} já existe na lista.`);
@@ -158,10 +158,17 @@ export const GerenciarCategoriasModal: React.FC<GerenciarCategoriasModalProps> =
     }
 
     const atualizada = [...categorias, nomeLimpo];
-    onSalvarCategorias(atualizada);
-    setNovaCategoria('');
-    setErro('');
-    onExibirToast(`Categoria ${nomeLimpo} adicionada!`);
+    try {
+      setSalvando(true);
+      await onSalvarCategorias(atualizada);
+      setNovaCategoria('');
+      setErro('');
+      onExibirToast(`Categoria ${nomeLimpo} adicionada!`);
+    } catch (err: any) {
+      setErro(err?.message || 'Erro ao salvar categoria no banco de dados.');
+    } finally {
+      setSalvando(false);
+    }
   };
 
   // 2. Iniciar edição inline
@@ -227,7 +234,8 @@ export const GerenciarCategoriasModal: React.FC<GerenciarCategoriasModalProps> =
   };
 
   // 5. Clicar no botão excluir categoria
-  const handleClicarExcluir = (cat: string) => {
+  const handleClicarExcluir = async (cat: string) => {
+    if (salvando) return;
     if (categorias.length <= 1) {
       setErro('O sistema precisa de pelo menos uma categoria cadastrada.');
       return;
@@ -248,8 +256,16 @@ export const GerenciarCategoriasModal: React.FC<GerenciarCategoriasModalProps> =
 
     // Se não tem nenhum atleta, remove direto
     const atualizada = categorias.filter((c) => c !== cat);
-    onSalvarCategorias(atualizada);
-    onExibirToast(`Categoria ${cat} removida.`);
+    try {
+      setSalvando(true);
+      await onSalvarCategorias(atualizada);
+      setErro('');
+      onExibirToast(`Categoria ${cat} removida.`);
+    } catch (err: any) {
+      setErro(err?.message || 'Erro ao remover categoria do banco de dados.');
+    } finally {
+      setSalvando(false);
+    }
   };
 
   // 6. Confirmar exclusão com migração de atletas
@@ -365,10 +381,11 @@ export const GerenciarCategoriasModal: React.FC<GerenciarCategoriasModalProps> =
               />
               <button
                 type="submit"
-                className="h-10 px-4 text-xs font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl inline-flex items-center gap-1.5 shrink-0 transition-all shadow-xs active:scale-98 cursor-pointer"
+                disabled={salvando || !novaCategoria.trim()}
+                className="h-10 px-4 text-xs font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl inline-flex items-center gap-1.5 shrink-0 transition-all shadow-xs active:scale-98 cursor-pointer disabled:opacity-50"
               >
                 <Plus className="w-4 h-4 text-amber-300" />
-                <span>+ Adicionar</span>
+                <span>{salvando ? 'Salvando...' : '+ Adicionar'}</span>
               </button>
             </form>
           </div>
@@ -480,10 +497,11 @@ export const GerenciarCategoriasModal: React.FC<GerenciarCategoriasModalProps> =
         <div className="p-4 bg-slate-50/80 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex justify-end shrink-0">
           <button
             type="button"
+            disabled={salvando}
             onClick={onClose}
-            className="px-5 py-2 text-xs font-black text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded-xl hover:bg-slate-800 transition shadow-xs cursor-pointer active:scale-98"
+            className="px-5 py-2 text-xs font-black text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded-xl hover:bg-slate-800 transition shadow-xs cursor-pointer active:scale-98 disabled:opacity-50"
           >
-            Concluir
+            {salvando ? 'Salvando...' : 'Concluir'}
           </button>
         </div>
       </div>

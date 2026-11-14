@@ -51,13 +51,35 @@ canvas {
   max-width: 100%;
 }
 
+.sumula-print-only,
+.sumula-print-only-flex,
+.sumula-print-only-inline {
+  display: none !important;
+}
+
 @media print {
-  body {
+  @page {
+    size: A4 portrait;
+    margin: 6mm 8mm;
+  }
+  html, body {
     background: #ffffff !important;
     color: #0f172a !important;
+    height: auto !important;
+    overflow: visible !important;
   }
-  .no-print {
+  .no-print,
+  .sumula-screen-only {
     display: none !important;
+  }
+  .sumula-print-only {
+    display: block !important;
+  }
+  .sumula-print-only-flex {
+    display: flex !important;
+  }
+  .sumula-print-only-inline {
+    display: inline !important;
   }
   body:has(.print-modal-root) #root {
     display: none !important;
@@ -99,5 +121,93 @@ canvas {
   .print-break-inside-avoid {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  /* Compactação da Súmula Oficial para caber em exatamente 1 folha A4 */
+  #sumula-arbitragem-doc {
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+    font-size: 10px !important;
+  }
+  #sumula-arbitragem-doc > * {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  #sumula-arbitragem-doc .sumula-cabecalho {
+    padding-bottom: 5px !important;
+  }
+  #sumula-arbitragem-doc .sumula-escudo svg,
+  #sumula-arbitragem-doc .sumula-escudo img {
+    width: 34px !important;
+    height: 34px !important;
+  }
+  #sumula-arbitragem-doc .sumula-titulo {
+    font-size: 15px !important;
+    line-height: 1.1 !important;
+  }
+  #sumula-arbitragem-doc .sumula-dados-partida {
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+  }
+  #sumula-arbitragem-doc .sumula-tabela th {
+    padding: 3px 6px !important;
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+  }
+  #sumula-arbitragem-doc .sumula-tabela tbody tr {
+    height: 21px !important;
+  }
+  #sumula-arbitragem-doc .sumula-tabela tbody td {
+    padding: 1px 6px !important;
+    font-size: 10px !important;
+    line-height: 1.15 !important;
+  }
+  #sumula-arbitragem-doc .sumula-celula-caixa {
+    height: 15px !important;
+  }
+  #sumula-arbitragem-doc .sumula-assinaturas {
+    padding-top: 4px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+  #sumula-arbitragem-doc .sumula-assinaturas > * {
+    margin-top: 0 !important;
+  }
+  #sumula-arbitragem-doc .sumula-assinaturas-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 18px !important;
+    padding-top: 2px !important;
+  }
+  #sumula-arbitragem-doc .sumula-linha-assinatura {
+    height: 18px !important;
+    margin-bottom: 2px !important;
+    padding-bottom: 0 !important;
+  }
+  #sumula-arbitragem-doc .sumula-arbitragem-box {
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+  }
+  #sumula-arbitragem-doc .sumula-arbitragem-box > * {
+    margin-top: 0 !important;
+  }
+  #sumula-arbitragem-doc .sumula-arbitragem-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    padding-top: 0 !important;
+  }
+  #sumula-arbitragem-doc .sumula-arbitragem-linha {
+    height: 16px !important;
+  }
+  #sumula-arbitragem-doc .sumula-obs-linha {
+    height: 13px !important;
   }
 }

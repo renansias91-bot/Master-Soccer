@@ -119,6 +119,16 @@
         "taxasJogo": { "type": "array" }
       },
       "required": ["atletaId"]
+    },
+    "ConfiguracaoCategorias": {
+      "title": "ConfiguracaoCategorias",
+      "description": "Lista oficial de categorias de base cadastradas no clube",
+      "type": "object",
+      "properties": {
+        "lista": { "type": "array" },
+        "atualizadoEm": { "type": "string" }
+      },
+      "required": ["lista"]
     }
   },
   "firestore": {
@@ -149,6 +159,10 @@
     "/financeiro_atletas/{atletaId}": {
       "schema": "RegistroFinanceiroAtleta",
       "description": "Registros financeiros individuais por atleta"
+    },
+    "/configuracoes/{docId}": {
+      "schema": "ConfiguracaoCategorias",
+      "description": "Configurações globais do clube, incluindo a lista oficial de categorias"
     }
   }
 }

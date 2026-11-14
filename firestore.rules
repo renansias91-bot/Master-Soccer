@@ -22,6 +22,9 @@ service cloud.firestore {
     match /financeiro_atletas/{atletaId} {
       allow read, write: if true;
     }
+    match /configuracoes/{docId} {
+      allow read, write: if true;
+    }
     match /{document=**} {
       allow read, write: if true;
     }

@@ -401,15 +401,21 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
 
   // =========================================================
   // PRÓXIMOS JOGOS (3 PRÓXIMOS EM ORDEM DE DATA E HORÁRIO)
-  // Regra: Em GERAL mostra os 3 mais próximos de qualquer categoria.
-  // Se SUB-15, mostra os 3 mais próximos de SUB-15.
+  // Obedece os mesmos 2 filtros ativos (Categoria e Competição)
   // =========================================================
   const proximosJogos = useMemo(() => {
     const jogosNaoRealizados = listaJogos.filter((j) => !j.realizado);
 
+    const catFiltro = categoriaAtiva.trim().toUpperCase();
+    const compFiltro = competicaoAtiva.trim().toLowerCase();
+
     const filtrados = jogosNaoRealizados.filter((j) => {
-      const matchCat = categoriaAtiva === 'GERAL' || j.categoria === categoriaAtiva;
-      const matchComp = competicaoAtiva === 'Todas' || j.tipo === competicaoAtiva;
+      const matchCat =
+        categoriaAtiva === 'GERAL' ||
+        (j.categoria || '').trim().toUpperCase() === catFiltro;
+      const matchComp =
+        competicaoAtiva === 'Todas' ||
+        (j.tipo || '').trim().toLowerCase() === compFiltro;
       return matchCat && matchComp;
     });
 
@@ -424,7 +430,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
     });
 
     return filtrados.slice(0, 3);
-  }, [categoriaAtiva, listaJogos]);
+  }, [categoriaAtiva, competicaoAtiva, listaJogos]);
 
   // =========================================================
   // DESEMPENHO DOS JOGADORES / DESTAQUES DA TEMPORADA
@@ -1231,9 +1237,13 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 Próximos Jogos
               </h3>
               <p className="text-xs text-slate-500 font-medium">
-                {categoriaAtiva === 'GERAL'
+                {categoriaAtiva === 'GERAL' && competicaoAtiva === 'Todas'
                   ? 'Próximas 3 partidas de qualquer categoria por ordem de data e hora'
-                  : `Próximas 3 partidas exclusivas da categoria ${categoriaAtiva}`}
+                  : categoriaAtiva === 'GERAL'
+                  ? `Próximas 3 partidas de ${competicaoAtiva} por ordem de data e hora`
+                  : competicaoAtiva === 'Todas'
+                  ? `Próximas 3 partidas exclusivas da categoria ${categoriaAtiva}`
+                  : `Próximas 3 partidas de ${categoriaAtiva} em ${competicaoAtiva}`}
               </p>
             </div>
           </div>
@@ -1241,9 +1251,9 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
           <button
             onClick={() => {
               if (onNavegarJogo) {
-                const primeiro = proximosJogos[0];
-                const cat = categoriaAtiva !== 'GERAL' ? categoriaAtiva : primeiro?.categoria;
-                onNavegarJogo(primeiro?.id, cat, primeiro?.tipo);
+                const cat = categoriaAtiva === 'GERAL' ? 'TODAS' : categoriaAtiva;
+                const comp = competicaoAtiva === 'Todas' ? 'TODAS' : competicaoAtiva;
+                onNavegarJogo(undefined, cat, comp);
               } else {
                 onNovaAvaliacao();
               }
@@ -1259,12 +1269,14 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
           <div className="p-8 text-center bg-slate-50/70 dark:bg-slate-850 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 space-y-2">
             <Calendar className="w-8 h-8 text-slate-400 mx-auto" />
             <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200">
-              Nenhum jogo agendado
+              Nenhum próximo jogo para este filtro
             </h4>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              {categoriaAtiva === 'GERAL'
+              {categoriaAtiva === 'GERAL' && competicaoAtiva === 'Todas'
                 ? 'Não há partidas futuras agendadas no momento.'
-                : `Não há partidas futuras agendadas para a categoria ${categoriaAtiva}.`}
+                : `Não há partidas futuras para ${
+                    categoriaAtiva === 'GERAL' ? 'todas as categorias' : categoriaAtiva
+                  }${competicaoAtiva === 'Todas' ? '' : ` em ${competicaoAtiva}`}.`}
             </p>
             <button
               onClick={onNovaAvaliacao}

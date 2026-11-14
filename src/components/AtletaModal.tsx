@@ -48,7 +48,7 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
 
   const opcoesCategoria = useMemo(() => {
     const base = categoriasDisponiveis && categoriasDisponiveis.length > 0 ? categoriasDisponiveis : CATEGORIAS_PADRAO;
-    return Array.from(new Set([...CATEGORIAS_PADRAO, ...base])).filter(
+    return Array.from(new Set(base)).filter(
       (c) => c && c !== 'TODAS' && c !== 'GERAL'
     );
   }, [categoriasDisponiveis]);

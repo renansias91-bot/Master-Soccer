@@ -7,6 +7,7 @@ import {
   enableIndexedDbPersistence,
   collection,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   addDoc,
@@ -809,6 +810,96 @@ export const firebaseService = {
       },
       (error) => {
         console.warn('Snapshot testes_fisicos offline ou pausado:', error.message);
+      }
+    );
+    return unsub;
+  },
+
+  // ==========================================
+  // CATEGORIAS DO CLUBE (configuracoes/categorias)
+  // ==========================================
+  async salvarCategorias(categorias: string[]): Promise<void> {
+    const path = 'configuracoes/categorias';
+    const listaLimpa = Array.from(
+      new Set(
+        (categorias || [])
+          .map((c) => (c || '').trim().toUpperCase())
+          .filter((c) => c && c !== 'TODAS' && c !== 'GERAL')
+      )
+    );
+
+    const payload = cleanFirestoreData({
+      lista: listaLimpa,
+      atualizadoEm: new Date().toISOString(),
+    });
+
+    try {
+      await setDoc(doc(db, 'configuracoes', 'categorias'), payload);
+    } catch (error) {
+      console.error('Erro ao salvar categorias no Firestore:', error);
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  },
+
+  async buscarCategoriasServidor(): Promise<string[] | null | undefined> {
+    try {
+      const snap = await getDocFromServer(doc(db, 'configuracoes', 'categorias'));
+      if (!snap.exists()) return null;
+      const d = snap.data();
+      if (!Array.isArray(d?.lista)) return null;
+      const lista = Array.from(
+        new Set(
+          d.lista
+            .map((c: unknown) => (typeof c === 'string' ? c.trim().toUpperCase() : ''))
+            .filter((c: string) => c && c !== 'TODAS' && c !== 'GERAL')
+        )
+      ) as string[];
+      return lista.length > 0 ? lista : null;
+    } catch {
+      return undefined;
+    }
+  },
+
+  async buscarCategorias(): Promise<string[] | null> {
+    try {
+      const snap = await getDoc(doc(db, 'configuracoes', 'categorias'));
+      if (!snap.exists()) return null;
+      const d = snap.data();
+      if (!Array.isArray(d?.lista)) return null;
+      const lista = Array.from(
+        new Set(
+          d.lista
+            .map((c: unknown) => (typeof c === 'string' ? c.trim().toUpperCase() : ''))
+            .filter((c: string) => c && c !== 'TODAS' && c !== 'GERAL')
+        )
+      ) as string[];
+      return lista.length > 0 ? lista : null;
+    } catch (error) {
+      console.warn('Aviso ao buscar categorias do Firestore:', error);
+      return null;
+    }
+  },
+
+  observarCategorias(onCategorias: (categorias: string[]) => void): () => void {
+    const unsub = onSnapshot(
+      doc(db, 'configuracoes', 'categorias'),
+      (docSnap) => {
+        if (!docSnap.exists()) return;
+        const d = docSnap.data();
+        if (!Array.isArray(d?.lista)) return;
+        const lista = Array.from(
+          new Set(
+            d.lista
+              .map((c: unknown) => (typeof c === 'string' ? c.trim().toUpperCase() : ''))
+              .filter((c: string) => c && c !== 'TODAS' && c !== 'GERAL')
+          )
+        ) as string[];
+        if (lista.length > 0) {
+          onCategorias(lista);
+        }
+      },
+      (error) => {
+        console.warn('Snapshot configuracoes/categorias offline ou pausado:', error.message);
       }
     );
     return unsub;

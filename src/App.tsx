@@ -30,7 +30,6 @@ import {
 } from './types';
 import {
   storageService,
-  CATEGORIAS_PADRAO,
   normalizarNomeCompeticao,
   encontrarCompeticaoFinanceiro,
   normalizarRegistroFinanceiro,
@@ -104,7 +103,7 @@ export default function App() {
   const [testesFisicos, setTestesFisicos] = useState<TesteFisicoAtleta[]>(() =>
     storageService.getTestesFisicos()
   );
-  const [categorias, setCategorias] = useState<string[]>(CATEGORIAS_PADRAO);
+  const [categorias, setCategorias] = useState<string[]>(() => storageService.getCategorias());
 
   // Navegação: Menu de Baixo (PAINEL, JOGO, ESCALAÇÃO, TROFÉUS) + Telas do Menu ☰ (Financeiro, Atletas, Teste Físico)
   const [abaAtiva, setAbaAtiva] = useState<AbaNavegacao>('painel');
@@ -170,7 +169,28 @@ export default function App() {
 
   // Sincronização em tempo real via onSnapshot do Firestore
   useEffect(() => {
-    if (isRotaCadastroPublico) return;
+    // Categorias sincronizam em tempo real inclusive na rota pública /cadastro-atleta
+    const unsubCategorias = firebaseService.observarCategorias((novasCategorias) => {
+      setCategorias(novasCategorias);
+      storageService.salvarCategorias(novasCategorias);
+    });
+
+    if (isRotaCadastroPublico) {
+      firebaseService
+        .buscarCategorias()
+        .then((cats) => {
+          if (cats && cats.length > 0) {
+            setCategorias(cats);
+            storageService.salvarCategorias(cats);
+          }
+        })
+        .catch(() => {});
+
+      return () => {
+        unsubCategorias();
+      };
+    }
+
     // 1. Atletas e Avaliações
     const unsubDados = firebaseService.observarDados(
       (novosAtletas) => {
@@ -219,6 +239,16 @@ export default function App() {
     // Inicialização
     async function inicializarDadosNoFirestore() {
       try {
+        // Sincroniza ou semeia categorias oficiais no Firestore
+        const categoriasServidor = await firebaseService.buscarCategoriasServidor();
+        if (categoriasServidor === null) {
+          const catsLocais = storageService.getCategorias();
+          await firebaseService.salvarCategorias(catsLocais).catch(() => {});
+        } else if (Array.isArray(categoriasServidor) && categoriasServidor.length > 0) {
+          setCategorias(categoriasServidor);
+          storageService.salvarCategorias(categoriasServidor);
+        }
+
         const dadosRemotos = await firebaseService.buscarDados();
         if (dadosRemotos.atletas.length === 0) {
           const atlsLocais = storageService.getAtletas();
@@ -240,12 +270,13 @@ export default function App() {
     inicializarDadosNoFirestore();
 
     return () => {
+      unsubCategorias();
       unsubDados();
       unsubFinanceiro();
       unsubJogos();
       unsubTestes();
     };
-  }, []);
+  }, [isRotaCadastroPublico]);
 
   const exibirToast = (msg: string) => {
     setToastMensagem(msg);
@@ -372,6 +403,7 @@ export default function App() {
       const catsUnicas = Array.from(new Set(novasCategorias));
       setCategorias(catsUnicas);
       storageService.salvarCategorias(catsUnicas);
+      await firebaseService.salvarCategorias(catsUnicas);
 
       // 2. Atualizar todos os atletas que estavam na categoria antiga -> nova
       const atletasAfetados = atletas.filter(
@@ -449,6 +481,7 @@ export default function App() {
       const novasCats = Array.from(novasCatsSet);
       setCategorias(novasCats);
       storageService.salvarCategorias(novasCats);
+      await firebaseService.salvarCategorias(novasCats);
 
       // 3. Atualiza atletas (cada um sobe exatamente 1 categoria, sem salto duplo)
       const novosAtletas = atletas.map((a) => {
@@ -550,6 +583,7 @@ export default function App() {
       const novasCategorias = categorias.filter((c) => c !== excluirUpper);
       setCategorias(novasCategorias);
       storageService.salvarCategorias(novasCategorias);
+      await firebaseService.salvarCategorias(novasCategorias);
 
       if (categoriaAtiva === excluirUpper) {
         setCategoriaAtiva(destinoUpper);
@@ -1577,9 +1611,10 @@ export default function App() {
         categorias={categorias}
         atletas={atletas}
         jogos={jogos}
-        onSalvarCategorias={(novas) => {
+        onSalvarCategorias={async (novas) => {
           storageService.salvarCategorias(novas);
           setCategorias(novas);
+          await firebaseService.salvarCategorias(novas);
           exibirToast('Categorias atualizadas!');
         }}
         onRenomearCategoria={handleRenomearCategoria}
