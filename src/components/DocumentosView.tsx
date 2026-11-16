@@ -16,7 +16,7 @@ import {
 import { Atleta } from '../types';
 import { formatarDataExibicao } from '../utils/dateUtils';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
-import { MasterSoccerEscudo } from './MasterSoccerEscudo';
+import { CabecalhoParceriaDocumento } from './MasterSoccerEscudo';
 
 interface DocumentosViewProps {
   atletas: Atleta[];
@@ -673,28 +673,22 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               {/* Folha Imprimível */}
               <div className="print-modal-scroll overflow-y-auto p-6 sm:p-10 bg-white text-slate-900">
                 <div className="print-page max-w-2xl mx-auto space-y-7">
-                  {/* Cabeçalho Oficial */}
-                  <div className="flex items-center justify-between pb-5 border-b-2 border-slate-900">
-                    <div className="flex items-center gap-3.5">
-                      <MasterSoccerEscudo size={52} />
-                      <div>
-                        <div className="text-lg sm:text-xl font-black tracking-tight text-slate-900 uppercase">
-                          Master Soccer RJ
+                  {/* Cabeçalho Oficial com Parceria */}
+                  <CabecalhoParceriaDocumento
+                    logoSize={52}
+                    tituloDocumento="Autorização de Viagem"
+                    subtituloDocumento="Master Soccer RJ · Departamento de Futebol de Base"
+                    infoDireita={
+                      <div className="text-right">
+                        <div className="text-[11px] font-black uppercase tracking-widest text-slate-500">
+                          Documento Oficial
                         </div>
-                        <div className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                          Departamento de Futebol de Base
+                        <div className="text-xs font-bold text-slate-700">
+                          Emissão: {new Date().toLocaleDateString('pt-BR')}
                         </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs font-black uppercase tracking-widest text-slate-500">
-                        Documento Oficial
-                      </div>
-                      <div className="text-sm sm:text-base font-black text-slate-900 uppercase">
-                        Autorização de Viagem
-                      </div>
-                    </div>
-                  </div>
+                    }
+                  />
 
                   {/* Quadro Resumo */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-slate-300 bg-slate-50 text-sm">

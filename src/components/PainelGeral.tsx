@@ -27,7 +27,7 @@ import {
   formatarDataAmigavelJogo,
 } from '../utils/dateUtils';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
-import { MasterSoccerEscudo } from './MasterSoccerEscudo';
+import { MasterSoccerEscudo, PecEscudo } from './MasterSoccerEscudo';
 
 const STORAGE_KEY_PAINEL_CATEGORIA = 'mastersoccer_painel_categoria_v1';
 const STORAGE_KEY_PAINEL_COMPETICAO = 'mastersoccer_painel_competicao_v1';
@@ -555,7 +555,15 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex flex-col items-center gap-3 z-10 max-w-2xl">
-          <MasterSoccerEscudo size={74} className="drop-shadow-lg shrink-0" />
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="flex items-center justify-center gap-4 sm:gap-5">
+              <MasterSoccerEscudo size={68} className="drop-shadow-lg shrink-0" />
+              <PecEscudo size={68} className="drop-shadow-lg shrink-0" />
+            </div>
+            <span className="text-[11px] font-black uppercase tracking-[0.25em] text-amber-300">
+              PARCERIA
+            </span>
+          </div>
           <div className="space-y-1.5 flex flex-col items-center text-center">
             <div className="flex items-center justify-center gap-2">
               <span className="text-[13px] font-black text-amber-400 tracking-wider uppercase font-mono bg-blue-950/90 px-3 py-1 rounded-lg border border-amber-400/40">

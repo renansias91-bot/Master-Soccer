@@ -18,7 +18,7 @@ import {
   navegadorSuportaCompartilharArquivoPdf,
   preAquecerCssPdf,
 } from '../utils/pdfShareUtils';
-import { MasterSoccerEscudo } from './MasterSoccerEscudo';
+import { CabecalhoParceriaDocumento } from './MasterSoccerEscudo';
 
 // ============================================================================
 // DOCUMENTO 1: SÚMULA OFICIAL PARA ARBITRAGEM (25 LINHAS EM BRANCO, 1 FOLHA A4)
@@ -164,31 +164,22 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
             style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
             className="p-5 sm:p-7 space-y-4 bg-white text-slate-900"
           >
-            {/* Cabeçalho Oficial */}
-            <div className="sumula-cabecalho flex items-center justify-between border-b-2 border-slate-900 pb-3">
-              <div className="flex items-center gap-3">
-                <div className="sumula-escudo shrink-0">
-                  <MasterSoccerEscudo size={46} />
+            {/* Cabeçalho Oficial com Parceria */}
+            <CabecalhoParceriaDocumento
+              logoSize={42}
+              compacto
+              className="sumula-cabecalho"
+              tituloDocumento="Súmula Oficial de Jogo"
+              subtituloDocumento="Relação de Atletas para Arbitragem"
+              infoDireita={
+                <div className="text-right text-[11px]" style={{ color: '#475569' }}>
+                  <div>Emissão: {new Date().toLocaleDateString('pt-BR')}</div>
+                  <div className="font-extrabold uppercase" style={{ color: '#0f172a' }}>
+                    25 Atletas na Súmula
+                  </div>
                 </div>
-                <div>
-                  <h2
-                    className="sumula-titulo text-lg sm:text-xl font-black uppercase tracking-tight"
-                    style={{ color: '#020617' }}
-                  >
-                    MASTER SOCCER RJ
-                  </h2>
-                  <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: '#475569' }}>
-                    Súmula Oficial de Jogo · Relação de Atletas para Arbitragem
-                  </p>
-                </div>
-              </div>
-              <div className="text-right text-[11px]" style={{ color: '#475569' }}>
-                <div>Emissão: {new Date().toLocaleDateString('pt-BR')}</div>
-                <div className="font-extrabold uppercase" style={{ color: '#0f172a' }}>
-                  25 Atletas na Súmula
-                </div>
-              </div>
-            </div>
+              }
+            />
 
             {/* Dados da Partida (Única parte preenchida no documento: PARTIDA, CAMPEONATO, CATEGORIA, DATA, HORÁRIO, LOCAL) */}
             <div
@@ -657,29 +648,23 @@ export const ModalEstrategiaJogo: React.FC<ModalEstrategiaJogoProps> = ({
             style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
             className="p-5 sm:p-7 space-y-5 bg-white text-slate-900"
           >
-            {/* Cabeçalho */}
-            <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3">
-              <div className="flex items-center gap-3">
-                <MasterSoccerEscudo size={46} />
-                <div>
-                  <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight" style={{ color: '#020617' }}>
-                    MASTER SOCCER RJ · ESTRATÉGIA DE JOGO
-                  </h2>
-                  <p className="text-[11px] font-bold uppercase" style={{ color: '#047857' }}>
-                    Uso Exclusivo da Comissão Técnica · Plano Tático da Partida
-                  </p>
+            {/* Cabeçalho Oficial com Parceria */}
+            <CabecalhoParceriaDocumento
+              logoSize={46}
+              tituloDocumento="Estratégia de Jogo"
+              subtituloDocumento="Uso Exclusivo da Comissão Técnica · Plano Tático da Partida"
+              infoDireita={
+                <div className="text-right text-[11px]" style={{ color: '#475569' }}>
+                  <div>Emissão: {new Date().toLocaleDateString('pt-BR')}</div>
+                  <div
+                    className="inline-block mt-1 px-2.5 py-0.5 rounded-md font-black uppercase text-xs"
+                    style={{ backgroundColor: '#dbeafe', color: '#1e40af', border: '1px solid #93c5fd' }}
+                  >
+                    {formacaoEfetiva}
+                  </div>
                 </div>
-              </div>
-              <div className="text-right text-[11px]" style={{ color: '#475569' }}>
-                <div>Emissão: {new Date().toLocaleDateString('pt-BR')}</div>
-                <div
-                  className="inline-block mt-1 px-2.5 py-0.5 rounded-md font-black uppercase text-xs"
-                  style={{ backgroundColor: '#dbeafe', color: '#1e40af', border: '1px solid #93c5fd' }}
-                >
-                  {formacaoEfetiva}
-                </div>
-              </div>
-            </div>
+              }
+            />
 
             {/* Informações do Jogo + Formação em Destaque */}
             <div

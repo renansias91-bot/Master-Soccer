@@ -44,7 +44,7 @@ import {
 } from '../types';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { formatarDataExibicao } from '../utils/dateUtils';
-import { MasterSoccerEscudo } from './MasterSoccerEscudo';
+import { MasterSoccerEscudo, CabecalhoParceriaDocumento } from './MasterSoccerEscudo';
 import {
   FormularioAtletaCadastro,
   POSICOES_CAMPO_OPTIONS,
@@ -2340,24 +2340,18 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
               style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
               className="p-6 sm:p-8 overflow-y-auto space-y-6 flex-1 bg-white text-slate-900"
             >
-              {/* Cabeçalho Oficial do Documento */}
-              <div className="flex items-center justify-between border-b-2 border-slate-900 pb-4">
-                <div className="flex items-center gap-3">
-                  <MasterSoccerEscudo size={48} />
-                  <div>
-                    <h2 className="text-xl font-black text-slate-950 uppercase tracking-tight">
-                      MASTER SOCCER RJ
-                    </h2>
-                    <p className="text-xs text-slate-600 font-semibold">
-                      Categorias de Base · Relatório Técnico Oficial
-                    </p>
+              {/* Cabeçalho Oficial do Documento com Parceria */}
+              <CabecalhoParceriaDocumento
+                logoSize={48}
+                tituloDocumento="Relatório Técnico Oficial"
+                subtituloDocumento="Categorias de Base · Documento Oficial"
+                infoDireita={
+                  <div className="text-right text-xs text-slate-500">
+                    <div>Data de Emissão: {new Date().toLocaleDateString('pt-BR')}</div>
+                    <div className="font-bold text-slate-700">Sistema Base FC</div>
                   </div>
-                </div>
-                <div className="text-right text-xs text-slate-500">
-                  <div>Data de Emissão: {new Date().toLocaleDateString('pt-BR')}</div>
-                  <div className="font-bold text-slate-700">Sistema Base FC</div>
-                </div>
-              </div>
+                }
+              />
 
               {/* Título do Relatório */}
               <div>

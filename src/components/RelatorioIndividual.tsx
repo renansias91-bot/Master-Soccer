@@ -20,7 +20,7 @@ import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils
 import { tituloNota } from '../utils/avaliacaoUtils';
 import { IconeQuadrinhoTatico, IconeExtraCampo } from './IconesPilares';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
-import { MasterSoccerEscudo } from './MasterSoccerEscudo';
+import { CabecalhoParceriaDocumento } from './MasterSoccerEscudo';
 import {
   compartilharArquivoPdfPronto,
   compartilharDocumentoPdf,
@@ -307,7 +307,19 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
       {/* Ficha do Jogador Selecionado (ex: Lucas Silva) */}
       {atletaAtivo ? (
         <div ref={relatorioRef} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 sm:p-8 space-y-6">
-          {/* Header do Jogador com Foto e Escudo Master Soccer */}
+          {/* Cabeçalho Oficial da Parceria no topo do documento / PDF */}
+          <CabecalhoParceriaDocumento
+            logoSize={48}
+            tituloDocumento="Ficha Técnica do Atleta"
+            subtituloDocumento="Relatório Individual de Desempenho & Histórico"
+            infoDireita={
+              <div className="text-right text-[11px] text-slate-500">
+                <div>Emissão: {new Date().toLocaleDateString('pt-BR')}</div>
+              </div>
+            }
+          />
+
+          {/* Header do Jogador com Foto */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 pb-6 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-4">
               <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-blue-600/40 shrink-0 flex items-center justify-center font-bold text-2xl text-blue-600">
@@ -366,7 +378,6 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                   {avaliacoesDoAtleta.length}
                 </span>
               </div>
-              <MasterSoccerEscudo size={52} className="shrink-0 drop-shadow-xs" />
             </div>
           </div>
 

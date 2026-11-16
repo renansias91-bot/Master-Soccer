@@ -271,7 +271,7 @@ const CSS_COMPACTO_SUMULA_A4 = `
     line-height: 1.1 !important;
   }
   #sumula-arbitragem-doc .sumula-tabela tbody tr {
-    height: 21px !important;
+    height: 20px !important;
   }
   #sumula-arbitragem-doc .sumula-tabela tbody td {
     padding: 1px 6px !important;
