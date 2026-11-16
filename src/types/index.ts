@@ -24,7 +24,7 @@ export interface Atleta {
   rg?: string; // Identidade / RG
   cpf?: string; // CPF do atleta
   categoria: CategoriaBase;
-  posicao: PosicaoAtleta;
+  posicao: PosicaoAtleta | '';
   numeroCamisa?: number;
   dataNascimento: string; // YYYY-MM-DD
   pernaDominante: PernaDominante;

@@ -6,6 +6,13 @@ export interface CompartilharPdfOpcoes {
   nomeArquivo: string;
   titulo?: string;
   texto?: string;
+  paginaUnicaA4?: boolean;
+  estiloSumulaA4?: boolean;
+}
+
+export interface GerarPdfOpcoes {
+  paginaUnicaA4?: boolean;
+  estiloSumulaA4?: boolean;
 }
 
 export interface ResultadoCompartilhamento {
@@ -18,9 +25,10 @@ export interface ResultadoCompartilhamento {
 }
 
 export const MENSAGEM_SEM_SUPORTE_SHARE =
-  'Seu navegador não permite compartilhar arquivo. Use o Chrome para compartilhar.';
+  'Não foi possível gerar o PDF. Tente novamente.';
 
 const colorCache = new Map<string, string>();
+const sanitizedSheetsCache = new Map<string, { ruleCount: number; css: string }>();
 let colorCtx: CanvasRenderingContext2D | null = null;
 
 function getColorContext(): CanvasRenderingContext2D | null {
@@ -85,18 +93,15 @@ function converterCorUnicaParaRgba(corCss: string): string {
     const ctx = getColorContext();
     if (!ctx) return '#1e293b';
 
-    // Verifica se o navegador aceita a cor no canvas
     ctx.fillStyle = '#000001';
     ctx.fillStyle = chave;
     const aplicado = String(ctx.fillStyle || '');
 
-    // Se o valor contiver transparent explícito
     if (chave.toLowerCase() === 'transparent') {
       colorCache.set(chave, 'transparent');
       return 'transparent';
     }
 
-    // Se o canvas rejeitou color-mix com variáveis CSS não resolvidas (ex: var(--tw-...))
     if (aplicado === '#000001' && !chave.includes('0, 0, 1') && !chave.includes('#000001')) {
       const fallback = chave.includes('transparent') ? 'rgba(15, 23, 42, 0.12)' : '#1e293b';
       colorCache.set(chave, fallback);
@@ -156,7 +161,6 @@ function sanitizarFuncoesCorCss(cssText: string): string {
 
     const tokenCompleto = cssText.slice(startIdx, endIdx + 1);
     if (tokenCompleto.includes('var(')) {
-      // Variáveis não resolvidas em folhas brutas não podem ser rasterizadas em canvas
       resultado += 'rgba(15, 23, 42, 0.15)';
     } else {
       resultado += converterCorUnicaParaRgba(tokenCompleto);
@@ -174,31 +178,170 @@ function temCorNaoSuportada(valor: string | null | undefined): boolean {
 
 /**
  * Serializa CSS de uma stylesheet mesma-origem para remover oklch/oklab/color-mix
- * antes que o html2canvas tente parsear a folha de estilo.
+ * antes que o html2canvas tente parsear a folha de estilo. Usa cache por href.
  */
 function extrairCssSeguroDeStylesheet(sheet: CSSStyleSheet): string | null {
   try {
     const rules = sheet.cssRules;
     if (!rules) return null;
+    const href = sheet.href || '';
+    if (href) {
+      const cached = sanitizedSheetsCache.get(href);
+      if (cached && cached.ruleCount === rules.length) {
+        return cached.css;
+      }
+    }
+
     const partes: string[] = [];
     for (let i = 0; i < rules.length; i++) {
       const rule = rules[i];
       const text = rule.cssText;
       if (!text) continue;
-      // Remove regras @property que o html2canvas não entende
       if (text.startsWith('@property')) continue;
       partes.push(sanitizarFuncoesCorCss(text));
     }
-    return partes.join('\n');
+    const css = partes.join('\n');
+    if (href) {
+      sanitizedSheetsCache.set(href, { ruleCount: rules.length, css });
+    }
+    return css;
   } catch {
     return null;
   }
 }
 
 /**
+ * Pré-aquece o cache de folhas de estilo sanitizadas para acelerar a geração de PDF no clique.
+ */
+export function preAquecerCssPdf(): void {
+  if (typeof document === 'undefined') return;
+  try {
+    for (let i = 0; i < document.styleSheets.length; i++) {
+      const sheet = document.styleSheets[i];
+      if (sheet.href) {
+        extrairCssSeguroDeStylesheet(sheet);
+      }
+    }
+  } catch {
+    // Silencioso
+  }
+}
+
+const CSS_COMPACTO_SUMULA_A4 = `
+  #sumula-arbitragem-doc {
+    width: 750px !important;
+    max-width: 750px !important;
+    padding: 8px 12px !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    font-size: 10px !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+  #sumula-arbitragem-doc > * {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  #sumula-arbitragem-doc .sumula-cabecalho {
+    padding-bottom: 5px !important;
+  }
+  #sumula-arbitragem-doc .sumula-escudo svg,
+  #sumula-arbitragem-doc .sumula-escudo img {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  #sumula-arbitragem-doc .sumula-titulo {
+    font-size: 15px !important;
+    line-height: 1.1 !important;
+  }
+  #sumula-arbitragem-doc .sumula-dados-partida {
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+  }
+  #sumula-arbitragem-doc .sumula-dados-partida-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 5px 12px !important;
+  }
+  #sumula-arbitragem-doc .sumula-tabela th {
+    padding: 4px 6px !important;
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+  }
+  #sumula-arbitragem-doc .sumula-tabela tbody tr {
+    height: 21px !important;
+  }
+  #sumula-arbitragem-doc .sumula-tabela tbody td {
+    padding: 1px 6px !important;
+    font-size: 10px !important;
+    line-height: 1.15 !important;
+  }
+  #sumula-arbitragem-doc .sumula-celula-caixa {
+    height: 15px !important;
+  }
+  #sumula-arbitragem-doc .sumula-assinaturas {
+    padding-top: 4px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+  #sumula-arbitragem-doc .sumula-assinaturas > * {
+    margin-top: 0 !important;
+  }
+  #sumula-arbitragem-doc .sumula-assinaturas-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 18px !important;
+    padding-top: 2px !important;
+  }
+  #sumula-arbitragem-doc .sumula-linha-assinatura {
+    height: 18px !important;
+    margin-bottom: 2px !important;
+    padding-bottom: 0 !important;
+  }
+  #sumula-arbitragem-doc .sumula-arbitragem-box {
+    padding: 6px 10px !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 5px !important;
+  }
+  #sumula-arbitragem-doc .sumula-arbitragem-box > * {
+    margin-top: 0 !important;
+  }
+  #sumula-arbitragem-doc .sumula-arbitragem-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    padding-top: 0 !important;
+  }
+  #sumula-arbitragem-doc .sumula-arbitragem-linha {
+    height: 16px !important;
+  }
+  #sumula-arbitragem-doc .sumula-obs-linha {
+    height: 14px !important;
+  }
+  #sumula-arbitragem-doc .sumula-screen-only {
+    display: none !important;
+  }
+  #sumula-arbitragem-doc .sumula-print-only {
+    display: block !important;
+  }
+  #sumula-arbitragem-doc .sumula-print-only-inline {
+    display: inline !important;
+  }
+`;
+
+/**
  * Converte um elemento HTML em um Blob PDF real na memória.
  */
-export async function gerarPdfBlobDeElemento(elemento: HTMLElement): Promise<Blob> {
+export async function gerarPdfBlobDeElemento(
+  elemento: HTMLElement,
+  opcoes: GerarPdfOpcoes = {}
+): Promise<Blob> {
+  const { paginaUnicaA4 = false, estiloSumulaA4 = false } = opcoes;
   const tempId = elemento.id || `pdf-target-${Date.now()}`;
   const hadId = Boolean(elemento.id);
   if (!hadId) {
@@ -206,7 +349,7 @@ export async function gerarPdfBlobDeElemento(elemento: HTMLElement): Promise<Blo
   }
 
   try {
-    // Pré-extrai CSS seguro de todas as folhas mesmas-origem do documento real
+    // Pré-extrai CSS seguro de todas as folhas mesmas-origem (usa cache se já aquecido)
     const cssSheetsSeguros = new Map<string, string>();
     for (let i = 0; i < document.styleSheets.length; i++) {
       const sheet = document.styleSheets[i];
@@ -218,11 +361,18 @@ export async function gerarPdfBlobDeElemento(elemento: HTMLElement): Promise<Blo
       }
     }
 
-    const alturaEstimada = elemento.scrollHeight || elemento.offsetHeight || 1000;
-    const scale = alturaEstimada > 3200 ? 1.25 : 1.5;
+    // Conjunto de ancestrais para ignorar todo o restante da página (#root, overlays, etc.)
+    const ancestrais = new Set<Element>();
+    let anc: Element | null = elemento;
+    while (anc) {
+      ancestrais.add(anc);
+      anc = anc.parentElement;
+    }
 
-    // Captura cores computadas reais (já com var() e color-mix() resolvidos pelo Chrome)
-    // antes de o html2canvas clonar e sanitizar as folhas de estilo.
+    const alturaEstimada = elemento.scrollHeight || elemento.offsetHeight || 1000;
+    const scale = estiloSumulaA4 ? 1.35 : alturaEstimada > 3200 ? 1.25 : 1.5;
+
+    // Captura cores computadas reais antes da clonagem
     const realNodes = [elemento, ...Array.from(elemento.querySelectorAll<HTMLElement>('*'))];
     const resolvedInlineColors: Array<{
       color?: string;
@@ -273,14 +423,28 @@ export async function gerarPdfBlobDeElemento(elemento: HTMLElement): Promise<Blo
       }
     });
 
+    const targetWidth = estiloSumulaA4 ? 750 : Math.max(elemento.scrollWidth || 800, 800);
+
     const canvas = await html2canvas(elemento, {
       scale,
       useCORS: true,
       allowTaint: false,
       logging: false,
-      imageTimeout: 2500,
+      imageTimeout: 2000,
       backgroundColor: '#ffffff',
-      windowWidth: Math.max(elemento.scrollWidth || 800, 800),
+      windowWidth: targetWidth,
+      ignoreElements: (el) => {
+        if (el.tagName === 'HEAD' || el.tagName === 'STYLE' || el.tagName === 'LINK') {
+          return false;
+        }
+        if (el.classList?.contains('no-print')) {
+          return true;
+        }
+        if (ancestrais.has(el) || elemento.contains(el)) {
+          return false;
+        }
+        return true;
+      },
       onclone: (clonedDoc) => {
         // 1. Sanitiza todas as tags <style> do documento clonado
         const styleTags = Array.from(clonedDoc.querySelectorAll('style'));
@@ -307,7 +471,7 @@ export async function gerarPdfBlobDeElemento(elemento: HTMLElement): Promise<Blo
           }
         }
 
-        // 3. Injeta resets seguros para renderização A4 limpa e rápida
+        // 3. Injeta resets seguros e, quando for súmula, injeta o layout A4 exato de impressão
         const resetStyle = clonedDoc.createElement('style');
         resetStyle.textContent = `
           html, body {
@@ -327,17 +491,16 @@ export async function gerarPdfBlobDeElemento(elemento: HTMLElement): Promise<Blo
             animation: none !important;
             transition: none !important;
           }
+          ${estiloSumulaA4 ? CSS_COMPACTO_SUMULA_A4 : ''}
         `;
         clonedDoc.head.appendChild(resetStyle);
 
         const clonedEl = clonedDoc.getElementById(tempId);
         if (!clonedEl) return;
 
-        // 4. Oculta elementos irmãos fora da cadeia ancestral do documento (acelera muito no Android)
-        const cadeiaAncestrais = new Set<HTMLElement>();
+        // 4. Garante containers ancestrais sem overflow/transform
         let cursor: HTMLElement | null = clonedEl;
         while (cursor) {
-          cadeiaAncestrais.add(cursor);
           cursor.style.overflow = 'visible';
           cursor.style.maxHeight = 'none';
           cursor.style.height = 'auto';
@@ -347,19 +510,6 @@ export async function gerarPdfBlobDeElemento(elemento: HTMLElement): Promise<Blo
           }
           cursor = cursor.parentElement;
         }
-
-        const ocultarIrmaosForaDaCadeia = (pai: HTMLElement | null) => {
-          if (!pai) return;
-          for (const filho of Array.from(pai.children)) {
-            if (!(filho instanceof HTMLElement)) continue;
-            if (!cadeiaAncestrais.has(filho)) {
-              filho.style.display = 'none';
-            } else if (filho !== clonedEl) {
-              ocultarIrmaosForaDaCadeia(filho);
-            }
-          }
-        };
-        ocultarIrmaosForaDaCadeia(clonedDoc.body);
 
         // 5. Aplica as cores computadas exatas em todos os nós clonados
         const clonedNodes = [clonedEl, ...Array.from(clonedEl.querySelectorAll<HTMLElement>('*'))];
@@ -390,7 +540,7 @@ export async function gerarPdfBlobDeElemento(elemento: HTMLElement): Promise<Blo
       },
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.88);
+    const imgData = canvas.toDataURL('image/jpeg', 0.9);
 
     const pdfWidth = 210;
     const pdfHeight = 297;
@@ -401,6 +551,20 @@ export async function gerarPdfBlobDeElemento(elemento: HTMLElement): Promise<Blo
       format: 'a4',
       compress: true,
     });
+
+    if (paginaUnicaA4) {
+      // Encaixa exatamente em 1 única folha A4 (margens 6mm x 8mm -> área útil 194mm x 285mm)
+      const marginX = 8;
+      const marginY = 6;
+      const maxW = pdfWidth - marginX * 2;
+      const maxH = pdfHeight - marginY * 2;
+      const ratio = Math.min(maxW / canvas.width, maxH / canvas.height);
+      const drawW = canvas.width * ratio;
+      const drawH = canvas.height * ratio;
+      const offsetX = (pdfWidth - drawW) / 2;
+      pdf.addImage(imgData, 'JPEG', offsetX, marginY, drawW, drawH);
+      return pdf.output('blob');
+    }
 
     const imgWidth = pdfWidth;
     const imgHeight = (canvas.height * pdfWidth) / canvas.width;
@@ -473,30 +637,24 @@ export async function compartilharArquivoPdfPronto(
     if (err?.name === 'AbortError') {
       return { sucesso: true, cancelado: true };
     }
-    if (err?.name === 'NotAllowedError') {
-      return {
-        sucesso: false,
-        precisaSegundoToque: true,
-        arquivoPronto: arquivoPDF,
-        erro: 'PDF gerado! Toque novamente no botão para abrir a aba de compartilhamento.',
-      };
-    }
     return {
       sucesso: false,
-      erro: err?.message || 'Não foi possível abrir o compartilhamento do sistema.',
+      erro: MENSAGEM_SEM_SUPORTE_SHARE,
     };
   }
 }
 
 /**
  * Gera o PDF em memória a partir do elemento HTML e abre a aba nativa de compartilhamento
- * com o arquivo PDF real anexado (sem download e sem fallback de link/texto).
+ * com o arquivo PDF real anexado.
  */
 export async function compartilharDocumentoPdf({
   elemento,
   nomeArquivo,
   titulo = 'Master Soccer RJ',
   texto = 'Documento Master Soccer RJ',
+  paginaUnicaA4 = false,
+  estiloSumulaA4 = false,
 }: CompartilharPdfOpcoes): Promise<ResultadoCompartilhamento> {
   if (!navegadorSuportaCompartilharArquivoPdf()) {
     return {
@@ -507,7 +665,10 @@ export async function compartilharDocumentoPdf({
   }
 
   try {
-    const pdfBlob = await gerarPdfBlobDeElemento(elemento);
+    const pdfBlob = await gerarPdfBlobDeElemento(elemento, {
+      paginaUnicaA4,
+      estiloSumulaA4,
+    });
     const arquivoPDF = new File([pdfBlob], nomeArquivo, {
       type: 'application/pdf',
       lastModified: Date.now(),
@@ -518,7 +679,7 @@ export async function compartilharDocumentoPdf({
     console.error('Erro ao gerar/compartilhar PDF:', error);
     return {
       sucesso: false,
-      erro: error?.message || 'Falha ao gerar o PDF para compartilhamento.',
+      erro: MENSAGEM_SEM_SUPORTE_SHARE,
     };
   }
 }

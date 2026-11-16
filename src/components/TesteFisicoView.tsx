@@ -10,9 +10,13 @@ import {
   RotateCcw,
   Timer,
   CheckCircle2,
+  Search,
+  UserPlus,
+  Check,
 } from 'lucide-react';
-import { Atleta, TesteFisicoAtleta } from '../types';
+import { Atleta, PosicaoAtleta, TesteFisicoAtleta } from '../types';
 import { getDataAtualBrasil, formatarDataExibicao } from '../utils/dateUtils';
+import { POSICOES_CAMPO_OPTIONS } from './FormularioAtletaCadastro';
 
 const STORAGE_KEY_TESTEFISICO_CATEGORIA = 'mastersoccer_testefisico_categoria_v1';
 
@@ -24,6 +28,11 @@ interface TesteFisicoViewProps {
   categorias: string[];
   onSalvarTeste: (teste: TesteFisicoAtleta) => void;
   onExcluirTeste: (id: string) => void;
+  onCadastrarAtletaRapido?: (dados: {
+    nome: string;
+    categoria: string;
+    posicao: PosicaoAtleta | '';
+  }) => Promise<Atleta>;
 }
 
 const formatarCronometro = (ms: number): string => {
@@ -42,12 +51,20 @@ const parseNumeroOpcional = (valor: string): number | undefined => {
   return Number.isFinite(num) ? num : undefined;
 };
 
+const normalizarBusca = (txt: string): string =>
+  (txt || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
 export const TesteFisicoView: React.FC<TesteFisicoViewProps> = ({
   atletas,
   testesFisicos,
   categorias,
   onSalvarTeste,
   onExcluirTeste,
+  onCadastrarAtletaRapido,
 }) => {
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>(() => {
     try {
@@ -101,6 +118,19 @@ export const TesteFisicoView: React.FC<TesteFisicoViewProps> = ({
 
   // Campos do formulário (sempre começam VAZIOS ao lançar novo teste)
   const [atletaId, setAtletaId] = useState('');
+  const [categoriaModalFiltro, setCategoriaModalFiltro] = useState<string>('TODAS');
+  const [buscaAtleta, setBuscaAtleta] = useState('');
+  const [buscaFocada, setBuscaFocada] = useState(false);
+  const inputBuscaRef = useRef<HTMLInputElement>(null);
+
+  // Modal de cadastro rápido de atleta novo dentro do Teste Físico
+  const [isCadastroRapidoOpen, setIsCadastroRapidoOpen] = useState(false);
+  const [rapidoNome, setRapidoNome] = useState('');
+  const [rapidoCategoria, setRapidoCategoria] = useState('SUB-15');
+  const [rapidoPosicao, setRapidoPosicao] = useState<PosicaoAtleta | ''>('');
+  const [salvandoRapido, setSalvandoRapido] = useState(false);
+  const [erroRapido, setErroRapido] = useState('');
+
   const [dataTeste, setDataTeste] = useState(() => getDataAtualBrasil());
   const [velocidadeTent1, setVelocidadeTent1] = useState<string>('');
   const [velocidadeTent2, setVelocidadeTent2] = useState<string>('');
@@ -192,14 +222,45 @@ export const TesteFisicoView: React.FC<TesteFisicoViewProps> = ({
     return undefined;
   }, [velocidadeTent1, velocidadeTent2]);
 
-  const atletasOrdenadosParaSelecao = useMemo(() => {
-    const filtrados = atletas.filter(
-      (a) => categoriaFiltro === 'TODAS' || a.categoria === categoriaFiltro || a.id === atletaId
-    );
+  const atletaSelecionadoObj = useMemo(
+    () => atletas.find((a) => a.id === atletaId) || null,
+    [atletas, atletaId]
+  );
+
+  const atletasFiltradosPorCategoriaModal = useMemo(() => {
+    const filtrados = atletas.filter((a) => {
+      if (categoriaModalFiltro === 'TODAS') return true;
+      return (a.categoria || '').trim().toUpperCase() === categoriaModalFiltro.trim().toUpperCase();
+    });
     return [...filtrados].sort((a, b) =>
       (a.apelido || a.nome).localeCompare(b.apelido || b.nome, 'pt-BR')
     );
-  }, [atletas, categoriaFiltro, atletaId]);
+  }, [atletas, categoriaModalFiltro]);
+
+  const atletasBuscaInstantanea = useMemo(() => {
+    const termo = normalizarBusca(buscaAtleta);
+    if (!termo) return atletasFiltradosPorCategoriaModal;
+    return atletasFiltradosPorCategoriaModal.filter((a) => {
+      const nomeNorm = normalizarBusca(a.nome);
+      const apelidoNorm = normalizarBusca(a.apelido || '');
+      const completoNorm = normalizarBusca(a.nomeCompleto || '');
+      return (
+        nomeNorm.includes(termo) ||
+        apelidoNorm.includes(termo) ||
+        completoNorm.includes(termo)
+      );
+    });
+  }, [atletasFiltradosPorCategoriaModal, buscaAtleta]);
+
+  const temMatchExatoBusca = useMemo(() => {
+    const termo = normalizarBusca(buscaAtleta);
+    if (!termo) return true;
+    return atletasBuscaInstantanea.some(
+      (a) =>
+        normalizarBusca(a.nome) === termo ||
+        normalizarBusca(a.apelido || '') === termo
+    );
+  }, [atletasBuscaInstantanea, buscaAtleta]);
 
   const testesFiltrados = useMemo(
     () =>
@@ -212,6 +273,14 @@ export const TesteFisicoView: React.FC<TesteFisicoViewProps> = ({
   const handleAbrirNovoTeste = (atletaPre?: Atleta) => {
     setTesteEditando(null);
     setAtletaId(atletaPre?.id || '');
+    setCategoriaModalFiltro(
+      atletaPre?.categoria && atletaPre.categoria.trim()
+        ? atletaPre.categoria
+        : categoriaFiltro || 'TODAS'
+    );
+    setBuscaAtleta('');
+    setBuscaFocada(false);
+    setIsCadastroRapidoOpen(false);
     setDataTeste(getDataAtualBrasil());
     setVelocidadeTent1('');
     setVelocidadeTent2('');
@@ -230,6 +299,10 @@ export const TesteFisicoView: React.FC<TesteFisicoViewProps> = ({
   const handleAbrirEditarTeste = (teste: TesteFisicoAtleta) => {
     setTesteEditando(teste);
     setAtletaId(teste.atletaId);
+    setCategoriaModalFiltro(teste.categoria || 'TODAS');
+    setBuscaAtleta('');
+    setBuscaFocada(false);
+    setIsCadastroRapidoOpen(false);
     setDataTeste(formatarDataExibicao(teste.data));
 
     if (teste.velocidadeTentativa1 !== undefined || teste.velocidadeTentativa2 !== undefined) {
@@ -283,7 +356,9 @@ export const TesteFisicoView: React.FC<TesteFisicoViewProps> = ({
     const novoTeste: TesteFisicoAtleta = {
       id: testeEditando ? testeEditando.id : `tf-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       atletaId,
-      categoria: atletaObj?.categoria || 'SUB-15',
+      categoria:
+        atletaObj?.categoria ||
+        (categoriaModalFiltro !== 'TODAS' ? categoriaModalFiltro : 'SUB-15'),
       data: dataTeste.trim() || getDataAtualBrasil(),
       velocidade30m: mediaVelocidadeCalculada,
       velocidadeTentativa1: t1,
@@ -300,6 +375,55 @@ export const TesteFisicoView: React.FC<TesteFisicoViewProps> = ({
     onSalvarTeste(novoTeste);
     setCronoRodando(null);
     setIsModalOpen(false);
+  };
+
+  const handleAbrirCadastroRapido = () => {
+    const nomeDigitado = buscaAtleta.trim();
+    setRapidoNome(nomeDigitado);
+    setRapidoCategoria(
+      categoriaModalFiltro !== 'TODAS'
+        ? categoriaModalFiltro
+        : categoriasLimpas[0] || 'SUB-15'
+    );
+    setRapidoPosicao('');
+    setErroRapido('');
+    setIsCadastroRapidoOpen(true);
+  };
+
+  const handleSalvarCadastroRapido = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const nomeLimpo = rapidoNome.trim();
+    if (!nomeLimpo) {
+      setErroRapido('Digite o nome ou apelido do atleta.');
+      return;
+    }
+    if (!rapidoCategoria) {
+      setErroRapido('Selecione a categoria.');
+      return;
+    }
+    if (!onCadastrarAtletaRapido) return;
+
+    try {
+      setSalvandoRapido(true);
+      setErroRapido('');
+      const novoAtleta = await onCadastrarAtletaRapido({
+        nome: nomeLimpo,
+        categoria: rapidoCategoria,
+        posicao: rapidoPosicao,
+      });
+      setAtletaId(novoAtleta.id);
+      if (categoriaModalFiltro !== 'TODAS' && categoriaModalFiltro !== novoAtleta.categoria) {
+        setCategoriaModalFiltro(novoAtleta.categoria || 'TODAS');
+      }
+      setBuscaAtleta('');
+      setBuscaFocada(false);
+      setErro('');
+      setIsCadastroRapidoOpen(false);
+    } catch (err: any) {
+      setErroRapido(err?.message || 'Não foi possível cadastrar o atleta.');
+    } finally {
+      setSalvandoRapido(false);
+    }
   };
 
   return (
@@ -521,39 +645,250 @@ export const TesteFisicoView: React.FC<TesteFisicoViewProps> = ({
                 </div>
               )}
 
-              {/* 2. ESCOLHER ATLETA E DATA PRIMEIRO */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                    Atleta Avaliado *
+              {/* 2. FILTRAR POR CATEGORIA + BUSCA INSTANTÂNEA DE ATLETA + DATA */}
+              <div className="space-y-3 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                {/* 1. PRIMEIRO: FILTRAR POR CATEGORIA */}
+                <div>
+                  <label className="block text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5">
+                    Categoria:
                   </label>
-                  <select
-                    value={atletaId}
-                    onChange={(e) => setAtletaId(e.target.value)}
-                    className="w-full h-11 px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    required
-                  >
-                    <option value="">Selecione o atleta...</option>
-                    {atletasOrdenadosParaSelecao.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.apelido || a.nome} — {a.categoria} ({a.posicao})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategoriaModalFiltro('TODAS');
+                        setBuscaFocada(true);
+                      }}
+                      style={
+                        categoriaModalFiltro === 'TODAS'
+                          ? { backgroundColor: '#2563eb', color: '#ffffff' }
+                          : undefined
+                      }
+                      className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+                        categoriaModalFiltro === 'TODAS'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      Todas
+                    </button>
+                    {categoriasLimpas.map((cat) => {
+                      const ativa = categoriaModalFiltro === cat;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => {
+                            setCategoriaModalFiltro(cat);
+                            if (
+                              atletaSelecionadoObj &&
+                              (atletaSelecionadoObj.categoria || '').toUpperCase() !==
+                                cat.toUpperCase()
+                            ) {
+                              setAtletaId('');
+                            }
+                            setBuscaFocada(true);
+                          }}
+                          style={
+                            ativa
+                              ? { backgroundColor: '#2563eb', color: '#ffffff' }
+                              : undefined
+                          }
+                          className={`min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+                            ativa
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                    Data da Avaliação *
-                  </label>
-                  <input
-                    type="text"
-                    value={dataTeste}
-                    onChange={(e) => setDataTeste(e.target.value)}
-                    placeholder="DD/MM/AAAA"
-                    className="w-full h-11 px-3 py-2 text-sm font-mono font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
-                    required
-                  />
+                {/* 2. BUSCA POR NOME / APELIDO + DATA */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2 relative">
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                      Atleta Avaliado *
+                    </label>
+
+                    {atletaSelecionadoObj ? (
+                      <div className="flex items-center justify-between gap-2.5 px-3 py-2.5 min-h-[44px] bg-blue-50 dark:bg-blue-950/50 border-2 border-blue-500 rounded-xl">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white font-black text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                            {atletaSelecionadoObj.fotoUrl ? (
+                              <img
+                                src={atletaSelecionadoObj.fotoUrl}
+                                alt={atletaSelecionadoObj.nome}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              (atletaSelecionadoObj.apelido || atletaSelecionadoObj.nome)
+                                .substring(0, 2)
+                                .toUpperCase()
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                              {atletaSelecionadoObj.apelido || atletaSelecionadoObj.nome}
+                              {' — '}
+                              <span className="text-blue-700 dark:text-blue-300">
+                                {atletaSelecionadoObj.categoria || 'Sem categoria'}
+                              </span>
+                              {atletaSelecionadoObj.posicao
+                                ? ` (${atletaSelecionadoObj.posicao})`
+                                : ''}
+                            </div>
+                            {atletaSelecionadoObj.apelido &&
+                              atletaSelecionadoObj.nome &&
+                              normalizarBusca(atletaSelecionadoObj.apelido) !==
+                                normalizarBusca(atletaSelecionadoObj.nome) && (
+                                <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                                  {atletaSelecionadoObj.nome}
+                                </div>
+                              )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAtletaId('');
+                            setBuscaAtleta('');
+                            setBuscaFocada(true);
+                            window.setTimeout(() => inputBuscaRef.current?.focus(), 40);
+                          }}
+                          className="px-2.5 py-1.5 text-xs font-extrabold text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-800 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 shrink-0 cursor-pointer"
+                        >
+                          Trocar
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <div className="relative">
+                          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <input
+                            ref={inputBuscaRef}
+                            type="text"
+                            value={buscaAtleta}
+                            onFocus={() => setBuscaFocada(true)}
+                            onChange={(e) => {
+                              setBuscaAtleta(e.target.value);
+                              setBuscaFocada(true);
+                              if (erro) setErro('');
+                            }}
+                            placeholder="Digite o nome ou apelido..."
+                            className="w-full h-11 pl-9 pr-9 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600"
+                          />
+                          {buscaAtleta && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBuscaAtleta('');
+                                inputBuscaRef.current?.focus();
+                              }}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                              aria-label="Limpar busca"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+
+                        {(buscaFocada || buscaAtleta.trim().length > 0) && (
+                          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg max-h-56 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                            {atletasBuscaInstantanea.length === 0 ? (
+                              <div className="p-3 text-center space-y-2">
+                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                  Nenhum atleta encontrado
+                                  {categoriaModalFiltro !== 'TODAS'
+                                    ? ` no ${categoriaModalFiltro}`
+                                    : ''}
+                                  .
+                                </p>
+                              </div>
+                            ) : (
+                              atletasBuscaInstantanea.map((a) => {
+                                const nomePrincipal = a.apelido || a.nome;
+                                const mostrarSubnome =
+                                  Boolean(a.apelido) &&
+                                  Boolean(a.nome) &&
+                                  normalizarBusca(a.apelido || '') !== normalizarBusca(a.nome);
+
+                                return (
+                                  <button
+                                    key={a.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setAtletaId(a.id);
+                                      setBuscaAtleta('');
+                                      setBuscaFocada(false);
+                                      if (erro) setErro('');
+                                    }}
+                                    className="w-full px-3 py-2.5 text-left hover:bg-blue-50 dark:hover:bg-blue-950/50 transition flex items-center gap-2.5 cursor-pointer"
+                                  >
+                                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-black text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                                      {a.fotoUrl ? (
+                                        <img
+                                          src={a.fotoUrl}
+                                          alt={a.nome}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      ) : (
+                                        nomePrincipal.substring(0, 2).toUpperCase()
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                                        {nomePrincipal} — {a.categoria || 'Sem categoria'}
+                                        {a.posicao ? ` (${a.posicao})` : ''}
+                                      </div>
+                                      {mostrarSubnome && (
+                                        <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                          {a.nome}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </button>
+                                );
+                              })
+                            )}
+
+                            {/* Botão para cadastrar atleta novo na hora */}
+                            {onCadastrarAtletaRapido &&
+                              buscaAtleta.trim().length > 0 &&
+                              !temMatchExatoBusca && (
+                                <button
+                                  type="button"
+                                  onClick={handleAbrirCadastroRapido}
+                                  className="w-full px-3 py-3 text-left bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-extrabold text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer"
+                                >
+                                  <UserPlus className="w-4 h-4 shrink-0" />
+                                  <span>
+                                    + Cadastrar novo atleta: "{buscaAtleta.trim()}"
+                                  </span>
+                                </button>
+                              )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                      Data da Avaliação *
+                    </label>
+                    <input
+                      type="text"
+                      value={dataTeste}
+                      onChange={(e) => setDataTeste(e.target.value)}
+                      placeholder="DD/MM/AAAA"
+                      className="w-full h-11 px-3 py-2 text-sm font-mono font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -938,6 +1273,129 @@ export const TesteFisicoView: React.FC<TesteFisicoViewProps> = ({
                   className="px-5 py-2.5 text-xs sm:text-sm font-black rounded-xl shadow-sm hover:opacity-95 active:scale-98 transition cursor-pointer"
                 >
                   Salvar Teste Físico
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Cadastro Rápido de Atleta Novo dentro do Novo Teste Físico */}
+      {isCadastroRapidoOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
+                    Cadastrar Novo Atleta
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    Cadastro rápido para lançar o teste agora. Complete a ficha depois.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCadastroRapidoOpen(false)}
+                disabled={salvandoRapido}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                aria-label="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSalvarCadastroRapido} className="p-5 space-y-4">
+              {erroRapido && (
+                <div className="p-3 text-xs font-bold text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl">
+                  {erroRapido}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                  Nome / Apelido *
+                </label>
+                <input
+                  type="text"
+                  value={rapidoNome}
+                  onChange={(e) => setRapidoNome(e.target.value)}
+                  placeholder="Ex: Pedrinho ou Pedro Henrique"
+                  autoFocus
+                  className="w-full h-11 px-3.5 py-2 text-sm font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                  Categoria *
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {categoriasLimpas.map((cat) => {
+                    const ativa = rapidoCategoria === cat;
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setRapidoCategoria(cat)}
+                        style={
+                          ativa
+                            ? { backgroundColor: '#2563eb', color: '#ffffff' }
+                            : undefined
+                        }
+                        className={`min-h-[40px] px-4 py-2 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+                          ativa
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+                  Posição (opcional)
+                </label>
+                <select
+                  value={rapidoPosicao}
+                  onChange={(e) => setRapidoPosicao(e.target.value as PosicaoAtleta | '')}
+                  className="w-full h-11 px-3 py-2 text-sm font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                >
+                  <option value="">Deixar em branco</option>
+                  {POSICOES_CAMPO_OPTIONS.map((pos) => (
+                    <option key={pos.value} value={pos.value}>
+                      {pos.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsCadastroRapidoOpen(false)}
+                  disabled={salvandoRapido}
+                  className="py-2.5 px-4 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={salvandoRapido || !rapidoNome.trim()}
+                  style={{ backgroundColor: '#059669', color: '#ffffff' }}
+                  className="py-2.5 px-4 rounded-xl text-xs font-extrabold hover:opacity-95 active:scale-98 transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{salvandoRapido ? 'Salvando...' : 'Salvar e Selecionar'}</span>
                 </button>
               </div>
             </form>

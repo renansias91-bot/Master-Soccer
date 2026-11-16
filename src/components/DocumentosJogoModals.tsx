@@ -13,13 +13,15 @@ import {
 import {
   compartilharArquivoPdfPronto,
   compartilharDocumentoPdf,
+  gerarPdfBlobDeElemento,
   MENSAGEM_SEM_SUPORTE_SHARE,
   navegadorSuportaCompartilharArquivoPdf,
+  preAquecerCssPdf,
 } from '../utils/pdfShareUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
 
 // ============================================================================
-// DOCUMENTO 1: SÚMULA OFICIAL PARA ARBITRAGEM (25 LINHAS, SOMENTE LEITURA)
+// DOCUMENTO 1: SÚMULA OFICIAL PARA ARBITRAGEM (25 LINHAS EM BRANCO, 1 FOLHA A4)
 // ============================================================================
 
 interface ModalSumulaArbitragemProps {
@@ -30,74 +32,44 @@ interface ModalSumulaArbitragemProps {
   escalacaoMap: Record<string, AtletaEscalado>;
 }
 
+const TOTAL_LINHAS_SUMULA = 25;
+const LINHAS_EM_BRANCO = Array.from({ length: TOTAL_LINHAS_SUMULA }, (_, idx) => idx);
+
 export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
   isOpen,
   onClose,
   jogo,
-  atletas,
-  escalacaoMap,
 }) => {
   const [compartilhando, setCompartilhando] = useState(false);
   const [erroShare, setErroShare] = useState<string | null>(null);
-  const [arquivoPronto, setArquivoPronto] = useState<{
-    file: File;
-    titulo: string;
-    texto: string;
-  } | null>(null);
   const docRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setErroShare(null);
-    setArquivoPronto(null);
-  }, [isOpen, jogo?.id, escalacaoMap]);
-
-  // Lê todos os atletas selecionados para o jogo (titulares e reservas juntos),
-  // sem distinguir quem é titular ou reserva, em ordem alfabética por Nome Completo.
-  const atletasSelecionados = useMemo(() => {
-    const idsSelecionados = Object.keys(escalacaoMap || {});
-    const lista = idsSelecionados
-      .map((id) => atletas.find((a) => a.id === id))
-      .filter((a): a is Atleta => Boolean(a));
-
-    lista.sort((a, b) => {
-      const nomeA = (a.nomeCompleto || a.nome || '').trim();
-      const nomeB = (b.nomeCompleto || b.nome || '').trim();
-      return nomeA.localeCompare(nomeB, 'pt-BR');
-    });
-
-    return lista;
-  }, [atletas, escalacaoMap]);
+    setCompartilhando(false);
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        preAquecerCssPdf();
+      }, 40);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, jogo?.id]);
 
   if (!isOpen || !jogo) return null;
 
   const adversarioLimpo = (jogo.adversario || '').replace(/^vs\s+/i, '').trim() || 'Adversário';
-  const totalLinhas = Math.max(25, atletasSelecionados.length);
-  const linhas = Array.from({ length: totalLinhas }, (_, idx) => atletasSelecionados[idx] || null);
 
   const handleCompartilhar = async () => {
+    if (compartilhando || !docRef.current) return;
+
     setErroShare(null);
-
-    if (arquivoPronto) {
-      const resPronto = await compartilharArquivoPdfPronto(
-        arquivoPronto.file,
-        arquivoPronto.titulo,
-        arquivoPronto.texto
-      );
-      if (resPronto.sucesso) {
-        setArquivoPronto(null);
-        return;
-      }
-      setErroShare(resPronto.erro || MENSAGEM_SEM_SUPORTE_SHARE);
-      return;
-    }
-
-    if (!navegadorSuportaCompartilharArquivoPdf()) {
-      setErroShare(MENSAGEM_SEM_SUPORTE_SHARE);
-      return;
-    }
-
-    if (!docRef.current) return;
     setCompartilhando(true);
+
+    // Garante que a tela de carregamento e o botão desativado apareçam NA HORA antes de gerar o PDF
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => setTimeout(resolve, 0));
+    });
+
     try {
       const advSlug =
         adversarioLimpo
@@ -110,29 +82,55 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
       const titulo = `Súmula Oficial: Master Soccer vs ${adversarioLimpo}`;
       const texto = `Súmula Oficial para Arbitragem - Master Soccer vs ${adversarioLimpo} (${jogo.categoria})`;
 
-      const res = await compartilharDocumentoPdf({
-        elemento: docRef.current,
-        nomeArquivo,
-        titulo,
-        texto,
+      const pdfBlob = await gerarPdfBlobDeElemento(docRef.current, {
+        paginaUnicaA4: true,
+        estiloSumulaA4: true,
       });
 
-      if (!res.sucesso) {
-        if (res.precisaSegundoToque && res.arquivoPronto) {
-          setArquivoPronto({ file: res.arquivoPronto, titulo, texto });
-        }
-        setErroShare(res.erro || MENSAGEM_SEM_SUPORTE_SHARE);
+      const arquivoPDF = new File([pdfBlob], nomeArquivo, {
+        type: 'application/pdf',
+        lastModified: Date.now(),
+      });
+
+      setCompartilhando(false);
+
+      const res = await compartilharArquivoPdfPronto(arquivoPDF, titulo, texto);
+      if (!res.sucesso && !res.cancelado) {
+        setErroShare('Não foi possível gerar o PDF. Tente novamente.');
       }
     } catch (err) {
       console.error('Erro ao compartilhar súmula:', err);
-      setErroShare('Não foi possível gerar o PDF da súmula.');
-    } finally {
       setCompartilhando(false);
+      setErroShare('Não foi possível gerar o PDF. Tente novamente.');
     }
   };
 
   const modalContent = (
     <div className="print-modal-root fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/65 backdrop-blur-xs animate-in fade-in duration-150">
+      {/* Overlay bloqueador em tela cheia enquanto gera o PDF */}
+      {compartilhando && (
+        <div
+          className="no-print fixed inset-0 z-[80] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+          role="status"
+          aria-live="assertive"
+        >
+          <div className="w-full max-w-xs bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 text-center space-y-4">
+            <div className="mx-auto w-14 h-14 rounded-full border-4 border-emerald-100 border-t-emerald-600 animate-spin" />
+            <div className="space-y-1">
+              <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                Gerando sua súmula... Aguarde um instante
+              </p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Preparando PDF em 1 folha A4 para compartilhar
+              </p>
+            </div>
+            <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+              <div className="h-full w-2/3 rounded-full bg-emerald-600 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="print-modal-card relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[94vh]">
         {/* Barra Superior do Visualizador (oculta na impressão) */}
         <div className="no-print flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
@@ -143,21 +141,22 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
                 Súmula Oficial de Jogo — Arbitragem
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                {totalLinhas} linhas ({atletasSelecionados.length} atletas preenchidos · Nº Camisa e T/R em branco para marcar à caneta)
+                25 linhas em branco para preenchimento à caneta (1 folha A4)
               </p>
             </div>
           </div>
           <button
             type="button"
+            disabled={compartilhando}
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition cursor-pointer"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             title="Fechar"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Documento Imprimível */}
+        {/* Documento Imprimível e Compartilhável (EXATAMENTE O MESMO MODELO) */}
         <div className="print-modal-scroll overflow-y-auto flex-1 bg-white">
           <div
             ref={docRef}
@@ -172,7 +171,10 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
                   <MasterSoccerEscudo size={46} />
                 </div>
                 <div>
-                  <h2 className="sumula-titulo text-lg sm:text-xl font-black uppercase tracking-tight" style={{ color: '#020617' }}>
+                  <h2
+                    className="sumula-titulo text-lg sm:text-xl font-black uppercase tracking-tight"
+                    style={{ color: '#020617' }}
+                  >
                     MASTER SOCCER RJ
                   </h2>
                   <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: '#475569' }}>
@@ -183,130 +185,69 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
               <div className="text-right text-[11px]" style={{ color: '#475569' }}>
                 <div>Emissão: {new Date().toLocaleDateString('pt-BR')}</div>
                 <div className="font-extrabold uppercase" style={{ color: '#0f172a' }}>
-                  {totalLinhas} Atletas na Súmula
+                  25 Atletas na Súmula
                 </div>
               </div>
             </div>
 
-            {/* Dados da Partida (Na tela: preenchido / Na impressão: linhas em branco para preencher à mão) */}
+            {/* Dados da Partida (Única parte preenchida no documento: PARTIDA, CAMPEONATO, CATEGORIA, DATA, HORÁRIO, LOCAL) */}
             <div
               className="sumula-dados-partida rounded-xl p-3.5 text-xs"
               style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1' }}
             >
-              {/* Pré-visualização na tela (mantida preenchida) */}
-              <div className="sumula-screen-only">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5">
-                  <div>
-                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                      Partida:
-                    </span>
-                    <span className="font-black text-sm" style={{ color: '#0f172a' }}>
-                      Master Soccer vs {adversarioLimpo}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                      Campeonato:
-                    </span>
-                    <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
-                      {jogo.tipo || 'Campeonato'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                      Categoria:
-                    </span>
-                    <span className="font-black text-sm" style={{ color: '#1d4ed8' }}>
-                      {jogo.categoria}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                      Data:
-                    </span>
-                    <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
-                      {formatarDataExibicao(jogo.dataJogo)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                      Horário:
-                    </span>
-                    <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
-                      {jogo.hora || '___:___'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
-                      Local:
-                    </span>
-                    <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
-                      {jogo.local || '______________________'}
-                    </span>
-                  </div>
+              <div className="sumula-dados-partida-grid grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2.5">
+                <div>
+                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                    Partida:
+                  </span>
+                  <span className="font-black text-sm" style={{ color: '#0f172a' }}>
+                    Master Soccer vs {adversarioLimpo}
+                  </span>
                 </div>
-              </div>
-
-              {/* Versão para Impressão / PDF: cabeçalho em branco para preencher à mão */}
-              <div className="sumula-print-only">
-                <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-[10px]">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
-                      PARTIDA:
-                    </span>
-                    <span
-                      className="flex-1 inline-block h-3"
-                      style={{ borderBottom: '1px solid #0f172a' }}
-                    />
-                  </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
-                      CAMPEONATO:
-                    </span>
-                    <span
-                      className="flex-1 inline-block h-3"
-                      style={{ borderBottom: '1px solid #0f172a' }}
-                    />
-                  </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
-                      CATEGORIA:
-                    </span>
-                    <span
-                      className="flex-1 inline-block h-3"
-                      style={{ borderBottom: '1px solid #0f172a' }}
-                    />
-                  </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
-                      DATA:
-                    </span>
-                    <span className="font-mono font-bold tracking-wider" style={{ color: '#0f172a' }}>
-                      ___ / ___ / _____
-                    </span>
-                  </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
-                      HORÁRIO:
-                    </span>
-                    <span className="font-mono font-bold tracking-wider" style={{ color: '#0f172a' }}>
-                      ___ : ___
-                    </span>
-                  </div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-black uppercase shrink-0" style={{ color: '#0f172a' }}>
-                      LOCAL:
-                    </span>
-                    <span
-                      className="flex-1 inline-block h-3"
-                      style={{ borderBottom: '1px solid #0f172a' }}
-                    />
-                  </div>
+                <div>
+                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                    Campeonato:
+                  </span>
+                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                    {jogo.tipo || 'Campeonato'}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                    Categoria:
+                  </span>
+                  <span className="font-black text-sm" style={{ color: '#1d4ed8' }}>
+                    {jogo.categoria}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                    Data:
+                  </span>
+                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                    {formatarDataExibicao(jogo.dataJogo)}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                    Horário:
+                  </span>
+                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                    {jogo.hora || '___:___'}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
+                    Local:
+                  </span>
+                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                    {jogo.local || '______________________'}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Tabela de 25 Linhas (ou mais se > 25 atletas) */}
+            {/* Tabela Fixa de 25 Linhas TODAS EM BRANCO para preencher à caneta */}
             <div>
               <table
                 className="sumula-tabela w-full text-left border-collapse text-xs"
@@ -347,85 +288,76 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {linhas.map((atl, idx) => {
-                    const nomeCompleto = atl ? (atl.nomeCompleto || atl.nome || '').trim() : '';
-                    const docIdentidade = atl ? (atl.documento || atl.rg || '').trim() : '';
-
-                    return (
-                      <tr
-                        key={atl ? atl.id : `linha-vazia-${idx}`}
-                        style={{
-                          backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc',
-                          height: '28px',
-                        }}
+                  {LINHAS_EM_BRANCO.map((idx) => (
+                    <tr
+                      key={`linha-vazia-${idx}`}
+                      style={{
+                        backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc',
+                        height: '28px',
+                      }}
+                    >
+                      {/* Ordem numérica fixa 01..25 */}
+                      <td
+                        className="py-1 px-1.5 text-center font-mono font-bold text-[11px]"
+                        style={{ border: '1px solid #94a3b8', color: '#475569' }}
                       >
-                        {/* Ordem numérica fixa 01..25 */}
-                        <td
-                          className="py-1 px-1.5 text-center font-mono font-bold text-[11px]"
-                          style={{ border: '1px solid #94a3b8', color: '#475569' }}
-                        >
-                          {String(idx + 1).padStart(2, '0')}
-                        </td>
+                        {String(idx + 1).padStart(2, '0')}
+                      </td>
 
-                        {/* Casinha em branco Nº Camisa (preencher à caneta) */}
-                        <td
-                          className="py-1 px-1.5 text-center"
-                          style={{ border: '1px solid #94a3b8' }}
-                        >
-                          <div
-                            className="sumula-celula-caixa"
-                            style={{
-                              border: '1px solid #64748b',
-                              backgroundColor: '#ffffff',
-                              height: '20px',
-                              width: '48px',
-                              margin: '0 auto',
-                              borderRadius: '3px',
-                            }}
-                          />
-                        </td>
+                      {/* Casinha em branco Nº Camisa */}
+                      <td
+                        className="py-1 px-1.5 text-center"
+                        style={{ border: '1px solid #94a3b8' }}
+                      >
+                        <div
+                          className="sumula-celula-caixa"
+                          style={{
+                            border: '1px solid #64748b',
+                            backgroundColor: '#ffffff',
+                            height: '20px',
+                            width: '48px',
+                            margin: '0 auto',
+                            borderRadius: '3px',
+                          }}
+                        />
+                      </td>
 
-                        {/* Nome Completo (ou em branco para preencher à caneta) */}
-                        <td
-                          className="py-1 px-2.5 font-bold text-xs uppercase"
-                          style={{ border: '1px solid #94a3b8', color: '#0f172a' }}
-                        >
-                          {nomeCompleto}
-                        </td>
+                      {/* Nome Completo em branco para caneta */}
+                      <td
+                        className="py-1 px-2.5 font-bold text-xs uppercase"
+                        style={{ border: '1px solid #94a3b8', color: '#0f172a' }}
+                      />
 
-                        {/* Identidade / RG / CPF (ou em branco para preencher à caneta) */}
-                        <td
-                          className="py-1 px-2.5 font-mono text-[11px] font-semibold"
-                          style={{ border: '1px solid #94a3b8', color: '#1e293b' }}
-                        >
-                          {docIdentidade}
-                        </td>
+                      {/* Identidade / RG / CPF em branco para caneta */}
+                      <td
+                        className="py-1 px-2.5 font-mono text-[11px] font-semibold"
+                        style={{ border: '1px solid #94a3b8', color: '#1e293b' }}
+                      />
 
-                        {/* Casinha em branco T / R (PROIBIDO pré-marcar; somente à caneta) */}
-                        <td
-                          className="py-1 px-1.5 text-center"
-                          style={{ border: '1px solid #94a3b8' }}
-                        >
-                          <div
-                            className="sumula-celula-caixa"
-                            style={{
-                              border: '1px solid #64748b',
-                              backgroundColor: '#ffffff',
-                              height: '20px',
-                              width: '52px',
-                              margin: '0 auto',
-                              borderRadius: '3px',
-                            }}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
+                      {/* Casinha em branco T / R */}
+                      <td
+                        className="py-1 px-1.5 text-center"
+                        style={{ border: '1px solid #94a3b8' }}
+                      >
+                        <div
+                          className="sumula-celula-caixa"
+                          style={{
+                            border: '1px solid #64748b',
+                            backgroundColor: '#ffffff',
+                            height: '20px',
+                            width: '52px',
+                            margin: '0 auto',
+                            borderRadius: '3px',
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
 
-            {/* Assinaturas Capitão, Técnico e Espaço para Arbitragem */}
+            {/* Assinaturas Capitão, Técnico e Espaço Reservado para Arbitragem (tudo em branco para caneta) */}
             <div className="sumula-assinaturas print-break-inside-avoid pt-4 space-y-5">
               <div className="sumula-assinaturas-grid grid grid-cols-1 sm:grid-cols-2 gap-6 pt-3 text-center text-xs">
                 <div>
@@ -438,7 +370,6 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
                   </div>
                   <div className="text-[10px]" style={{ color: '#64748b' }}>
                     Master Soccer RJ
-                    <span className="sumula-screen-only"> · {jogo.categoria}</span>
                   </div>
                 </div>
                 <div>
@@ -465,9 +396,7 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
                     Espaço Reservado para Arbitragem
                   </span>
                   <span className="text-[10px] font-semibold" style={{ color: '#64748b' }}>
-                    Placar Final: Master Soccer _____ x _____ {' '}
-                    <span className="sumula-screen-only">{adversarioLimpo}</span>
-                    <span className="sumula-print-only-inline">______________</span>
+                    Placar Final: Master Soccer _____ x _____ ______________
                   </span>
                 </div>
 
@@ -498,17 +427,17 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
           </div>
         </div>
 
-        {/* Aviso de Compartilhamento (quando navegador não suporta ou precisa de 2º toque) */}
+        {/* Aviso de Erro ao Gerar / Compartilhar */}
         {erroShare && (
-          <div className="no-print px-4 py-2.5 bg-amber-50 dark:bg-amber-950/60 border-t border-amber-200 dark:border-amber-800 flex items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200 shrink-0">
+          <div className="no-print px-4 py-2.5 bg-red-50 dark:bg-red-950/60 border-t border-red-200 dark:border-red-800 flex items-center justify-between gap-2 text-xs text-red-900 dark:text-red-200 shrink-0">
             <div className="flex items-center gap-2 font-bold">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
               <span>{erroShare}</span>
             </div>
             <button
               type="button"
               onClick={() => setErroShare(null)}
-              className="p-1 text-amber-700 hover:text-amber-950 dark:text-amber-300 cursor-pointer"
+              className="p-1 text-red-700 hover:text-red-950 dark:text-red-300 cursor-pointer"
               aria-label="Fechar aviso"
             >
               <X className="w-3.5 h-3.5" />
@@ -520,8 +449,9 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
         <div className="no-print p-3.5 sm:p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5 bg-slate-50 dark:bg-slate-800/60 flex-wrap shrink-0">
           <button
             type="button"
+            disabled={compartilhando}
             onClick={onClose}
-            className="px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
+            className="px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Fechar
           </button>
@@ -530,18 +460,17 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
             type="button"
             disabled={compartilhando}
             onClick={handleCompartilhar}
-            className="px-5 py-2.5 rounded-xl text-xs font-black text-white hover:opacity-95 active:scale-95 shadow-md flex items-center gap-2 cursor-pointer transition disabled:opacity-50"
-            style={{ backgroundColor: '#059669', color: '#ffffff' }}
+            className="px-5 py-2.5 rounded-xl text-xs font-black text-white hover:opacity-95 active:scale-95 shadow-md flex items-center gap-2 transition disabled:cursor-not-allowed"
+            style={
+              compartilhando
+                ? { backgroundColor: '#94a3b8', color: '#ffffff' }
+                : { backgroundColor: '#059669', color: '#ffffff', cursor: 'pointer' }
+            }
           >
             {compartilhando ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                <span>Gerando PDF...</span>
-              </>
-            ) : arquivoPronto ? (
-              <>
-                <Share2 className="w-4 h-4 text-white" />
-                <span>Abrir Compartilhar PDF</span>
+                <span>Gerando PDF... Aguarde</span>
               </>
             ) : (
               <>
@@ -553,8 +482,9 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
 
           <button
             type="button"
+            disabled={compartilhando}
             onClick={() => window.print()}
-            className="px-5 py-2.5 rounded-xl text-xs font-black text-white hover:opacity-95 active:scale-95 shadow-md flex items-center gap-2 cursor-pointer transition"
+            className="px-5 py-2.5 rounded-xl text-xs font-black text-white hover:opacity-95 active:scale-95 shadow-md flex items-center gap-2 cursor-pointer transition disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
           >
             <Printer className="w-4 h-4" />

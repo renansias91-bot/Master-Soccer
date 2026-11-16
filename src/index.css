@@ -152,6 +152,11 @@ canvas {
     padding: 6px 10px !important;
     border-radius: 6px !important;
   }
+  #sumula-arbitragem-doc .sumula-dados-partida-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 5px 12px !important;
+  }
   #sumula-arbitragem-doc .sumula-tabela th {
     padding: 3px 6px !important;
     font-size: 9px !important;

@@ -28,6 +28,7 @@ import {
   RegistroFinanceiroAtleta,
   JogoAgenda,
   TesteFisicoAtleta,
+  PosicaoAtleta,
 } from './types';
 import {
   storageService,
@@ -476,6 +477,56 @@ export default function App() {
     }
   };
 
+  const handleCadastrarAtletaRapido = async (dados: {
+    nome: string;
+    categoria: string;
+    posicao: PosicaoAtleta | '';
+  }): Promise<Atleta> => {
+    const nomeLimpo = dados.nome.trim();
+    const baseAtleta: Omit<Atleta, 'id'> = {
+      nome: nomeLimpo,
+      nomeCompleto: nomeLimpo,
+      apelido: nomeLimpo,
+      categoria: dados.categoria || 'SUB-15',
+      posicao: dados.posicao,
+      dataNascimento: '',
+      pernaDominante: 'Destro',
+      status: 'Ativo',
+      dataCadastro: new Date().toISOString().split('T')[0],
+      docAtestadoOk: false,
+      docRgAutenticadaOk: false,
+    };
+
+    try {
+      const docId = await firebaseService.cadastrarAtleta(baseAtleta);
+      const novoAtleta: Atleta = {
+        ...baseAtleta,
+        id: docId || `atl-${Date.now()}`,
+      };
+      setAtletas((prev) => {
+        if (prev.some((a) => a.id === novoAtleta.id)) return prev;
+        const atualizados = [...prev, novoAtleta];
+        storageService.salvarAtletas(atualizados);
+        return atualizados;
+      });
+      exibirToast(`Atleta ${nomeLimpo} cadastrado! Complete a ficha depois no Plantel.`);
+      return novoAtleta;
+    } catch (e) {
+      console.warn('Erro ao cadastrar atleta rápido no Firestore (salvando local):', e);
+      const tempAtleta: Atleta = {
+        ...baseAtleta,
+        id: `atl-${Date.now()}`,
+      };
+      setAtletas((prev) => {
+        const atualizados = [...prev, tempAtleta];
+        storageService.salvarAtletas(atualizados);
+        return atualizados;
+      });
+      exibirToast(`Atleta ${nomeLimpo} cadastrado localmente.`);
+      return tempAtleta;
+    }
+  };
+
   const handleAtualizarDocumentoAtleta = async (
     atletaId: string,
     campo: 'docAtestadoOk' | 'docRgAutenticadaOk',
@@ -719,7 +770,7 @@ export default function App() {
       const excluirUpper = catExcluir.trim().toUpperCase();
       const destinoUpper = catDestino.trim().toUpperCase();
 
-      // 1. Move todos os atletas da categoria excluída para a categoria destino
+      // 1. Atualiza atletas da categoria excluída (move para destino ou deixa sem categoria '')
       const afetados = atletas.filter(
         (a) => a.categoria?.trim().toUpperCase() === excluirUpper
       );
@@ -737,21 +788,23 @@ export default function App() {
         }
       }
 
-      // 2. Atualiza jogos futuros
-      const jogosAfetados = jogos.filter(
-        (j) => !j.realizado && j.categoria?.trim().toUpperCase() === excluirUpper
-      );
-      if (jogosAfetados.length > 0) {
-        const novosJogos = jogos.map((j) =>
-          !j.realizado && j.categoria?.trim().toUpperCase() === excluirUpper
-            ? { ...j, categoria: destinoUpper }
-            : j
+      // 2. Atualiza jogos futuros apenas se houver categoria destino
+      if (destinoUpper) {
+        const jogosAfetados = jogos.filter(
+          (j) => !j.realizado && j.categoria?.trim().toUpperCase() === excluirUpper
         );
-        setJogos(novosJogos);
-        storageService.salvarJogosAgenda(novosJogos);
+        if (jogosAfetados.length > 0) {
+          const novosJogos = jogos.map((j) =>
+            !j.realizado && j.categoria?.trim().toUpperCase() === excluirUpper
+              ? { ...j, categoria: destinoUpper }
+              : j
+          );
+          setJogos(novosJogos);
+          storageService.salvarJogosAgenda(novosJogos);
 
-        for (const jg of jogosAfetados) {
-          firebaseService.salvarJogo({ ...jg, categoria: destinoUpper }).catch(() => {});
+          for (const jg of jogosAfetados) {
+            firebaseService.salvarJogo({ ...jg, categoria: destinoUpper }).catch(() => {});
+          }
         }
       }
 
@@ -762,16 +815,12 @@ export default function App() {
       await firebaseService.salvarCategorias(novasCategorias);
 
       if (categoriaAtiva === excluirUpper) {
-        setCategoriaAtiva(destinoUpper);
+        setCategoriaAtiva(destinoUpper || 'TODAS');
       }
 
-      exibirToast(
-        afetados.length > 0
-          ? `${afetados.length} atleta(s) movidos para ${destinoUpper} e categoria ${excluirUpper} removida!`
-          : `Categoria ${excluirUpper} removida com sucesso!`
-      );
+      exibirToast(`Categoria ${excluirUpper} excluída com sucesso.`);
     } catch (err: any) {
-      console.error('Erro ao excluir categoria com migração:', err);
+      console.error('Erro ao excluir categoria:', err);
       exibirToast('Erro ao excluir categoria.');
       throw err;
     }
@@ -1387,8 +1436,20 @@ export default function App() {
     <div className="min-h-screen bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans w-full max-w-[100vw] overflow-x-hidden box-border">
       {/* Toast Notification */}
       {toastMensagem && (
-        <div className="fixed bottom-24 sm:bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xl border border-slate-700 dark:border-slate-200 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-amber-400 dark:text-amber-500 shrink-0" />
+        <div
+          className={
+            toastMensagem.startsWith('Categoria ') || toastMensagem.startsWith('Virada de ')
+              ? 'fixed top-4 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white shadow-xl border border-emerald-500 text-xs sm:text-sm font-extrabold animate-in fade-in slide-in-from-top-2 duration-200 max-w-[92vw]'
+              : 'fixed bottom-24 sm:bottom-6 right-6 z-[90] flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xl border border-slate-700 dark:border-slate-200 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3 duration-200'
+          }
+        >
+          <CheckCircle2
+            className={`w-4 h-4 shrink-0 ${
+              toastMensagem.startsWith('Categoria ') || toastMensagem.startsWith('Virada de ')
+                ? 'text-white'
+                : 'text-amber-400 dark:text-amber-500'
+            }`}
+          />
           <span>{toastMensagem}</span>
         </div>
       )}
@@ -1855,6 +1916,7 @@ export default function App() {
             categorias={categorias}
             onSalvarTeste={handleSalvarTesteFisico}
             onExcluirTeste={handleExcluirTesteFisico}
+            onCadastrarAtletaRapido={handleCadastrarAtletaRapido}
           />
         </div>
 
@@ -1987,7 +2049,6 @@ export default function App() {
           storageService.salvarCategorias(novas);
           setCategorias(novas);
           await firebaseService.salvarCategorias(novas);
-          exibirToast('Categorias atualizadas!');
         }}
         onRenomearCategoria={handleRenomearCategoria}
         onViradaDeAno={handleViradaDeAno}

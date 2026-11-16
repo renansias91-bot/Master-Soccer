@@ -319,7 +319,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                           {nomeExibicaoAtleta(atleta)}
                         </span>
                         <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
-                          {atleta.categoria}
+                          {atleta.categoria || 'Sem categoria'}
                         </span>
                         <span
                           className={`text-[11px] font-black px-2 py-0.5 rounded-md border shrink-0 ${
@@ -517,7 +517,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                       </span>
                     </div>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 shrink-0">
-                      {atletaAutorizacao.categoria}
+                      {atletaAutorizacao.categoria || 'Sem categoria'}
                     </span>
                   </div>
                 </div>
@@ -711,7 +711,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                         Categoria
                       </span>
                       <span className="font-extrabold text-slate-900">
-                        {atletaAutorizacao.categoria}
+                        {atletaAutorizacao.categoria || 'Sem categoria'}
                       </span>
                     </div>
                     <div>
