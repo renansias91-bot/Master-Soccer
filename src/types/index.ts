@@ -35,6 +35,8 @@ export interface Atleta {
   status: StatusAtleta;
   dataCadastro: string;
   fotoUrl?: string;
+  docAtestadoOk?: boolean;
+  docRgAutenticadaOk?: boolean;
 }
 
 export interface NotasPilares {
@@ -194,11 +196,13 @@ export interface TesteFisicoAtleta {
   atletaId: string;
   data: string; // DD/MM/AAAA
   categoria: CategoriaBase;
-  velocidade30m?: number; // seg (ex: 3.95)
+  velocidade30m?: number; // seg (média oficial, ex: 3.95)
+  velocidadeTentativa1?: number; // seg (tentativa 1)
+  velocidadeTentativa2?: number; // seg (tentativa 2)
   saltoVertical?: number; // cm (ex: 46)
   resistenciaYoYo?: number; // metros (ex: 1200)
   agilidadeShuttle?: number; // seg (ex: 4.8)
-  flexibilidadeBanco?: number; // cm (ex: 28)
+  flexibilidadeBanco?: number; // legado
   estatura?: number; // cm
   massaCorporal?: number; // kg
   observacoes?: string;

@@ -140,6 +140,12 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
     if (atletaEditando?.numeroCamisa && !isNaN(Number(atletaEditando.numeroCamisa))) {
       atletaSalvo.numeroCamisa = Number(atletaEditando.numeroCamisa);
     }
+    if (atletaEditando?.docAtestadoOk !== undefined) {
+      atletaSalvo.docAtestadoOk = atletaEditando.docAtestadoOk;
+    }
+    if (atletaEditando?.docRgAutenticadaOk !== undefined) {
+      atletaSalvo.docRgAutenticadaOk = atletaEditando.docRgAutenticadaOk;
+    }
 
     setSalvando(true);
     setErro('');

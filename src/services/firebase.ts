@@ -218,6 +218,8 @@ export const firebaseService = {
         ? { numeroCamisa: Number(atletaData.numeroCamisa) }
         : {}),
       ...(atletaData.fotoUrl && atletaData.fotoUrl.trim() ? { fotoUrl: atletaData.fotoUrl.trim() } : {}),
+      docAtestadoOk: Boolean(atletaData.docAtestadoOk),
+      docRgAutenticadaOk: Boolean(atletaData.docRgAutenticadaOk),
       criadoEm: new Date().toISOString(),
     };
 
@@ -385,6 +387,8 @@ export const firebaseService = {
           status: d.status || 'Ativo',
           dataCadastro: d.dataCadastro || new Date().toISOString().split('T')[0],
           fotoUrl: d.fotoUrl || '',
+          docAtestadoOk: Boolean(d.docAtestadoOk),
+          docRgAutenticadaOk: Boolean(d.docRgAutenticadaOk),
         });
       });
     } catch (error) {
@@ -462,6 +466,8 @@ export const firebaseService = {
             status: d.status || 'Ativo',
             dataCadastro: d.dataCadastro || new Date().toISOString().split('T')[0],
             fotoUrl: d.fotoUrl || '',
+            docAtestadoOk: Boolean(d.docAtestadoOk),
+            docRgAutenticadaOk: Boolean(d.docRgAutenticadaOk),
           });
         });
         onAtletas(atls);
@@ -754,6 +760,12 @@ export const firebaseService = {
       data: teste.data,
       categoria: teste.categoria,
       ...(teste.velocidade30m !== undefined ? { velocidade30m: Number(teste.velocidade30m) } : {}),
+      ...(teste.velocidadeTentativa1 !== undefined
+        ? { velocidadeTentativa1: Number(teste.velocidadeTentativa1) }
+        : {}),
+      ...(teste.velocidadeTentativa2 !== undefined
+        ? { velocidadeTentativa2: Number(teste.velocidadeTentativa2) }
+        : {}),
       ...(teste.saltoVertical !== undefined ? { saltoVertical: Number(teste.saltoVertical) } : {}),
       ...(teste.resistenciaYoYo !== undefined ? { resistenciaYoYo: Number(teste.resistenciaYoYo) } : {}),
       ...(teste.agilidadeShuttle !== undefined ? { agilidadeShuttle: Number(teste.agilidadeShuttle) } : {}),
@@ -794,6 +806,10 @@ export const firebaseService = {
             data: d.data || '',
             categoria: d.categoria || 'SUB-15',
             velocidade30m: d.velocidade30m !== undefined ? Number(d.velocidade30m) : undefined,
+            velocidadeTentativa1:
+              d.velocidadeTentativa1 !== undefined ? Number(d.velocidadeTentativa1) : undefined,
+            velocidadeTentativa2:
+              d.velocidadeTentativa2 !== undefined ? Number(d.velocidadeTentativa2) : undefined,
             saltoVertical: d.saltoVertical !== undefined ? Number(d.saltoVertical) : undefined,
             resistenciaYoYo: d.resistenciaYoYo !== undefined ? Number(d.resistenciaYoYo) : undefined,
             agilidadeShuttle: d.agilidadeShuttle !== undefined ? Number(d.agilidadeShuttle) : undefined,

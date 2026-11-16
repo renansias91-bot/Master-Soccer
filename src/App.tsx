@@ -17,6 +17,7 @@ import {
   Trophy,
   ChevronRight,
   Flame,
+  FileCheck2,
 } from 'lucide-react';
 import {
   Atleta,
@@ -54,6 +55,7 @@ import { ConfirmacaoApagarModal } from './components/ConfirmacaoApagarModal';
 import { MasterSoccerEscudo } from './components/MasterSoccerEscudo';
 import { CadastroPublicoAtletaView } from './components/CadastroPublicoAtletaView';
 import { CentralAjudaModal } from './components/CentralAjudaModal';
+import { DocumentosView } from './components/DocumentosView';
 import {
   TourGuiadoOverlay,
   TipoTourGuiado,
@@ -68,6 +70,7 @@ type AbaNavegacao =
   | 'financeiro'
   | 'relatorio'
   | 'testefisico'
+  | 'documentos'
   | 'atletas';
 
 const getChaveScrollAba = (aba: AbaNavegacao): string => {
@@ -86,6 +89,8 @@ const getChaveScrollAba = (aba: AbaNavegacao): string => {
       return 'scroll_RELATÓRIO';
     case 'testefisico':
       return 'scroll_TESTEFISICO';
+    case 'documentos':
+      return 'scroll_DOCUMENTOS';
     case 'atletas':
       return 'scroll_ATLETAS';
     default:
@@ -101,6 +106,7 @@ const ABAS_VALIDAS: AbaNavegacao[] = [
   'financeiro',
   'relatorio',
   'testefisico',
+  'documentos',
   'atletas',
 ];
 
@@ -267,6 +273,7 @@ export default function App() {
     financeiro: Number(sessionStorage.getItem('scroll_FINANCEIRO') || 0),
     relatorio: Number(sessionStorage.getItem('scroll_RELATÓRIO') || 0),
     testefisico: Number(sessionStorage.getItem('scroll_TESTEFISICO') || 0),
+    documentos: Number(sessionStorage.getItem('scroll_DOCUMENTOS') || 0),
     atletas: Number(sessionStorage.getItem('scroll_ATLETAS') || 0),
   });
   const isRestoringScrollRef = useRef(false);
@@ -466,6 +473,24 @@ export default function App() {
         storageService.salvarAtletas(atualizados);
       }
       exibirToast(`Atleta ${atleta.nome.split(' ')[0]} salvo localmente.`);
+    }
+  };
+
+  const handleAtualizarDocumentoAtleta = async (
+    atletaId: string,
+    campo: 'docAtestadoOk' | 'docRgAutenticadaOk',
+    valor: boolean
+  ) => {
+    const atualizados = atletas.map((a) =>
+      a.id === atletaId ? { ...a, [campo]: valor } : a
+    );
+    setAtletas(atualizados);
+    storageService.salvarAtletas(atualizados);
+
+    try {
+      await firebaseService.atualizarAtleta(atletaId, { [campo]: valor });
+    } catch (e) {
+      console.warn('Status do documento salvo localmente (offline):', e);
     }
   };
 
@@ -1591,7 +1616,41 @@ export default function App() {
                           abaAtiva === 'testefisico' ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
                         }`}
                       >
-                        Velocidade, salto, Yo-Yo & flexibilidade
+                        Velocidade, salto, Yo-Yo & agilidade
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 opacity-70" />
+                </button>
+
+                {/* 4. Documentos */}
+                <button
+                  onClick={() => handleNavegarMenuTopo('documentos')}
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all border-2 active:scale-98 ${
+                    abaAtiva === 'documentos'
+                      ? 'bg-blue-600 text-white font-extrabold border-blue-600 shadow-md'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold border-slate-200/80 dark:border-slate-800'
+                  }`}
+                  style={abaAtiva === 'documentos' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div
+                      className={`p-2.5 rounded-xl ${
+                        abaAtiva === 'documentos'
+                          ? 'bg-blue-700 text-white'
+                          : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600'
+                      }`}
+                    >
+                      <FileCheck2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-base font-extrabold">Documentos</div>
+                      <div
+                        className={`text-xs font-medium ${
+                          abaAtiva === 'documentos' ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
+                        }`}
+                      >
+                        Atestado, RG Autenticada & Viagem
                       </div>
                     </div>
                   </div>
@@ -1796,6 +1855,19 @@ export default function App() {
             categorias={categorias}
             onSalvarTeste={handleSalvarTesteFisico}
             onExcluirTeste={handleExcluirTesteFisico}
+          />
+        </div>
+
+        <div
+          ref={(el) => {
+            wrapperRefs.current['documentos'] = el;
+          }}
+          style={{ display: abaAtiva === 'documentos' ? 'block' : 'none' }}
+        >
+          <DocumentosView
+            atletas={atletas}
+            categorias={categorias}
+            onAtualizarDocumento={handleAtualizarDocumentoAtleta}
           />
         </div>
       </main>
