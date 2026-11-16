@@ -532,9 +532,29 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     });
   };
 
+  // Rola instantaneamente para o TOPO da ficha do atleta recém-aberta (logo abaixo do cabeçalho fixo),
+  // sem jamais herdar a posição de rolagem do atleta anterior
+  const rolarParaTopoDoAtleta = (atletaId: string) => {
+    const alinhar = () => {
+      const cardEl = document.getElementById(`card-atleta-avaliacao-${atletaId}`);
+      if (!cardEl) return;
+      const headerOffset = 68;
+      const rect = cardEl.getBoundingClientRect();
+      const targetY = Math.max(0, (window.scrollY || document.documentElement.scrollTop || 0) + rect.top - headerOffset);
+      window.scrollTo({ top: targetY, left: 0, behavior: 'instant' as ScrollBehavior });
+    };
+
+    requestAnimationFrame(() => {
+      alinhar();
+      requestAnimationFrame(alinhar);
+    });
+    setTimeout(alinhar, 50);
+  };
+
   // Regra do acordeão:
   // - Só 1 atleta aberto por vez; clicar em outro fecha o atual e abre o novo
   // - Clicar no mesmo atleta que já está aberto fecha ele
+  // - Sempre que abrir um atleta, leva a tela imediatamente para o topo da ficha dele
   const handleToggleAtletaCard = (atletaId: string) => {
     if (!jogoSelecionadoParaAvaliar) return;
     if (atletaExpandidoId === atletaId) {
@@ -545,6 +565,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     carregarAvaliacaoDoAtleta(atletaId, jogoSelecionadoParaAvaliar);
     setAtletaExpandidoId(atletaId);
     setFeedbackSalvoAtletaId(null);
+    rolarParaTopoDoAtleta(atletaId);
   };
 
   // Toggle de tags sem limite máximo (selecionar quantos quiser)
@@ -637,6 +658,8 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
     onSalvarAvaliacao(novaAvaliacao);
     setFeedbackSalvoAtletaId(atletaAlvo.id);
+    setAtletaExpandidoId(null);
+    rolarParaTopoDoAtleta(atletaAlvo.id);
   };
 
   // Selo de status de escalação no card do jogo
@@ -848,6 +871,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               return (
                 <div
                   key={atl.id}
+                  id={`card-atleta-avaliacao-${atl.id}`}
                   className={`w-full rounded-2xl border transition-all overflow-hidden ${
                     aberto
                       ? 'bg-white dark:bg-slate-900 border-blue-500 shadow-md ring-2 ring-blue-500/20'
