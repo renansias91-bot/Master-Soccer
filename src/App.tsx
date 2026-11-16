@@ -53,6 +53,7 @@ import { AbaTrofeus } from './components/AbaTrofeus';
 import { ConfirmacaoApagarModal } from './components/ConfirmacaoApagarModal';
 import { MasterSoccerEscudo } from './components/MasterSoccerEscudo';
 import { CadastroPublicoAtletaView } from './components/CadastroPublicoAtletaView';
+import { CentralAjudaModal } from './components/CentralAjudaModal';
 
 type AbaNavegacao =
   | 'painel'
@@ -179,6 +180,7 @@ export default function App() {
 
   const [isCategoriasModalOpen, setIsCategoriasModalOpen] = useState(false);
   const [isInstalarModalOpen, setIsInstalarModalOpen] = useState(false);
+  const [isAjudaOpen, setIsAjudaOpen] = useState(false);
   const [menuDrawerOpen, setMenuDrawerOpen] = useState(false);
   const [toastMensagem, setToastMensagem] = useState<string | null>(null);
 
@@ -1235,7 +1237,7 @@ export default function App() {
           />
 
           {/* Painel Lateral */}
-          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 h-full shadow-2xl border-l-2 border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between z-10 animate-in slide-in-from-right duration-200">
+          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 h-full overflow-y-auto shadow-2xl border-l-2 border-slate-200 dark:border-slate-800 p-6 flex flex-col justify-between z-10 animate-in slide-in-from-right duration-200">
             <div>
               {/* Topo do Menu ☰ */}
               <div className="flex items-center justify-between pb-5 border-b-2 border-slate-100 dark:border-slate-800">
@@ -1398,6 +1400,18 @@ export default function App() {
               >
                 <Download className="w-4 h-4" />
                 <span>Instalar Aplicativo (PWA)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuDrawerOpen(false);
+                  setIsAjudaOpen(true);
+                }}
+                className="w-full text-left px-3.5 py-2.5 text-sm font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-xl flex items-center gap-2.5 transition"
+              >
+                <span className="text-sm leading-none">❓</span>
+                <span>Ajuda / Como Usar</span>
               </button>
             </div>
           </div>
@@ -1773,6 +1787,16 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Central de Ajuda - Como Usar (somente abre quando o usuário clica no item do menu) */}
+      <CentralAjudaModal
+        isOpen={isAjudaOpen}
+        onVoltarParaMenu={() => {
+          setIsAjudaOpen(false);
+          setMenuDrawerOpen(true);
+        }}
+        onFecharTudo={() => setIsAjudaOpen(false)}
+      />
     </div>
   );
 }
