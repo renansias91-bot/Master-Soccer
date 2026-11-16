@@ -75,12 +75,14 @@ export const CabecalhoParceriaDocumento: React.FC<CabecalhoParceriaDocumentoProp
           <PecEscudo size={logoSize} />
         </div>
         <p
-          className={`font-black uppercase tracking-widest ${
-            compacto ? 'text-[9px] mt-1' : 'text-[10px] sm:text-[11px] mt-1.5'
+          className={`font-black uppercase whitespace-nowrap ${
+            compacto
+              ? 'text-[9px] tracking-wider mt-1'
+              : 'text-[9.5px] sm:text-[11px] tracking-widest mt-1.5'
           }`}
           style={{ color: '#334155' }}
         >
-          PARCERIA MASTER SOCCER RJ x PADUANO ESPORTE CLUBE
+          MASTER SOCCER RJ / PADUANO ESPORTE CLUBE
         </p>
       </div>
 
