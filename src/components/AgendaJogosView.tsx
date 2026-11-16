@@ -47,6 +47,7 @@ interface AgendaJogosViewProps {
   onNavegarEscalacao?: (jogoId: string) => void;
   jogoFocarInfo?: { jogoId?: string; categoria?: string; competicao?: string } | null;
   onLimparJogoFocar?: () => void;
+  tourPassoId?: string | null;
 }
 
 const getPesoPosicaoOrdenacao = (posicao?: string, posicaoJogo?: string): number => {
@@ -120,6 +121,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
   onNavegarEscalacao,
   jogoFocarInfo,
   onLimparJogoFocar,
+  tourPassoId,
 }) => {
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>(() => {
     try {
@@ -509,6 +511,62 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     });
   };
 
+  const abertoPeloTourRef = useRef<boolean>(false);
+
+  // Sincronização visual exclusiva do Tour Guiado (sem salvar ou alterar nenhum dado real)
+  useEffect(() => {
+    if (!tourPassoId) {
+      if (abertoPeloTourRef.current) {
+        abertoPeloTourRef.current = false;
+        setJogoSelecionadoId(null);
+        setJogoFallbackAberto(null);
+        setAtletaExpandidoId(null);
+        setFeedbackSalvoAtletaId(null);
+        setModoLeitura(false);
+      }
+      return;
+    }
+
+    if (tourPassoId === 'jogo-btn-novo') {
+      if (jogoSelecionadoId) {
+        setJogoSelecionadoId(null);
+        setJogoFallbackAberto(null);
+        setAtletaExpandidoId(null);
+        setModoLeitura(false);
+      }
+      return;
+    }
+
+    if (
+      tourPassoId === 'avaliar-escolher-atleta' ||
+      tourPassoId === 'avaliar-pilares' ||
+      tourPassoId === 'avaliar-salvar'
+    ) {
+      const jogoPreferido =
+        jogos.find(
+          (j) =>
+            Object.keys(j.escalacao || {}).length > 0 ||
+            atletas.some((a) => a.categoria === j.categoria)
+        ) || jogos[0];
+
+      if (!jogoPreferido) return;
+
+      if (jogoSelecionadoId !== jogoPreferido.id) {
+        abertoPeloTourRef.current = true;
+        setJogoSelecionadoId(jogoPreferido.id);
+        setJogoFallbackAberto(jogoPreferido);
+        setModoLeitura(false);
+      }
+
+      if (tourPassoId === 'avaliar-escolher-atleta') {
+        setAtletaExpandidoId(null);
+      } else if (atletasDoJogo.length > 0 && atletaExpandidoId !== atletasDoJogo[0].id) {
+        carregarAvaliacaoDoAtleta(atletasDoJogo[0].id, jogoPreferido);
+        setAtletaExpandidoId(atletasDoJogo[0].id);
+      }
+    }
+  }, [tourPassoId, jogos, atletas, atletasDoJogo, jogoSelecionadoId, atletaExpandidoId]);
+
   const handleFecharAvaliacao = () => {
     const jogoId = ultimoJogoAbertoIdRef.current;
     const savedY = scrollAntesAvaliacaoRef.current;
@@ -850,7 +908,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
           </div>
         ) : (
           <div className="flex flex-col gap-3 w-full">
-            {atletasDoJogo.map((atl) => {
+            {atletasDoJogo.map((atl, atlIdx) => {
               const aberto = atletaExpandidoId === atl.id;
               const avSalva = encontrarAvaliacaoDoAtletaNoJogo(
                 avaliacoes,
@@ -872,6 +930,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                 <div
                   key={atl.id}
                   id={`card-atleta-avaliacao-${atl.id}`}
+                  data-tour={atlIdx === 0 ? 'avaliar-card-atleta' : undefined}
                   className={`w-full rounded-2xl border transition-all overflow-hidden ${
                     aberto
                       ? 'bg-white dark:bg-slate-900 border-blue-500 shadow-md ring-2 ring-blue-500/20'
@@ -1194,7 +1253,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                       </div>
 
                       {/* Os 5 Quesitos de Avaliação */}
-                      <div className="space-y-3">
+                      <div data-tour="avaliar-pilares" className="space-y-3">
                         {[
                           {
                             id: 'fisica',
@@ -1396,6 +1455,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                       <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
                         <button
                           type="button"
+                          data-tour="avaliar-btn-salvar"
                           disabled={modoLeitura}
                           onClick={() => handleSalvarAvaliacaoJogador(atl)}
                           style={{
@@ -1642,6 +1702,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
 
         {/* Botão azul [+ Novo Jogo] em largura total */}
         <button
+          data-tour="btn-novo-jogo"
           onClick={onNovoJogo}
           style={{ backgroundColor: '#2563eb' }}
           className="w-full min-h-[46px] inline-flex items-center justify-center gap-2 py-3 px-4 text-[15px] sm:text-base font-extrabold text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-xs transition-all cursor-pointer border border-blue-500/40"

@@ -997,9 +997,9 @@ export const ModalEstrategiaJogo: React.FC<ModalEstrategiaJogoProps> = ({
                           <div
                             className="w-10 h-10 sm:w-11 sm:h-11 rounded-full shadow-lg relative flex items-center justify-center p-0.5"
                             style={{
-                              backgroundColor: '#16A34A',
+                              backgroundColor: '#2563EB',
                               color: '#FFFFFF',
-                              border: '2px solid #14532D',
+                              border: '2.5px solid #FFFFFF',
                             }}
                           >
                             <div
@@ -1011,11 +1011,11 @@ export const ModalEstrategiaJogo: React.FC<ModalEstrategiaJogoProps> = ({
 
                             {/* Selo da sigla da posição */}
                             <span
-                              className="absolute -top-1.5 -right-1.5 text-[8px] font-black px-1.5 py-0.2 rounded-full shadow leading-tight"
+                              className="absolute -top-2 -right-1.5 text-[8px] font-black px-1.5 py-0.2 rounded-full shadow leading-tight whitespace-nowrap"
                               style={{
-                                backgroundColor: '#2563eb',
-                                color: '#ffffff',
-                                border: '1px solid #ffffff',
+                                backgroundColor: '#FFFFFF',
+                                color: '#1E3A8A',
+                                border: '1px solid #CBD5E1',
                               }}
                             >
                               {slot.label}
@@ -1024,11 +1024,11 @@ export const ModalEstrategiaJogo: React.FC<ModalEstrategiaJogoProps> = ({
 
                           {/* Apelido embaixo */}
                           <div
-                            className="mt-1 px-1.5 py-0.5 rounded text-[10px] font-black shadow-md max-w-[86px] truncate text-center leading-tight"
+                            className="mt-1 px-2 py-0.5 rounded-md text-[10px] font-black shadow-md max-w-[92px] truncate text-center leading-tight"
                             style={{
-                              backgroundColor: '#16A34A',
+                              backgroundColor: '#2563EB',
                               color: '#FFFFFF',
-                              border: '1px solid #14532D',
+                              border: '1px solid #1D4ED8',
                             }}
                           >
                             {atleta.apelido?.trim() || atleta.nome.split(' ')[0]}
@@ -1040,17 +1040,17 @@ export const ModalEstrategiaJogo: React.FC<ModalEstrategiaJogoProps> = ({
                             className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shadow-md relative"
                             style={{
                               backgroundColor: '#FFFFFF',
-                              color: '#334155',
+                              color: '#0F172A',
                               border: '2px solid #cbd5e1',
                             }}
                           >
-                            <span className="text-xs font-black">--</span>
+                            <span className="text-sm font-black">+</span>
                             <span
-                              className="absolute -top-1.5 -right-1.5 text-[8px] font-black px-1.5 py-0.2 rounded-full shadow leading-tight"
+                              className="absolute -top-2 -right-1.5 text-[8px] font-black px-1.5 py-0.2 rounded-full shadow leading-tight whitespace-nowrap"
                               style={{
-                                backgroundColor: '#2563eb',
-                                color: '#ffffff',
-                                border: '1px solid #ffffff',
+                                backgroundColor: '#FFFFFF',
+                                color: '#1E3A8A',
+                                border: '1px solid #CBD5E1',
                               }}
                             >
                               {slot.label}

@@ -54,6 +54,11 @@ import { ConfirmacaoApagarModal } from './components/ConfirmacaoApagarModal';
 import { MasterSoccerEscudo } from './components/MasterSoccerEscudo';
 import { CadastroPublicoAtletaView } from './components/CadastroPublicoAtletaView';
 import { CentralAjudaModal } from './components/CentralAjudaModal';
+import {
+  TourGuiadoOverlay,
+  TipoTourGuiado,
+  PassoTourGuiado,
+} from './components/TourGuiadoOverlay';
 
 type AbaNavegacao =
   | 'painel'
@@ -102,6 +107,118 @@ const ABAS_VALIDAS: AbaNavegacao[] = [
 const STORAGE_KEY_ABA_ATIVA = 'mastersoccer_aba_ativa_v1';
 const STORAGE_KEY_CATEGORIA_ATIVA = 'mastersoccer_categoria_ativa_v1';
 const STORAGE_KEY_JOGO_ESCALACAO = 'mastersoccer_jogo_escalacao_id_v1';
+
+const PASSOS_POR_TOUR: Record<TipoTourGuiado, PassoTourGuiado[]> = {
+  'criar-jogo': [
+    {
+      id: 'jogo-btn-novo',
+      selector: '[data-tour="btn-novo-jogo"]',
+      titulo: '1. Aperte aqui para criar o jogo',
+      descricao: 'Esse botão azul abre a tela de cadastro da nova partida.',
+    },
+    {
+      id: 'jogo-adversario',
+      selector: '[data-tour="jogo-input-adversario"]',
+      titulo: '2. Preencha o nome do adversário aqui',
+      descricao: 'Informe contra qual time o Master Soccer vai jogar.',
+    },
+    {
+      id: 'jogo-data-hora',
+      selector: '[data-tour="jogo-data-hora"]',
+      titulo: '3. Informe a data e o horário',
+      descricao: 'Digite o dia (DD/MM/AAAA) e a hora (HH:MM) da partida.',
+    },
+    {
+      id: 'jogo-categoria',
+      selector: '[data-tour="jogo-categoria"]',
+      titulo: '4. Escolha a categoria do time',
+      descricao: 'Toque na categoria correspondente (ex: SUB-15, SUB-17).',
+    },
+    {
+      id: 'jogo-competicao',
+      selector: '[data-tour="jogo-competicao"]',
+      titulo: '5. Preencha ou escolha a competição',
+      descricao: 'Digite o nome do campeonato ou toque em um já cadastrado.',
+    },
+    {
+      id: 'jogo-salvar',
+      selector: '[data-tour="jogo-btn-salvar"]',
+      titulo: '6. Aperte em "Salvar Jogo" para finalizar',
+      descricao: 'Depois disso, a partida já aparece na Agenda de Jogos.',
+    },
+  ],
+  'montar-escalacao': [
+    {
+      id: 'escalacao-posicao',
+      selector: '[data-tour="escalacao-grupo-posicao"]',
+      titulo: '1. Escolha a posição para abrir os jogadores',
+      descricao: 'Toque em uma posição (ou em TODOS) para listar os atletas.',
+    },
+    {
+      id: 'escalacao-jogador',
+      selector: '[data-tour="escalacao-escolher-jogador"]',
+      titulo: '2. Escolha o jogador como Titular ou Reserva',
+      descricao: 'Toque em "Titular" ou "Reserva" ao lado do nome do atleta.',
+    },
+    {
+      id: 'escalacao-formacao',
+      selector: '[data-tour="escalacao-formacao"]',
+      titulo: '3. Ajuste a formação tática se quiser',
+      descricao: 'Aqui você muda o esquema do time (ex: 4-4-2, 4-3-3).',
+    },
+    {
+      id: 'escalacao-salvar',
+      selector: '[data-tour="escalacao-btn-salvar"]',
+      titulo: '4. Aperte aqui para salvar a escalação',
+      descricao: 'Tudo pronto! Só salvar para gravar titulares e reservas no jogo.',
+    },
+  ],
+  'avaliar-jogador': [
+    {
+      id: 'avaliar-escolher-atleta',
+      selector: '[data-tour="avaliar-card-atleta"]',
+      titulo: '1. Escolha o atleta que deseja avaliar',
+      descricao: 'Toque no nome do jogador para abrir a ficha de avaliação.',
+    },
+    {
+      id: 'avaliar-pilares',
+      selector: '[data-tour="avaliar-pilares"]',
+      titulo: '2. Dê as notas nos 5 pilares',
+      descricao: 'Avalie Físico, Técnico, Tático, Mental e Extra-Campo deslizando as barras.',
+    },
+    {
+      id: 'avaliar-salvar',
+      selector: '[data-tour="avaliar-btn-salvar"]',
+      titulo: '3. Aperte em "Salvar Avaliação"',
+      descricao: 'Toque nesse botão verde para registrar a avaliação do atleta.',
+    },
+  ],
+};
+
+const TOUR_JOGO_DEMO: JogoAgenda = {
+  id: '__tour_demo_jogo__',
+  adversario: 'vs Adversário Exemplo',
+  dataJogo: '20/11/2026',
+  hora: '15:00',
+  categoria: 'SUB-15',
+  local: 'Campo Master Soccer',
+  tipo: 'Amistoso',
+  realizado: false,
+  criadoEm: '2026-01-01T00:00:00.000Z',
+  escalacao: {},
+};
+
+const TOUR_ATLETA_DEMO: Atleta = {
+  id: '__tour_demo_atleta__',
+  nome: 'Atleta Exemplo',
+  apelido: 'Atleta Exemplo',
+  categoria: 'SUB-15',
+  posicao: 'Meio-Campista',
+  pernaDominante: 'Destro',
+  dataNascimento: '2011-01-01',
+  status: 'Ativo',
+  dataCadastro: '2026-01-01',
+};
 
 export default function App() {
   const isOnline = useOnlineStatus();
@@ -181,6 +298,11 @@ export default function App() {
   const [isCategoriasModalOpen, setIsCategoriasModalOpen] = useState(false);
   const [isInstalarModalOpen, setIsInstalarModalOpen] = useState(false);
   const [isAjudaOpen, setIsAjudaOpen] = useState(false);
+  const [tourAtivo, setTourAtivo] = useState<TipoTourGuiado | null>(null);
+  const [tourPassoIndex, setTourPassoIndex] = useState(0);
+  const [tourConcluido, setTourConcluido] = useState(false);
+  const abaPreTourRef = useRef<AbaNavegacao>('painel');
+  const escalacaoPreTourRef = useRef<string | undefined>(undefined);
   const [menuDrawerOpen, setMenuDrawerOpen] = useState(false);
   const [toastMensagem, setToastMensagem] = useState<string | null>(null);
 
@@ -1026,6 +1148,103 @@ export default function App() {
     }
   };
 
+  // =========================================================
+  // CONTROLE DO TOUR GUIADO INTERATIVO (SOMENTE VISUAL, SEM SALVAR NADA)
+  // =========================================================
+  const passosTourAtual = tourAtivo ? PASSOS_POR_TOUR[tourAtivo] : [];
+  const passoTourAtualObj =
+    tourAtivo && !tourConcluido ? passosTourAtual[tourPassoIndex] || null : null;
+  const tourPassoId = passoTourAtualObj ? passoTourAtualObj.id : null;
+
+  const jogosParaExibicao = React.useMemo(() => {
+    if (tourAtivo && jogos.length === 0) return [TOUR_JOGO_DEMO];
+    return jogos;
+  }, [tourAtivo, jogos]);
+
+  const atletasParaExibicao = React.useMemo(() => {
+    if (tourAtivo && atletas.length === 0) return [TOUR_ATLETA_DEMO];
+    return atletas;
+  }, [tourAtivo, atletas]);
+
+  const aplicarEstadoDoPasso = (tipo: TipoTourGuiado, idx: number) => {
+    const passo = PASSOS_POR_TOUR[tipo]?.[idx];
+    if (!passo) return;
+
+    if (tipo === 'criar-jogo') {
+      mudarAbaComMemoriaScroll('jogo');
+      if (passo.id === 'jogo-btn-novo') {
+        setIsJogoModalOpen(false);
+      } else {
+        setJogoEditando(null);
+        setIsJogoModalOpen(true);
+      }
+      return;
+    }
+
+    if (tipo === 'montar-escalacao') {
+      setIsJogoModalOpen(false);
+      const listaJogos = jogos.length > 0 ? jogos : [TOUR_JOGO_DEMO];
+      const jogoAlvo = listaJogos.find((j) => !j.realizado) || listaJogos[0];
+      setJogoSelecionadoParaEscalacaoId(jogoAlvo.id);
+      mudarAbaComMemoriaScroll('escalacao');
+      return;
+    }
+
+    if (tipo === 'avaliar-jogador') {
+      setIsJogoModalOpen(false);
+      mudarAbaComMemoriaScroll('jogo');
+    }
+  };
+
+  const handleIniciarTour = (tipo: TipoTourGuiado) => {
+    abaPreTourRef.current = abaAtiva;
+    escalacaoPreTourRef.current = jogoSelecionadoParaEscalacaoId;
+    setIsAjudaOpen(false);
+    setMenuDrawerOpen(false);
+    setTourAtivo(tipo);
+    setTourPassoIndex(0);
+    setTourConcluido(false);
+    aplicarEstadoDoPasso(tipo, 0);
+  };
+
+  const limparEstadosTemporariosDoTour = (irParaTelaPratica: boolean) => {
+    setIsJogoModalOpen(false);
+    setJogoEditando(null);
+    setJogoSelecionadoParaEscalacaoId(escalacaoPreTourRef.current);
+    if (irParaTelaPratica) {
+      mudarAbaComMemoriaScroll('jogo');
+    } else {
+      mudarAbaComMemoriaScroll(abaPreTourRef.current);
+    }
+  };
+
+  const handleProximoPassoTour = () => {
+    if (!tourAtivo) return;
+    const total = PASSOS_POR_TOUR[tourAtivo].length;
+    if (tourPassoIndex + 1 >= total) {
+      limparEstadosTemporariosDoTour(true);
+      setTourConcluido(true);
+      return;
+    }
+    const proximo = tourPassoIndex + 1;
+    setTourPassoIndex(proximo);
+    aplicarEstadoDoPasso(tourAtivo, proximo);
+  };
+
+  const handlePularTour = () => {
+    limparEstadosTemporariosDoTour(false);
+    setTourAtivo(null);
+    setTourPassoIndex(0);
+    setTourConcluido(false);
+  };
+
+  const handleTerminarTour = () => {
+    limparEstadosTemporariosDoTour(true);
+    setTourAtivo(null);
+    setTourPassoIndex(0);
+    setTourConcluido(false);
+  };
+
   // Ao abrir o app, garante abertura limpa no PAINEL e remove hashes/estados antigos de navegação e escalação
   useEffect(() => {
     if (isRotaCadastroPublico) return;
@@ -1457,8 +1676,8 @@ export default function App() {
           style={{ display: abaAtiva === 'jogo' ? 'block' : 'none' }}
         >
           <AgendaJogosView
-            jogos={jogos}
-            atletas={atletas}
+            jogos={jogosParaExibicao}
+            atletas={atletasParaExibicao}
             avaliacoes={avaliacoes}
             categorias={categorias}
             jogoFocarInfo={jogoFocarInfo}
@@ -1467,12 +1686,16 @@ export default function App() {
             onEditarJogo={handleAbrirEditarJogo}
             onExcluirJogo={handleExcluirJogo}
             onExcluirAvaliacao={handleExcluirAvaliacaoDireto}
-            onSalvarAvaliacao={handleSalvarAvaliacao}
+            onSalvarAvaliacao={(av) => {
+              if (tourAtivo) return;
+              return handleSalvarAvaliacao(av);
+            }}
             onSelecionarAtleta={handleAbrirRelatorioAtleta}
             onNavegarEscalacao={(jogoId) => {
               setJogoSelecionadoParaEscalacaoId(jogoId);
               mudarAbaComMemoriaScroll('escalacao');
             }}
+            tourPassoId={tourPassoId}
           />
         </div>
 
@@ -1485,7 +1708,7 @@ export default function App() {
         >
           <PlantelView
             key={jogoSelecionadoParaEscalacaoId || 'plantel-view'}
-            atletas={atletas}
+            atletas={atletasParaExibicao}
             avaliacoes={avaliacoes}
             categorias={categorias}
             categoriaSelecionada={categoriaAtiva}
@@ -1493,14 +1716,18 @@ export default function App() {
             onSelecionarAtleta={handleAbrirRelatorioAtleta}
             onEditarAtleta={handleAbrirEditarAtleta}
             onExcluirAtleta={handleExcluirAtleta}
-            jogos={jogos}
-            onSalvarJogo={handleSalvarJogo}
+            jogos={jogosParaExibicao}
+            onSalvarJogo={(jogoAtualizado) => {
+              if (tourAtivo) return;
+              return handleSalvarJogo(jogoAtualizado);
+            }}
             jogoSelecionadoId={jogoSelecionadoParaEscalacaoId}
             onSelecionarJogoId={setJogoSelecionadoParaEscalacaoId}
             onVoltarParaAgenda={() => {
               setJogoSelecionadoParaEscalacaoId(undefined);
               mudarAbaComMemoriaScroll('jogo');
             }}
+            tourPassoId={tourPassoId}
           />
         </div>
 
@@ -1645,7 +1872,10 @@ export default function App() {
       <JogoModal
         isOpen={isJogoModalOpen}
         onClose={() => setIsJogoModalOpen(false)}
-        onSave={handleSalvarJogo}
+        onSave={(novoJogo) => {
+          if (tourAtivo) return;
+          return handleSalvarJogo(novoJogo);
+        }}
         jogoEditando={jogoEditando}
         categoriasDisponiveis={categorias}
         categoriaPadrao={categoriaAtiva === 'TODAS' ? 'SUB-15' : categoriaAtiva}
@@ -1796,6 +2026,19 @@ export default function App() {
           setMenuDrawerOpen(true);
         }}
         onFecharTudo={() => setIsAjudaOpen(false)}
+        onIniciarTour={handleIniciarTour}
+      />
+
+      {/* Overlay de Tour Guiado Interativo */}
+      <TourGuiadoOverlay
+        ativo={Boolean(tourAtivo)}
+        concluido={tourConcluido}
+        passoAtual={passoTourAtualObj}
+        indicePasso={tourPassoIndex}
+        totalPassos={passosTourAtual.length}
+        onProximo={handleProximoPassoTour}
+        onPular={handlePularTour}
+        onTerminar={handleTerminarTour}
       />
     </div>
   );

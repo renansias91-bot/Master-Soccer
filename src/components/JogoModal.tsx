@@ -162,7 +162,7 @@ export const JogoModal: React.FC<JogoModalProps> = ({
           )}
 
           {/* Adversário */}
-          <div>
+          <div data-tour="jogo-input-adversario">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1">
               Adversário *
             </label>
@@ -191,7 +191,7 @@ export const JogoModal: React.FC<JogoModalProps> = ({
           </div>
 
           {/* Data e Hora */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div data-tour="jogo-data-hora" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-blue-600" />
@@ -256,7 +256,7 @@ export const JogoModal: React.FC<JogoModalProps> = ({
           </div>
 
           {/* Categoria (botões simples, sem dropdown) */}
-          <div>
+          <div data-tour="jogo-categoria">
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1">
                 <Shield className="w-3.5 h-3.5 text-blue-600" />
@@ -299,7 +299,7 @@ export const JogoModal: React.FC<JogoModalProps> = ({
           </div>
 
           {/* Competição (campo de texto livre + botões clicáveis das competições do Financeiro) */}
-          <div className="space-y-2">
+          <div data-tour="jogo-competicao" className="space-y-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
               <span className="text-sm leading-none">📝</span>
               <span>Competição *</span>
@@ -444,6 +444,7 @@ export const JogoModal: React.FC<JogoModalProps> = ({
             </button>
             <button
               type="submit"
+              data-tour="jogo-btn-salvar"
               className="px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-98 rounded-lg shadow-xs transition-all flex items-center gap-2 cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4 text-amber-300" />

@@ -54,6 +54,7 @@ interface PlantelViewProps {
   jogoSelecionadoId?: string;
   onSelecionarJogoId?: (id: string | undefined) => void;
   onVoltarParaAgenda?: () => void;
+  tourPassoId?: string | null;
 }
 
 
@@ -381,6 +382,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
   jogoSelecionadoId,
   onSelecionarJogoId,
   onVoltarParaAgenda,
+  tourPassoId,
 }) => {
   const [busca, setBusca] = useState('');
   const [filtroCategoriaLista, setFiltroCategoriaLista] = useState<string>(() => {
@@ -953,6 +955,21 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
       });
   }, [formacao, atletasElegiveisOrdenados, escalacaoMap, busca, categoriaDoJogo]);
 
+  // Sincronização visual apenas para os passos do Tour Guiado (não altera ou salva dados)
+  useEffect(() => {
+    if (!tourPassoId) return;
+    if (tourPassoId === 'escalacao-posicao') {
+      setAbaSubEscalacao('lista');
+      setPosicaoAberta(null);
+    } else if (tourPassoId === 'escalacao-jogador') {
+      setAbaSubEscalacao('lista');
+      const primeiroComAtleta = gruposPosicaoVisiveis.find((g) => g.atletas.length > 0);
+      if (primeiroComAtleta) {
+        setPosicaoAberta(primeiroComAtleta.key);
+      }
+    }
+  }, [tourPassoId, gruposPosicaoVisiveis]);
+
 
 
   // Se o usuário entrar direto na aba ESCALAÇÃO sem ter selecionado um jogo antes na Agenda:
@@ -1032,6 +1049,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
 
         <button
           type="button"
+          data-tour="escalacao-btn-salvar"
           onClick={handleSalvarEscalacao}
           style={{ backgroundColor: '#2563eb' }}
           className="min-h-[42px] flex-1 min-w-[210px] inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs sm:text-sm md:text-base font-black text-white hover:bg-blue-700 active:scale-98 rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap"
@@ -1096,7 +1114,10 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
         {/* Esquerda: FORMAÇÃO TÁTICA + Contadores */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Botão FORMAÇÃO TÁTICA */}
-          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
+          <div
+            data-tour="escalacao-formacao"
+            className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700"
+          >
             <span className="text-[11px] font-black uppercase text-slate-600 dark:text-slate-300 whitespace-nowrap">
               FORMAÇÃO TÁTICA:
             </span>
@@ -1196,7 +1217,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
             </div>
           ) : (
             <div className="flex flex-col gap-2.5">
-              {gruposPosicaoVisiveis.map((grupo) => {
+              {gruposPosicaoVisiveis.map((grupo, idxGrupo) => {
                 const aberto = posicaoAberta === grupo.key;
                 const cores = obterCoresGrupoPosicao(grupo.key);
                 const subtitulo = `${grupo.sigla} - ${grupo.titulo}`;
@@ -1214,6 +1235,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                     {/* Cabeçalho da Posição: padrão único Master Soccer (TODOS em azul marinho e posições em fundo claro + borda azul) */}
                     <button
                       type="button"
+                      data-tour={idxGrupo === 0 ? 'escalacao-grupo-posicao' : undefined}
                       onClick={() => setPosicaoAberta(aberto ? null : grupo.key)}
                       style={
                         aberto
@@ -1256,7 +1278,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                             Nenhum atleta cadastrado nessa posição. Você pode escalar outro jogador nesta vaga pelo Campinho ou em TODOS.
                           </div>
                         ) : (
-                          grupo.atletas.map((atleta) => {
+                          grupo.atletas.map((atleta, idxAtleta) => {
                             const escalado = escalacaoMap[atleta.id];
                             const ehTitular = escalado ? escalado.titular : false;
                             const ehReserva = escalado ? !escalado.titular : false;
@@ -1268,6 +1290,7 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                             return (
                               <div
                                 key={atleta.id}
+                                data-tour={idxAtleta === 0 ? 'escalacao-escolher-jogador' : undefined}
                                 className={`rounded-2xl p-3.5 sm:p-4 transition-all border flex items-center justify-between gap-2.5 ${
                                   ehTitular
                                     ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-500 shadow-2xs'
@@ -1413,20 +1436,29 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                       <span style={{ color: '#000000', fontSize: '20px', fontWeight: 900, lineHeight: 1 }}>
                         +
                       </span>
-                      {/* Selo da sigla da posição */}
-                      <span className="absolute -top-1.5 -right-1 text-[8.5px] font-black px-1.5 py-0.2 rounded-full shadow bg-blue-600 text-white border border-white leading-tight">
+                      {/* Selo da sigla da posição em cima: caixinha branca com letra azul escuro */}
+                      <span
+                        style={{
+                          backgroundColor: '#FFFFFF',
+                          color: '#1E3A8A',
+                          borderColor: '#CBD5E1',
+                          borderWidth: '1px',
+                          borderStyle: 'solid',
+                        }}
+                        className="absolute -top-2 -right-1 text-[8.5px] font-black px-1.5 py-0.2 rounded-full shadow leading-tight whitespace-nowrap"
+                      >
                         {slot.label}
                       </span>
                     </div>
                     <div
                       style={{
                         backgroundColor: '#FFFFFF',
-                        color: '#000000',
+                        color: '#0F172A',
                         borderColor: '#D1D5DB',
                         borderWidth: '1px',
                         borderStyle: 'solid',
                       }}
-                      className="mt-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold shadow-xs leading-tight"
+                      className="mt-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold shadow-xs leading-tight"
                     >
                       Vazio
                     </div>
@@ -1446,13 +1478,13 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                   className="flex flex-col items-center group cursor-pointer transition-transform hover:scale-110 active:scale-95 relative"
                   title={`${atleta.apelido || atleta.nome} (${slot.label}) - Toque para trocar`}
                 >
-                  {/* Bolinha preenchida verde #16A34A com borda #14532D */}
+                  {/* Bolinha do jogador selecionado: AZUL FORTE (#2563EB) com borda branca (#FFFFFF) e letra branca */}
                   <div
                     style={{
-                      backgroundColor: '#16A34A',
+                      backgroundColor: '#2563EB',
                       color: '#FFFFFF',
-                      borderColor: '#14532D',
-                      borderWidth: '2px',
+                      borderColor: '#FFFFFF',
+                      borderWidth: '2.5px',
                       borderStyle: 'solid',
                     }}
                     className="w-11 h-11 sm:w-12 sm:h-12 rounded-full shadow-xl relative flex items-center justify-center p-0.5 overflow-visible"
@@ -1472,22 +1504,31 @@ export const PlantelView: React.FC<PlantelViewProps> = ({
                       </div>
                     )}
 
-                    {/* Selo com a sigla da posição (GOL, LE, ZAG, LD, VOL, MEI, ATA) */}
-                    <span className="absolute -top-1.5 -right-1 text-[8.5px] sm:text-[9px] font-black px-1.5 py-0.2 rounded-full shadow bg-blue-600 text-white border border-white leading-tight pointer-events-none">
+                    {/* Selo da posição em cima: caixinha branca com letra azul escuro */}
+                    <span
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        color: '#1E3A8A',
+                        borderColor: '#CBD5E1',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                      }}
+                      className="absolute -top-2 -right-1 text-[8.5px] sm:text-[9px] font-black px-1.5 py-0.2 rounded-full shadow leading-tight pointer-events-none whitespace-nowrap"
+                    >
                       {slot.label}
                     </span>
                   </div>
 
-                  {/* Nome do jogador legível embaixo em verde #16A34A */}
+                  {/* Nome do jogador embaixo: caixinha azul com letra branca */}
                   <div
                     style={{
-                      backgroundColor: '#16A34A',
+                      backgroundColor: '#2563EB',
                       color: '#FFFFFF',
-                      borderColor: '#14532D',
+                      borderColor: '#1D4ED8',
                       borderWidth: '1px',
                       borderStyle: 'solid',
                     }}
-                    className="mt-1 px-1.5 py-0.5 rounded-md text-[10px] sm:text-[11px] font-black shadow-md max-w-[85px] sm:max-w-[100px] truncate text-center leading-tight"
+                    className="mt-1 px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-black shadow-md max-w-[92px] sm:max-w-[106px] truncate text-center leading-tight"
                   >
                     {atleta.apelido || atleta.nome.split(' ')[0]}
                   </div>
