@@ -14,6 +14,7 @@ import {
   JogoAgenda,
   TesteFisicoAtleta,
   Trofeu,
+  CandidatoPeneira,
 } from '../types';
 
 const STORAGE_KEY_ATLETAS = 'mastersoccer_atletas_v2';
@@ -25,6 +26,7 @@ const STORAGE_KEY_VALOR_MENSALIDADE = 'mastersoccer_valor_mensalidade_v2';
 const STORAGE_KEY_JOGOS_AGENDA = 'mastersoccer_jogos_agenda_v2';
 const STORAGE_KEY_TESTES_FISICOS = 'mastersoccer_testes_fisicos_v2';
 const STORAGE_KEY_TROFEUS = 'mastersoccer_trofeus_v2';
+const STORAGE_KEY_PENEIRAS = 'mastersoccer_peneiras_v1';
 
 export const TROFEUS_PADRAO: Trofeu[] = [
   { id: 1, campeonato: 'Liga Nacional 2024', categoria: 'Sub-20', resultado: 'campeao' },
@@ -840,6 +842,42 @@ export const storageService = {
     this.salvarTrofeus(lista);
   },
 
+  // ==========================================
+  // AVALIAÇÃO / PENEIRA - TESTE
+  // ==========================================
+  getPeneiras(): CandidatoPeneira[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY_PENEIRAS);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.error('Erro ao ler peneiras do localStorage', e);
+    }
+    return [];
+  },
+
+  salvarPeneiras(lista: CandidatoPeneira[]): void {
+    localStorage.setItem(STORAGE_KEY_PENEIRAS, JSON.stringify(lista));
+  },
+
+  salvarPeneira(candidato: CandidatoPeneira): void {
+    const lista = this.getPeneiras();
+    const idx = lista.findIndex((p) => p.id === candidato.id);
+    if (idx >= 0) {
+      lista[idx] = candidato;
+    } else {
+      lista.unshift(candidato);
+    }
+    this.salvarPeneiras(lista);
+  },
+
+  excluirPeneira(id: string): void {
+    const lista = this.getPeneiras().filter((p) => p.id !== id);
+    this.salvarPeneiras(lista);
+  },
+
   // Reset para dados de fábrica
   restaurarDadosFabrica(): void {
     localStorage.removeItem(STORAGE_KEY_ATLETAS);
@@ -851,6 +889,7 @@ export const storageService = {
     localStorage.removeItem(STORAGE_KEY_JOGOS_AGENDA);
     localStorage.removeItem(STORAGE_KEY_TESTES_FISICOS);
     localStorage.removeItem(STORAGE_KEY_TROFEUS);
+    localStorage.removeItem(STORAGE_KEY_PENEIRAS);
     this.salvarAtletas(ATLETAS_INICIAIS);
     this.salvarAvaliacoes(AVALIACOES_INICIAIS);
     this.salvarCategorias(CATEGORIAS_PADRAO);

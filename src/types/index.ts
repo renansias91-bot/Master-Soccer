@@ -316,3 +316,18 @@ export interface Trofeu {
   dataConquista?: string;
 }
 
+export type PosicaoPeneira = 'GOL' | 'ZAG' | 'LE' | 'LD' | 'VOL' | 'MEI' | 'ATA';
+
+export interface CandidatoPeneira {
+  id: string;
+  nome: string;
+  posicao: PosicaoPeneira;
+  anoNascimento: string;
+  categoria: CategoriaBase;
+  dataTeste: string; // YYYY-MM-DD ou DD/MM/AAAA
+  telefoneResponsavel: string;
+  apresentouAtestado: boolean;
+  observacao?: string;
+  aprovado?: boolean;
+  criadoEm?: string;
+}

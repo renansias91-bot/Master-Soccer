@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Flame,
   FileCheck2,
+  ClipboardCheck,
 } from 'lucide-react';
 import {
   Atleta,
@@ -29,6 +30,8 @@ import {
   JogoAgenda,
   TesteFisicoAtleta,
   PosicaoAtleta,
+  CandidatoPeneira,
+  PosicaoPeneira,
 } from './types';
 import {
   storageService,
@@ -57,6 +60,7 @@ import { MasterSoccerEscudo } from './components/MasterSoccerEscudo';
 import { CadastroPublicoAtletaView } from './components/CadastroPublicoAtletaView';
 import { CentralAjudaModal } from './components/CentralAjudaModal';
 import { DocumentosView } from './components/DocumentosView';
+import { PeneiraView } from './components/PeneiraView';
 import {
   TourGuiadoOverlay,
   TipoTourGuiado,
@@ -72,6 +76,7 @@ type AbaNavegacao =
   | 'relatorio'
   | 'testefisico'
   | 'documentos'
+  | 'peneira'
   | 'atletas';
 
 const getChaveScrollAba = (aba: AbaNavegacao): string => {
@@ -92,6 +97,8 @@ const getChaveScrollAba = (aba: AbaNavegacao): string => {
       return 'scroll_TESTEFISICO';
     case 'documentos':
       return 'scroll_DOCUMENTOS';
+    case 'peneira':
+      return 'scroll_PENEIRA';
     case 'atletas':
       return 'scroll_ATLETAS';
     default:
@@ -108,6 +115,7 @@ const ABAS_VALIDAS: AbaNavegacao[] = [
   'relatorio',
   'testefisico',
   'documentos',
+  'peneira',
   'atletas',
 ];
 
@@ -243,6 +251,9 @@ export default function App() {
   const [testesFisicos, setTestesFisicos] = useState<TesteFisicoAtleta[]>(() =>
     storageService.getTestesFisicos()
   );
+  const [peneiras, setPeneiras] = useState<CandidatoPeneira[]>(() =>
+    storageService.getPeneiras()
+  );
   const [categorias, setCategorias] = useState<string[]>(() => storageService.getCategorias());
 
   // Navegação: Sempre inicia no PAINEL ao abrir o aplicativo
@@ -275,6 +286,7 @@ export default function App() {
     relatorio: Number(sessionStorage.getItem('scroll_RELATÓRIO') || 0),
     testefisico: Number(sessionStorage.getItem('scroll_TESTEFISICO') || 0),
     documentos: Number(sessionStorage.getItem('scroll_DOCUMENTOS') || 0),
+    peneira: Number(sessionStorage.getItem('scroll_PENEIRA') || 0),
     atletas: Number(sessionStorage.getItem('scroll_ATLETAS') || 0),
   });
   const isRestoringScrollRef = useRef(false);
@@ -292,6 +304,8 @@ export default function App() {
   const [atletaSelecionado, setAtletaSelecionado] = useState<Atleta | null>(null);
   const [isAtletaModalOpen, setIsAtletaModalOpen] = useState(false);
   const [atletaEditando, setAtletaEditando] = useState<Atleta | null>(null);
+  const [dadosAtletaIniciais, setDadosAtletaIniciais] = useState<Partial<Atleta> | null>(null);
+  const [peneiraEmConversao, setPeneiraEmConversao] = useState<CandidatoPeneira | null>(null);
 
   const [isAvaliacaoModalOpen, setIsAvaliacaoModalOpen] = useState(false);
   const [avaliacaoEditando, setAvaliacaoEditando] = useState<AvaliacaoJogo | null>(null);
@@ -395,6 +409,12 @@ export default function App() {
       }
     });
 
+    // 5. Avaliação / Peneira - Teste
+    const unsubPeneiras = firebaseService.observarPeneiras((novasPeneiras) => {
+      setPeneiras(novasPeneiras);
+      storageService.salvarPeneiras(novasPeneiras);
+    });
+
     // Inicialização
     async function inicializarDadosNoFirestore() {
       try {
@@ -434,6 +454,7 @@ export default function App() {
       unsubFinanceiro();
       unsubJogos();
       unsubTestes();
+      unsubPeneiras();
     };
   }, [isRotaCadastroPublico]);
 
@@ -460,7 +481,17 @@ export default function App() {
       if (atletaSelecionado && atletaSelecionado.id === atleta.id) {
         setAtletaSelecionado(atleta);
       }
-      exibirToast(`Atleta ${atleta.nome.split(' ')[0]} salvo com sucesso!`);
+      if (peneiraEmConversao && !atleta.id) {
+        const peneiraIdRemover = peneiraEmConversao.id;
+        storageService.excluirPeneira(peneiraIdRemover);
+        setPeneiras((prev) => prev.filter((p) => p.id !== peneiraIdRemover));
+        firebaseService.excluirPeneira(peneiraIdRemover).catch(() => {});
+        setPeneiraEmConversao(null);
+        setDadosAtletaIniciais(null);
+        exibirToast(`${atleta.nome.split(' ')[0]} entrou para o plantel (${atleta.categoria})!`);
+      } else {
+        exibirToast(`Atleta ${atleta.nome.split(' ')[0]} salvo com sucesso!`);
+      }
     } catch (e: any) {
       console.error('Erro ao salvar atleta:', e);
       if (atleta.id) {
@@ -472,6 +503,14 @@ export default function App() {
         const atualizados = [...atletas, tempAtleta];
         setAtletas(atualizados);
         storageService.salvarAtletas(atualizados);
+      }
+      if (peneiraEmConversao && !atleta.id) {
+        const peneiraIdRemover = peneiraEmConversao.id;
+        storageService.excluirPeneira(peneiraIdRemover);
+        setPeneiras((prev) => prev.filter((p) => p.id !== peneiraIdRemover));
+        firebaseService.excluirPeneira(peneiraIdRemover).catch(() => {});
+        setPeneiraEmConversao(null);
+        setDadosAtletaIniciais(null);
       }
       exibirToast(`Atleta ${atleta.nome.split(' ')[0]} salvo localmente.`);
     }
@@ -596,7 +635,75 @@ export default function App() {
   };
 
   const handleAbrirEditarAtleta = (atleta: Atleta) => {
+    setPeneiraEmConversao(null);
+    setDadosAtletaIniciais(null);
     setAtletaEditando(atleta);
+    setIsAtletaModalOpen(true);
+  };
+
+  // Handlers para Avaliação / Peneira - Teste
+  const handleSalvarPeneira = async (candidato: CandidatoPeneira) => {
+    storageService.salvarPeneira(candidato);
+    setPeneiras(storageService.getPeneiras());
+    try {
+      await firebaseService.salvarPeneira(candidato);
+      exibirToast(
+        candidato.aprovado
+          ? `${candidato.nome.split(' ')[0]} aprovado no teste!`
+          : 'Teste registrado com sucesso!'
+      );
+    } catch (e) {
+      console.warn('Peneira salva localmente (offline):', e);
+      exibirToast('Teste salvo localmente.');
+    }
+  };
+
+  const handleExcluirPeneira = async (id: string) => {
+    storageService.excluirPeneira(id);
+    setPeneiras(storageService.getPeneiras());
+    try {
+      await firebaseService.excluirPeneira(id);
+    } catch (e) {
+      console.warn('Erro ao excluir peneira no Firestore:', e);
+    }
+    exibirToast('Registro removido da lista.');
+  };
+
+  const mapearPosicaoPeneiraParaAtleta = (pos: PosicaoPeneira): PosicaoAtleta => {
+    switch (pos) {
+      case 'GOL':
+        return 'Goleiro';
+      case 'ZAG':
+        return 'Zagueiro';
+      case 'LE':
+        return 'Lateral Esquerdo';
+      case 'LD':
+        return 'Lateral Direito';
+      case 'VOL':
+        return 'Volante';
+      case 'MEI':
+        return 'Meio-Campista';
+      case 'ATA':
+        return 'Centroavante';
+      default:
+        return 'Meio-Campista';
+    }
+  };
+
+  const handleEntrarParaPlantelPeneira = (candidato: CandidatoPeneira) => {
+    const anoDigits = (candidato.anoNascimento || '').replace(/\D/g, '');
+    const dataNascInicial = anoDigits.length === 4 ? `${anoDigits}-01-01` : '';
+
+    setAtletaEditando(null);
+    setPeneiraEmConversao(candidato);
+    setDadosAtletaIniciais({
+      nome: candidato.nome,
+      categoria: candidato.categoria,
+      posicao: mapearPosicaoPeneiraParaAtleta(candidato.posicao),
+      dataNascimento: dataNascInicial,
+      telefoneResponsavel: candidato.telefoneResponsavel || '',
+      docAtestadoOk: Boolean(candidato.apresentouAtestado),
+    });
     setIsAtletaModalOpen(true);
   };
 
@@ -1717,6 +1824,40 @@ export default function App() {
                   </div>
                   <ChevronRight className="w-5 h-5 opacity-70" />
                 </button>
+
+                {/* 5. Avaliação / Peneira - Teste */}
+                <button
+                  onClick={() => handleNavegarMenuTopo('peneira')}
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all border-2 active:scale-98 ${
+                    abaAtiva === 'peneira'
+                      ? 'bg-blue-600 text-white font-extrabold border-blue-600 shadow-md'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 font-bold border-slate-200/80 dark:border-slate-800'
+                  }`}
+                  style={abaAtiva === 'peneira' ? { backgroundColor: '#2563eb', color: '#ffffff' } : {}}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div
+                      className={`p-2.5 rounded-xl ${
+                        abaAtiva === 'peneira'
+                          ? 'bg-blue-700 text-white'
+                          : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600'
+                      }`}
+                    >
+                      <ClipboardCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-base font-extrabold">Avaliação / Peneira - Teste</div>
+                      <div
+                        className={`text-xs font-medium ${
+                          abaAtiva === 'peneira' ? 'text-blue-100' : 'text-slate-500 dark:text-slate-400'
+                        }`}
+                      >
+                        Garotos em avaliação para o plantel
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 opacity-70" />
+                </button>
               </div>
             </div>
 
@@ -1932,6 +2073,21 @@ export default function App() {
             onAtualizarDocumento={handleAtualizarDocumentoAtleta}
           />
         </div>
+
+        <div
+          ref={(el) => {
+            wrapperRefs.current['peneira'] = el;
+          }}
+          style={{ display: abaAtiva === 'peneira' ? 'block' : 'none' }}
+        >
+          <PeneiraView
+            candidatos={peneiras}
+            categorias={categorias}
+            onSalvarCandidato={handleSalvarPeneira}
+            onExcluirCandidato={handleExcluirPeneira}
+            onEntrarParaPlantel={handleEntrarParaPlantelPeneira}
+          />
+        </div>
       </main>
 
       {/* ========================================================= */}
@@ -2019,9 +2175,14 @@ export default function App() {
       {/* Modal de Atleta */}
       <AtletaModal
         isOpen={isAtletaModalOpen}
-        onClose={() => setIsAtletaModalOpen(false)}
+        onClose={() => {
+          setIsAtletaModalOpen(false);
+          setPeneiraEmConversao(null);
+          setDadosAtletaIniciais(null);
+        }}
         onSave={handleSalvarAtleta}
         atletaEditando={atletaEditando}
+        dadosIniciais={dadosAtletaIniciais}
         categoriasDisponiveis={categorias}
         categoriaPadrao={categoriaAtiva === 'TODAS' ? 'SUB-15' : categoriaAtiva}
       />

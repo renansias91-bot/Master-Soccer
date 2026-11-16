@@ -32,22 +32,53 @@ interface ModalSumulaArbitragemProps {
   escalacaoMap: Record<string, AtletaEscalado>;
 }
 
+interface LinhaAtletaSumula {
+  id: string;
+  nomeCompleto: string;
+  rg: string;
+}
+
 const TOTAL_LINHAS_SUMULA = 25;
-const LINHAS_EM_BRANCO = Array.from({ length: TOTAL_LINHAS_SUMULA }, (_, idx) => idx);
+const LINHAS_INDICES = Array.from({ length: TOTAL_LINHAS_SUMULA }, (_, idx) => idx);
+
+function extrairAtletasDaEscalacaoParaSumula(
+  atletas: Atleta[],
+  escalacaoMap: Record<string, AtletaEscalado> | undefined
+): LinhaAtletaSumula[] {
+  if (!escalacaoMap) return [];
+  const selecionados = atletas
+    .filter((a) => Boolean(escalacaoMap[a.id]))
+    .map((a) => ({
+      id: a.id,
+      nomeCompleto: (a.nomeCompleto || a.nome || '').trim(),
+      rg: (a.rg || '').trim(),
+    }))
+    .filter((item) => Boolean(item.nomeCompleto))
+    .sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto, 'pt-BR', { sensitivity: 'base' }));
+
+  return selecionados.slice(0, TOTAL_LINHAS_SUMULA);
+}
 
 export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
   isOpen,
   onClose,
   jogo,
+  atletas,
+  escalacaoMap,
 }) => {
   const [compartilhando, setCompartilhando] = useState(false);
   const [erroShare, setErroShare] = useState<string | null>(null);
+  const [linhasSumula, setLinhasSumula] = useState<LinhaAtletaSumula[]>([]);
+  const [atualizadoAviso, setAtualizadoAviso] = useState(false);
   const docRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setErroShare(null);
     setCompartilhando(false);
-    if (isOpen) {
+    setAtualizadoAviso(false);
+    if (isOpen && jogo) {
+      const mapaEfetivo = escalacaoMap && Object.keys(escalacaoMap).length > 0 ? escalacaoMap : jogo.escalacao;
+      setLinhasSumula(extrairAtletasDaEscalacaoParaSumula(atletas, mapaEfetivo));
       const timer = setTimeout(() => {
         preAquecerCssPdf();
       }, 40);
@@ -58,6 +89,15 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
   if (!isOpen || !jogo) return null;
 
   const adversarioLimpo = (jogo.adversario || '').replace(/^vs\s+/i, '').trim() || 'Adversário';
+
+  const handlePuxarDaEscalacao = () => {
+    const mapaEfetivo =
+      escalacaoMap && Object.keys(escalacaoMap).length > 0 ? escalacaoMap : jogo.escalacao;
+    const atualizada = extrairAtletasDaEscalacaoParaSumula(atletas, mapaEfetivo);
+    setLinhasSumula(atualizada);
+    setAtualizadoAviso(true);
+    window.setTimeout(() => setAtualizadoAviso(false), 2500);
+  };
 
   const handleCompartilhar = async () => {
     if (compartilhando || !docRef.current) return;
@@ -133,30 +173,55 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
 
       <div className="print-modal-card relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[94vh]">
         {/* Barra Superior do Visualizador (oculta na impressão) */}
-        <div className="no-print flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <FileText className="w-5 h-5 text-blue-600" />
-            <div>
-              <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight">
-                Súmula Oficial de Jogo — Arbitragem
-              </h3>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                25 linhas em branco para preenchimento à caneta (1 folha A4)
-              </p>
+        <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
+          <div className="flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <FileText className="w-5 h-5 text-blue-600 shrink-0" />
+              <div>
+                <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight">
+                  Súmula Oficial de Jogo — Arbitragem
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  {linhasSumula.length > 0
+                    ? `${linhasSumula.length} atletas (Nome + RG em ordem A-Z) · Cabeçalho e camisa/T-R saem em branco no PDF`
+                    : 'Sem escalação salva (25 linhas em branco) · Cabeçalho sai em branco no PDF'}
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              disabled={compartilhando}
+              onClick={onClose}
+              className="sm:hidden p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            type="button"
-            disabled={compartilhando}
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Fechar"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-2 justify-end">
+            <button
+              type="button"
+              disabled={compartilhando}
+              onClick={handlePuxarDaEscalacao}
+              className="px-3 py-2 rounded-xl text-xs font-extrabold bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-1.5 transition cursor-pointer disabled:opacity-40"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${atualizadoAviso ? 'animate-spin' : ''}`} />
+              <span>{atualizadoAviso ? 'Lista Atualizada!' : 'Puxar da Escalação'}</span>
+            </button>
+            <button
+              type="button"
+              disabled={compartilhando}
+              onClick={onClose}
+              className="hidden sm:inline-flex p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Documento Imprimível e Compartilhável (EXATAMENTE O MESMO MODELO) */}
+        {/* Documento Imprimível e Compartilhável */}
         <div className="print-modal-scroll overflow-y-auto flex-1 bg-white">
           <div
             ref={docRef}
@@ -173,7 +238,9 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
               subtituloDocumento="Relação de Atletas para Arbitragem"
               infoDireita={
                 <div className="text-right text-[11px]" style={{ color: '#475569' }}>
-                  <div>Emissão: {new Date().toLocaleDateString('pt-BR')}</div>
+                  <div className="sumula-screen-only">
+                    Pré-visualização do jogo
+                  </div>
                   <div className="font-extrabold uppercase" style={{ color: '#0f172a' }}>
                     25 Atletas na Súmula
                   </div>
@@ -181,7 +248,9 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
               }
             />
 
-            {/* Dados da Partida (Única parte preenchida no documento: PARTIDA, CAMPEONATO, CATEGORIA, DATA, HORÁRIO, LOCAL) */}
+            {/* Dados da Partida:
+                - Na PRÉ-VISUALIZAÇÃO (.sumula-screen-only): mostra preenchido para o treinador conferir o jogo
+                - No PDF / IMPRESSÃO (.sumula-print-only): sai TODO EM BRANCO para preencher à caneta */}
             <div
               className="sumula-dados-partida rounded-xl p-3.5 text-xs"
               style={{ backgroundColor: '#f8fafc', border: '1px solid #cbd5e1' }}
@@ -191,54 +260,79 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
                   <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
                     Partida:
                   </span>
-                  <span className="font-black text-sm" style={{ color: '#0f172a' }}>
+                  <span className="sumula-screen-only font-black text-sm" style={{ color: '#0f172a' }}>
                     Master Soccer vs {adversarioLimpo}
                   </span>
+                  <div
+                    className="sumula-print-only h-4 mt-1"
+                    style={{ borderBottom: '1px solid #475569' }}
+                  />
                 </div>
                 <div>
                   <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
                     Campeonato:
                   </span>
-                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                  <span className="sumula-screen-only font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
                     {jogo.tipo || 'Campeonato'}
                   </span>
+                  <div
+                    className="sumula-print-only h-4 mt-1"
+                    style={{ borderBottom: '1px solid #475569' }}
+                  />
                 </div>
                 <div>
                   <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
                     Categoria:
                   </span>
-                  <span className="font-black text-sm" style={{ color: '#1d4ed8' }}>
+                  <span className="sumula-screen-only font-black text-sm" style={{ color: '#1d4ed8' }}>
                     {jogo.categoria}
                   </span>
+                  <div
+                    className="sumula-print-only h-4 mt-1"
+                    style={{ borderBottom: '1px solid #475569' }}
+                  />
                 </div>
                 <div>
                   <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
                     Data:
                   </span>
-                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                  <span className="sumula-screen-only font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
                     {formatarDataExibicao(jogo.dataJogo)}
                   </span>
+                  <div
+                    className="sumula-print-only h-4 mt-1"
+                    style={{ borderBottom: '1px solid #475569' }}
+                  />
                 </div>
                 <div>
                   <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
                     Horário:
                   </span>
-                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                  <span className="sumula-screen-only font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
                     {jogo.hora || '___:___'}
                   </span>
+                  <div
+                    className="sumula-print-only h-4 mt-1"
+                    style={{ borderBottom: '1px solid #475569' }}
+                  />
                 </div>
                 <div>
                   <span className="font-bold uppercase block text-[10px]" style={{ color: '#64748b' }}>
                     Local:
                   </span>
-                  <span className="font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
+                  <span className="sumula-screen-only font-black text-xs sm:text-sm" style={{ color: '#0f172a' }}>
                     {jogo.local || '______________________'}
                   </span>
+                  <div
+                    className="sumula-print-only h-4 mt-1"
+                    style={{ borderBottom: '1px solid #475569' }}
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Tabela Fixa de 25 Linhas TODAS EM BRANCO para preencher à caneta */}
+            {/* Tabela Fixa de 25 Linhas: só puxa Nome Completo + RG em ordem alfabética.
+                Nº Camisa e T / R sempre em branco para preencher à caneta. */}
             <div>
               <table
                 className="sumula-tabela w-full text-left border-collapse text-xs"
@@ -279,71 +373,78 @@ export const ModalSumulaArbitragem: React.FC<ModalSumulaArbitragemProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {LINHAS_EM_BRANCO.map((idx) => (
-                    <tr
-                      key={`linha-vazia-${idx}`}
-                      style={{
-                        backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc',
-                        height: '28px',
-                      }}
-                    >
-                      {/* Ordem numérica fixa 01..25 */}
-                      <td
-                        className="py-1 px-1.5 text-center font-mono font-bold text-[11px]"
-                        style={{ border: '1px solid #94a3b8', color: '#475569' }}
+                  {LINHAS_INDICES.map((idx) => {
+                    const atletaLinha = linhasSumula[idx];
+                    return (
+                      <tr
+                        key={`linha-sumula-${idx}`}
+                        style={{
+                          backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc',
+                          height: '28px',
+                        }}
                       >
-                        {String(idx + 1).padStart(2, '0')}
-                      </td>
+                        {/* Ordem numérica fixa 01..25 */}
+                        <td
+                          className="py-1 px-1.5 text-center font-mono font-bold text-[11px]"
+                          style={{ border: '1px solid #94a3b8', color: '#475569' }}
+                        >
+                          {String(idx + 1).padStart(2, '0')}
+                        </td>
 
-                      {/* Casinha em branco Nº Camisa */}
-                      <td
-                        className="py-1 px-1.5 text-center"
-                        style={{ border: '1px solid #94a3b8' }}
-                      >
-                        <div
-                          className="sumula-celula-caixa"
-                          style={{
-                            border: '1px solid #64748b',
-                            backgroundColor: '#ffffff',
-                            height: '20px',
-                            width: '48px',
-                            margin: '0 auto',
-                            borderRadius: '3px',
-                          }}
-                        />
-                      </td>
+                        {/* Casinha SEMPRE em branco Nº Camisa */}
+                        <td
+                          className="py-1 px-1.5 text-center"
+                          style={{ border: '1px solid #94a3b8' }}
+                        >
+                          <div
+                            className="sumula-celula-caixa"
+                            style={{
+                              border: '1px solid #64748b',
+                              backgroundColor: '#ffffff',
+                              height: '20px',
+                              width: '48px',
+                              margin: '0 auto',
+                              borderRadius: '3px',
+                            }}
+                          />
+                        </td>
 
-                      {/* Nome Completo em branco para caneta */}
-                      <td
-                        className="py-1 px-2.5 font-bold text-xs uppercase"
-                        style={{ border: '1px solid #94a3b8', color: '#0f172a' }}
-                      />
+                        {/* Nome Completo puxado da Escalação (ordem alfabética) */}
+                        <td
+                          className="py-1 px-2.5 font-bold text-xs uppercase"
+                          style={{ border: '1px solid #94a3b8', color: '#0f172a' }}
+                        >
+                          {atletaLinha?.nomeCompleto || ''}
+                        </td>
 
-                      {/* Identidade / RG / CPF em branco para caneta */}
-                      <td
-                        className="py-1 px-2.5 font-mono text-[11px] font-semibold"
-                        style={{ border: '1px solid #94a3b8', color: '#1e293b' }}
-                      />
+                        {/* Só RG cadastrado do atleta (em branco se não tiver) */}
+                        <td
+                          className="py-1 px-2.5 font-mono text-[11px] font-semibold"
+                          style={{ border: '1px solid #94a3b8', color: '#1e293b' }}
+                        >
+                          {atletaLinha?.rg || ''}
+                        </td>
 
-                      {/* Casinha em branco T / R */}
-                      <td
-                        className="py-1 px-1.5 text-center"
-                        style={{ border: '1px solid #94a3b8' }}
-                      >
-                        <div
-                          className="sumula-celula-caixa"
-                          style={{
-                            border: '1px solid #64748b',
-                            backgroundColor: '#ffffff',
-                            height: '20px',
-                            width: '52px',
-                            margin: '0 auto',
-                            borderRadius: '3px',
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  ))}
+                        {/* Casinha SEMPRE em branco T / R */}
+                        <td
+                          className="py-1 px-1.5 text-center"
+                          style={{ border: '1px solid #94a3b8' }}
+                        >
+                          <div
+                            className="sumula-celula-caixa"
+                            style={{
+                              border: '1px solid #64748b',
+                              backgroundColor: '#ffffff',
+                              height: '20px',
+                              width: '52px',
+                              margin: '0 auto',
+                              borderRadius: '3px',
+                            }}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

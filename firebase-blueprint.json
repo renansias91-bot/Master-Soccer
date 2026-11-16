@@ -129,6 +129,25 @@
         "atualizadoEm": { "type": "string" }
       },
       "required": ["lista"]
+    },
+    "CandidatoPeneira": {
+      "title": "CandidatoPeneira",
+      "description": "Garotos inscritos para avaliação / peneira / teste no clube",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "posicao": { "type": "string" },
+        "anoNascimento": { "type": "string" },
+        "categoria": { "type": "string" },
+        "dataTeste": { "type": "string" },
+        "telefoneResponsavel": { "type": "string" },
+        "apresentouAtestado": { "type": "boolean" },
+        "observacao": { "type": "string" },
+        "aprovado": { "type": "boolean" },
+        "criadoEm": { "type": "string" }
+      },
+      "required": ["nome", "posicao", "categoria", "dataTeste"]
     }
   },
   "firestore": {
@@ -163,6 +182,10 @@
     "/configuracoes/{docId}": {
       "schema": "ConfiguracaoCategorias",
       "description": "Configurações globais do clube, incluindo a lista oficial de categorias"
+    },
+    "/peneiras/{peneiraId}": {
+      "schema": "CandidatoPeneira",
+      "description": "Avaliações e testes de novos garotos na peneira"
     }
   }
 }

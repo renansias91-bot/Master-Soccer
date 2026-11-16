@@ -16,6 +16,7 @@ interface AtletaModalProps {
   onClose: () => void;
   onSave: (atleta: Atleta) => Promise<void> | void;
   atletaEditando?: Atleta | null;
+  dadosIniciais?: Partial<Atleta> | null;
   categoriasDisponiveis: string[];
   categoriaPadrao?: string;
 }
@@ -27,6 +28,7 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
   onClose,
   onSave,
   atletaEditando,
+  dadosIniciais,
   categoriasDisponiveis,
   categoriaPadrao = 'SUB-15',
 }) => {
@@ -68,6 +70,23 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
       setNomeResponsavel(atletaEditando.nomeResponsavel || '');
       setTelefoneResponsavel(atletaEditando.telefoneResponsavel || '');
       setStatus(atletaEditando.status);
+    } else if (dadosIniciais) {
+      setNome(dadosIniciais.nome || '');
+      setApelido(dadosIniciais.apelido || '');
+      setRg(dadosIniciais.rg || dadosIniciais.documento || '');
+      setCpf(dadosIniciais.cpf || '');
+      setCategoria(
+        dadosIniciais.categoria ||
+          (categoriaPadrao && categoriaPadrao !== 'TODAS' ? categoriaPadrao : '')
+      );
+      setPosicao(dadosIniciais.posicao || '');
+      setPernaDominante(dadosIniciais.pernaDominante || 'Destro');
+      setAltura(dadosIniciais.altura ? String(dadosIniciais.altura) : '');
+      setPeso(dadosIniciais.peso ? String(dadosIniciais.peso) : '');
+      setDataNascimento(dadosIniciais.dataNascimento || '');
+      setNomeResponsavel(dadosIniciais.nomeResponsavel || '');
+      setTelefoneResponsavel(dadosIniciais.telefoneResponsavel || '');
+      setStatus('Ativo');
     } else {
       setNome('');
       setApelido('');
@@ -85,7 +104,7 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
     }
     setErro('');
     setSalvando(false);
-  }, [atletaEditando, isOpen, categoriaPadrao]);
+  }, [atletaEditando, dadosIniciais, isOpen, categoriaPadrao]);
 
   if (!isOpen) return null;
 
@@ -142,6 +161,8 @@ export const AtletaModal: React.FC<AtletaModalProps> = ({
     }
     if (atletaEditando?.docAtestadoOk !== undefined) {
       atletaSalvo.docAtestadoOk = atletaEditando.docAtestadoOk;
+    } else if (dadosIniciais?.docAtestadoOk !== undefined) {
+      atletaSalvo.docAtestadoOk = dadosIniciais.docAtestadoOk;
     }
     if (atletaEditando?.docRgAutenticadaOk !== undefined) {
       atletaSalvo.docRgAutenticadaOk = atletaEditando.docRgAutenticadaOk;

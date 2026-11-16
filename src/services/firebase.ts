@@ -20,7 +20,7 @@ import {
 
 import { getAuth } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { Atleta, AvaliacaoJogo, ItemCompeticaoTaxa, RegistroFinanceiroAtleta, JogoAgenda, TesteFisicoAtleta } from '../types';
+import { Atleta, AvaliacaoJogo, ItemCompeticaoTaxa, RegistroFinanceiroAtleta, JogoAgenda, TesteFisicoAtleta, CandidatoPeneira, PosicaoPeneira } from '../types';
 import { normalizarCompeticao, normalizarRegistroFinanceiro } from './storage';
 
 export enum OperationType {
@@ -916,6 +916,73 @@ export const firebaseService = {
       },
       (error) => {
         console.warn('Snapshot configuracoes/categorias offline ou pausado:', error.message);
+      }
+    );
+    return unsub;
+  },
+
+  // ==========================================
+  // AVALIAÇÃO / PENEIRA - TESTE
+  // ==========================================
+  async salvarPeneira(candidato: CandidatoPeneira): Promise<void> {
+    const path = `peneiras/${candidato.id}`;
+    const payload = cleanFirestoreData({
+      id: candidato.id,
+      nome: (candidato.nome || '').trim(),
+      posicao: candidato.posicao || 'MEI',
+      anoNascimento: (candidato.anoNascimento || '').trim(),
+      categoria: candidato.categoria || 'SUB-15',
+      dataTeste: candidato.dataTeste || '',
+      telefoneResponsavel: (candidato.telefoneResponsavel || '').trim(),
+      apresentouAtestado: Boolean(candidato.apresentouAtestado),
+      observacao: (candidato.observacao || '').trim(),
+      aprovado: Boolean(candidato.aprovado),
+      criadoEm: candidato.criadoEm || new Date().toISOString(),
+      atualizadoEm: new Date().toISOString(),
+    });
+
+    try {
+      await setDoc(doc(db, 'peneiras', candidato.id), payload, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  },
+
+  async excluirPeneira(id: string): Promise<void> {
+    const path = `peneiras/${id}`;
+    try {
+      await deleteDoc(doc(db, 'peneiras', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  },
+
+  observarPeneiras(onPeneiras: (lista: CandidatoPeneira[]) => void): () => void {
+    const unsub = onSnapshot(
+      collection(db, 'peneiras'),
+      (snapshot) => {
+        const lista: CandidatoPeneira[] = [];
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          lista.push({
+            id: d.id || docSnap.id,
+            nome: d.nome || '',
+            posicao: (d.posicao || 'MEI') as PosicaoPeneira,
+            anoNascimento: d.anoNascimento || '',
+            categoria: d.categoria || 'SUB-15',
+            dataTeste: d.dataTeste || '',
+            telefoneResponsavel: d.telefoneResponsavel || '',
+            apresentouAtestado: Boolean(d.apresentouAtestado),
+            observacao: d.observacao || '',
+            aprovado: Boolean(d.aprovado),
+            criadoEm: d.criadoEm || '',
+          });
+        });
+        lista.sort((a, b) => (b.criadoEm || '').localeCompare(a.criadoEm || ''));
+        onPeneiras(lista);
+      },
+      (error) => {
+        console.warn('Snapshot peneiras offline ou pausado:', error.message);
       }
     );
     return unsub;
