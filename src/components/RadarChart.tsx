@@ -15,7 +15,7 @@ const PILARES = [
   { key: 'tatica', label: 'TÁTICA', short: 'TÁT' },
   { key: 'fisica', label: 'FÍSICA', short: 'FÍS' },
   { key: 'mental', label: 'MENTAL', short: 'MEN' },
-  { key: 'disciplinar', label: 'DISCIPLINAR', short: 'DISC' },
+  { key: 'disciplinar', label: 'EXTRA-CAMPO', short: 'EXTRA' },
 ] as const;
 
 export const RadarChart: React.FC<RadarChartProps> = ({

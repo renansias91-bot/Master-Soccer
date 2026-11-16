@@ -1472,7 +1472,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                                             {av.notas.disciplinar}
                                           </div>
                                           <div className="text-[9px] font-bold uppercase text-slate-400">
-                                            Disciplinar
+                                            Extra-Campo
                                           </div>
                                         </div>
                                       </div>

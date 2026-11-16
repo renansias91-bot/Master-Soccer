@@ -18,6 +18,7 @@ import {
 import { Atleta, AvaliacaoJogo } from '../types';
 import { formatarDataExibicao, dataParaValorOrdenacao } from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
+import { IconeQuadrinhoTatico, IconeExtraCampo } from './IconesPilares';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
 import {
@@ -181,7 +182,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
       tecnica: /\[TÉCNICO\]:\s*([\s\S]*?)(?=\n\n\[|$)/i,
       tatica: /\[TÁTICO\]:\s*([\s\S]*?)(?=\n\n\[|$)/i,
       mental: /\[MENTAL\]:\s*([\s\S]*?)(?=\n\n\[|$)/i,
-      disciplinar: /\[DISCIPLINAR\]:\s*([\s\S]*?)(?=\n\n\[|$)/i,
+      disciplinar: /\[(?:EXTRA-CAMPO|DISCIPLINAR)\]:\s*([\s\S]*?)(?=\n\n\[|$)/i,
     };
     const match = texto.match(mapaTag[pilar]);
     if (match) return match[1].trim();
@@ -612,7 +613,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                            <span>🧠</span> TÁTICO
+                            <IconeQuadrinhoTatico className="w-5 h-5" /> TÁTICO
                           </span>
                           <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
                             Nota: {Math.round(avaliacaoSelecionada.notas.tatica)}/10 -{' '}
@@ -652,7 +653,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                            <span>🎯</span> MENTAL
+                            <span>🧠</span> MENTAL
                           </span>
                           <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
                             Nota: {Math.round(avaliacaoSelecionada.notas.mental)}/10 -{' '}
@@ -679,7 +680,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                         />
                       </div>
 
-                      {/* 5. DISCIPLINAR */}
+                      {/* 5. EXTRA-CAMPO */}
                       <div
                         style={{
                           margin: '16px 0',
@@ -692,7 +693,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                            <span>🛡️</span> DISCIPLINAR
+                            <IconeExtraCampo className="w-5 h-5" /> EXTRA-CAMPO
                           </span>
                           <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
                             Nota: {Math.round(avaliacaoSelecionada.notas.disciplinar)}/10 -{' '}
@@ -713,7 +714,7 @@ export const RelatorioIndividual: React.FC<RelatorioIndividualProps> = ({
                         <textarea
                           readOnly
                           value={getObsPilar(avaliacaoSelecionada, 'disciplinar')}
-                          placeholder="Observação do Disciplinar..."
+                          placeholder="Observação do Extra-Campo..."
                           style={{ height: '120px', resize: 'none' }}
                           className="w-full mt-3 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
                         />

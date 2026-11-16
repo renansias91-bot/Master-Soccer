@@ -73,7 +73,7 @@ export const EvolucaoChart: React.FC<EvolucaoChartProps> = ({ avaliacoes }) => {
               { key: 'tatica', label: 'Tática' },
               { key: 'fisica', label: 'Física' },
               { key: 'mental', label: 'Mental' },
-              { key: 'disciplinar', label: 'Disciplinar' },
+              { key: 'disciplinar', label: 'Extra-Campo' },
             ] as const
           ).map((item) => (
             <button

@@ -182,7 +182,7 @@ export const ComparativoView: React.FC<ComparativoViewProps> = ({
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-2 text-slate-600 dark:text-slate-400">5. Disciplinar</td>
+                    <td className="py-2 text-slate-600 dark:text-slate-400">5. Extra-Campo</td>
                     <td className="py-2 text-center font-mono font-semibold tabular-nums">
                       {statsA.mediasPilares.disciplinar.toFixed(1)}
                     </td>

@@ -9,6 +9,7 @@ import {
 } from '../types';
 import { getDataAtualBrasil, formatarDataExibicao } from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
+import { IconeQuadrinhoTatico, IconeExtraCampo } from './IconesPilares';
 
 interface AvaliacaoModalProps {
   isOpen: boolean;
@@ -139,7 +140,7 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
         const matchTec = obsTexto.match(/\[TÉCNICO\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
         const matchTat = obsTexto.match(/\[TÁTICO\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
         const matchMen = obsTexto.match(/\[MENTAL\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
-        const matchDis = obsTexto.match(/\[DISCIPLINAR\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
+        const matchDis = obsTexto.match(/\[(?:EXTRA-CAMPO|DISCIPLINAR)\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
 
         if (matchFis || matchTec || matchTat || matchMen || matchDis) {
           setObsFisica(matchFis ? matchFis[1].trim() : '');
@@ -263,7 +264,7 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
     if (obsTecnica.trim()) partesObs.push(`[TÉCNICO]: ${obsTecnica.trim()}`);
     if (obsTatica.trim()) partesObs.push(`[TÁTICO]: ${obsTatica.trim()}`);
     if (obsMental.trim()) partesObs.push(`[MENTAL]: ${obsMental.trim()}`);
-    if (obsDisciplinar.trim()) partesObs.push(`[DISCIPLINAR]: ${obsDisciplinar.trim()}`);
+    if (obsDisciplinar.trim()) partesObs.push(`[EXTRA-CAMPO]: ${obsDisciplinar.trim()}`);
 
     const textoObservacoesFinal = partesObs.length > 0
       ? partesObs.join('\n\n')
@@ -844,7 +845,7 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <span>🧠</span> TÁTICO
+                    <IconeQuadrinhoTatico className="w-5 h-5" /> TÁTICO
                   </span>
                   <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
                     Nota: {Math.round(tatica)}/10 - {tituloNota(tatica)}
@@ -902,7 +903,7 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <span>🎯</span> MENTAL
+                    <span>🧠</span> MENTAL
                   </span>
                   <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
                     Nota: {Math.round(mental)}/10 - {tituloNota(mental)}
@@ -947,7 +948,7 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
                 />
               </div>
 
-              {/* 5. DISCIPLINAR */}
+              {/* 5. EXTRA-CAMPO */}
               <div
                 style={{
                   margin: '16px 0',
@@ -960,7 +961,7 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <span>🛡️</span> DISCIPLINAR
+                    <IconeExtraCampo className="w-5 h-5" /> EXTRA-CAMPO
                   </span>
                   <span style={{ color: '#2563eb' }} className="text-sm sm:text-base font-bold">
                     Nota: {Math.round(disciplinar)}/10 - {tituloNota(disciplinar)}
@@ -999,7 +1000,7 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
                 <textarea
                   value={obsDisciplinar}
                   onChange={(e) => setObsDisciplinar(e.target.value)}
-                  placeholder="Observação do Disciplinar..."
+                  placeholder="Observação do Extra-Campo..."
                   style={{ height: '120px', resize: 'none' }}
                   className="w-full mt-2.5 p-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />

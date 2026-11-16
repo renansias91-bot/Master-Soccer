@@ -22,6 +22,7 @@ import {
   TAGS_DESTAQUE_DISPONIVEIS,
   TAGS_ATENCAO_DISPONIVEIS,
 } from '../types';
+import { IconeQuadrinhoTatico, IconeExtraCampo } from './IconesPilares';
 import {
   formatarDataExibicao,
   dataParaValorOrdenacao,
@@ -461,7 +462,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         const matchTec = obsTexto.match(/\[TÉCNICO\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
         const matchTat = obsTexto.match(/\[TÁTICO\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
         const matchMen = obsTexto.match(/\[MENTAL\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
-        const matchDis = obsTexto.match(/\[DISCIPLINAR\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
+        const matchDis = obsTexto.match(/\[(?:EXTRA-CAMPO|DISCIPLINAR)\]:\s*([\s\S]*?)(?=\n\n\[|$)/i);
 
         setObsFisica(matchFis ? matchFis[1].trim() : '');
         setObsTecnica(matchTec ? matchTec[1].trim() : obsTexto);
@@ -578,7 +579,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     if (obsTecnica.trim()) partesObs.push(`[TÉCNICO]: ${obsTecnica.trim()}`);
     if (obsTatica.trim()) partesObs.push(`[TÁTICO]: ${obsTatica.trim()}`);
     if (obsMental.trim()) partesObs.push(`[MENTAL]: ${obsMental.trim()}`);
-    if (obsDisciplinar.trim()) partesObs.push(`[DISCIPLINAR]: ${obsDisciplinar.trim()}`);
+    if (obsDisciplinar.trim()) partesObs.push(`[EXTRA-CAMPO]: ${obsDisciplinar.trim()}`);
 
     const textoObservacoesFinal =
       partesObs.length > 0 ? partesObs.join('\n\n') : 'Atuação avaliada pela comissão técnica.';
@@ -1193,7 +1194,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                           },
                           {
                             id: 'tatica',
-                            icone: '🧠',
+                            icone: <IconeQuadrinhoTatico className="w-5 h-5" />,
                             titulo: 'TÁTICO',
                             valor: tatica,
                             setter: setTatica,
@@ -1203,7 +1204,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                           },
                           {
                             id: 'mental',
-                            icone: '🎯',
+                            icone: '🧠',
                             titulo: 'MENTAL',
                             valor: mental,
                             setter: setMental,
@@ -1213,13 +1214,13 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                           },
                           {
                             id: 'disciplinar',
-                            icone: '🛡️',
-                            titulo: 'DISCIPLINAR',
+                            icone: <IconeExtraCampo className="w-5 h-5" />,
+                            titulo: 'EXTRA-CAMPO',
                             valor: disciplinar,
                             setter: setDisciplinar,
                             obs: obsDisciplinar,
                             obsSetter: setObsDisciplinar,
-                            placeholder: 'Observação do Disciplinar...',
+                            placeholder: 'Observação do Extra-Campo...',
                           },
                         ].map((q) => (
                           <div

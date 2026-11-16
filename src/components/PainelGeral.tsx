@@ -504,7 +504,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
           Tático: avs.reduce((acc, av) => acc + (av.notas?.tatica || 0), 0) / totalJogos,
           Físico: avs.reduce((acc, av) => acc + (av.notas?.fisica || 0), 0) / totalJogos,
           Mental: avs.reduce((acc, av) => acc + (av.notas?.mental || 0), 0) / totalJogos,
-          Disciplinar: avs.reduce((acc, av) => acc + (av.notas?.disciplinar || 0), 0) / totalJogos,
+          'Extra-Campo': avs.reduce((acc, av) => acc + (av.notas?.disciplinar || 0), 0) / totalJogos,
         };
         const entradas = Object.entries(medias);
         entradas.sort((a, b) => b[1] - a[1]);
@@ -1244,7 +1244,7 @@ export const PainelGeral: React.FC<PainelGeralProps> = ({
                 </span>
               </div>
               <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-                <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 block">DISC</span>
+                <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400 block">EXTRA</span>
                 <span className="text-[16px] font-mono font-black text-slate-900 dark:text-slate-100 tabular-nums">
                   {estatisticasDesempenho.mediasPilares.disciplinar.toFixed(1)}
                 </span>

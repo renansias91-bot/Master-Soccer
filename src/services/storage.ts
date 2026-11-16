@@ -428,7 +428,7 @@ export const storageService = {
       { nome: 'Tática', nota: mediasPilares.tatica },
       { nome: 'Física', nota: mediasPilares.fisica },
       { nome: 'Mental', nota: mediasPilares.mental },
-      { nome: 'Disciplinar', nota: mediasPilares.disciplinar },
+      { nome: 'Extra-Campo', nota: mediasPilares.disciplinar },
     ].sort((a, b) => b.nota - a.nota);
 
     return {
@@ -496,7 +496,7 @@ export const storageService = {
       'Tática',
       'Física',
       'Mental',
-      'Disciplinar',
+      'Extra-Campo',
       'Nota Geral',
       'Observações',
     ];

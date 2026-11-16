@@ -1070,11 +1070,6 @@ export default function App() {
   const mudarAbaComMemoriaScroll = (novaAba: AbaNavegacao) => {
     if (novaAba === abaAtiva) return;
 
-    // Ao sair da tela de Escalação sem salvar, limpa o jogo selecionado para não ficar preso na memória
-    if (abaAtiva === 'escalacao' && novaAba !== 'escalacao') {
-      setJogoSelecionadoParaEscalacaoId(undefined);
-    }
-
     // 1. Salvar rolagem da aba atual que está saindo
     const currentY = window.scrollY || document.documentElement.scrollTop || 0;
     const chaveAtual = getChaveScrollAba(abaAtiva);
@@ -1130,7 +1125,6 @@ export default function App() {
 
   const handleNavegarPlantel = (categoria?: string) => {
     if (categoria) setCategoriaAtiva(categoria);
-    setJogoSelecionadoParaEscalacaoId(undefined);
     mudarAbaComMemoriaScroll('escalacao');
   };
 
@@ -1602,10 +1596,7 @@ export default function App() {
 
           {/* 3. ESCALAÇÃO */}
           <button
-            onClick={() => {
-              setJogoSelecionadoParaEscalacaoId(undefined);
-              mudarAbaComMemoriaScroll('escalacao');
-            }}
+            onClick={() => mudarAbaComMemoriaScroll('escalacao')}
             className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all ${
               abaAtiva === 'escalacao'
                 ? 'font-black bg-blue-50/90 dark:bg-blue-950/50 shadow-2xs'

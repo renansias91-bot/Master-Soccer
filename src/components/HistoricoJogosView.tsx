@@ -247,7 +247,7 @@ export const HistoricoJogosView: React.FC<HistoricoJogosViewProps> = ({
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-slate-400 block font-medium">DISCIPLINAR</span>
+                    <span className="text-[10px] text-slate-400 block font-medium">EXTRA-CAMPO</span>
                     <span className="font-mono font-bold text-slate-800 dark:text-slate-200 tabular-nums">
                       {av.notas.disciplinar.toFixed(1)}
                     </span>
