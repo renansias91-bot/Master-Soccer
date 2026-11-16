@@ -659,6 +659,7 @@ export default function App() {
   };
 
   const handleExcluirPeneira = async (id: string) => {
+    const alvo = peneiras.find((p) => p.id === id);
     storageService.excluirPeneira(id);
     setPeneiras(storageService.getPeneiras());
     try {
@@ -666,7 +667,9 @@ export default function App() {
     } catch (e) {
       console.warn('Erro ao excluir peneira no Firestore:', e);
     }
-    exibirToast('Registro removido da lista.');
+    exibirToast(
+      alvo ? `Teste de ${alvo.nome} excluído com sucesso.` : 'Teste excluído com sucesso.'
+    );
   };
 
   const mapearPosicaoPeneiraParaAtleta = (pos: PosicaoPeneira): PosicaoAtleta => {
@@ -1545,14 +1548,20 @@ export default function App() {
       {toastMensagem && (
         <div
           className={
-            toastMensagem.startsWith('Categoria ') || toastMensagem.startsWith('Virada de ')
+            toastMensagem.startsWith('Categoria ') ||
+            toastMensagem.startsWith('Virada de ') ||
+            toastMensagem.includes('excluído com sucesso') ||
+            toastMensagem.includes('excluídos com sucesso')
               ? 'fixed top-4 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white shadow-xl border border-emerald-500 text-xs sm:text-sm font-extrabold animate-in fade-in slide-in-from-top-2 duration-200 max-w-[92vw]'
               : 'fixed bottom-24 sm:bottom-6 right-6 z-[90] flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xl border border-slate-700 dark:border-slate-200 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3 duration-200'
           }
         >
           <CheckCircle2
             className={`w-4 h-4 shrink-0 ${
-              toastMensagem.startsWith('Categoria ') || toastMensagem.startsWith('Virada de ')
+              toastMensagem.startsWith('Categoria ') ||
+              toastMensagem.startsWith('Virada de ') ||
+              toastMensagem.includes('excluído com sucesso') ||
+              toastMensagem.includes('excluídos com sucesso')
                 ? 'text-white'
                 : 'text-amber-400 dark:text-amber-500'
             }`}

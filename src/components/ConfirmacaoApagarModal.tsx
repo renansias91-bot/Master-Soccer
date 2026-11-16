@@ -60,7 +60,7 @@ export const ConfirmacaoApagarModal: React.FC<ConfirmacaoApagarModalProps> = ({
             {mensagem}
           </p>
           {subtexto && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+            <p className="text-xs font-bold text-red-600 dark:text-red-400 mt-2">
               {subtexto}
             </p>
           )}

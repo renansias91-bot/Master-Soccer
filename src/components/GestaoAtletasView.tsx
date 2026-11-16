@@ -45,6 +45,7 @@ import {
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { formatarDataExibicao } from '../utils/dateUtils';
 import { MasterSoccerEscudo, CabecalhoParceriaDocumento } from './MasterSoccerEscudo';
+import { ConfirmacaoApagarModal } from './ConfirmacaoApagarModal';
 import {
   FormularioAtletaCadastro,
   POSICOES_CAMPO_OPTIONS,
@@ -208,6 +209,8 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
   const documentoRef = useRef<HTMLDivElement | null>(null);
   const [compartilhando, setCompartilhando] = useState(false);
   const [erroShareDoc, setErroShareDoc] = useState<string | null>(null);
+  const [atletaParaExcluir, setAtletaParaExcluir] = useState<Atleta | null>(null);
+  const [excluindoAtleta, setExcluindoAtleta] = useState(false);
   const [arquivoProntoDoc, setArquivoProntoDoc] = useState<{
     file: File;
     titulo: string;
@@ -1812,15 +1815,7 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
                             <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700">
                               <button
                                 type="button"
-                                onClick={() => {
-                                  if (
-                                    confirm(
-                                      `Tem certeza que deseja excluir o atleta "${atleta.nome}" e todas as suas avaliações?`
-                                    )
-                                  ) {
-                                    onExcluirAtleta(atleta.id);
-                                  }
-                                }}
+                                onClick={() => setAtletaParaExcluir(atleta)}
                                 className="px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer flex items-center gap-1.5"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -2445,6 +2440,34 @@ export const GestaoAtletasView: React.FC<GestaoAtletasViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modal de Confirmação Obrigatória para Excluir Atleta */}
+      <ConfirmacaoApagarModal
+        isOpen={Boolean(atletaParaExcluir)}
+        onClose={() => {
+          if (!excluindoAtleta) setAtletaParaExcluir(null);
+        }}
+        onConfirm={async () => {
+          if (!atletaParaExcluir || excluindoAtleta) return;
+          setExcluindoAtleta(true);
+          try {
+            await onExcluirAtleta(atletaParaExcluir.id);
+            setAtletaParaExcluir(null);
+          } finally {
+            setExcluindoAtleta(false);
+          }
+        }}
+        titulo="Excluir atleta?"
+        mensagem={
+          atletaParaExcluir
+            ? `Você tem certeza que deseja excluir o atleta "${atletaParaExcluir.nome}" e todas as suas avaliações?`
+            : 'Você tem certeza que deseja excluir este atleta?'
+        }
+        subtexto="Essa ação não pode ser desfeita."
+        textoCancelar="Cancelar"
+        textoConfirmar="Excluir"
+        carregando={excluindoAtleta}
+      />
     </div>
   );
 };

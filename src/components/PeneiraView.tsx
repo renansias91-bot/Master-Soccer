@@ -64,6 +64,8 @@ export const PeneiraView: React.FC<PeneiraViewProps> = ({
 }) => {
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>('TODAS');
   const [modalAberto, setModalAberto] = useState(false);
+  const [candidatoParaExcluir, setCandidatoParaExcluir] = useState<CandidatoPeneira | null>(null);
+  const [excluindoCandidato, setExcluindoCandidato] = useState(false);
 
   // Campos do formulário + Novo Teste
   const [nome, setNome] = useState('');
@@ -163,6 +165,17 @@ export const PeneiraView: React.FC<PeneiraViewProps> = ({
       ...candidato,
       aprovado: true,
     });
+  };
+
+  const handleConfirmarExcluirCandidato = async () => {
+    if (!candidatoParaExcluir || excluindoCandidato) return;
+    setExcluindoCandidato(true);
+    try {
+      await onExcluirCandidato(candidatoParaExcluir.id);
+      setCandidatoParaExcluir(null);
+    } finally {
+      setExcluindoCandidato(false);
+    }
   };
 
   return (
@@ -334,7 +347,7 @@ export const PeneiraView: React.FC<PeneiraViewProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => onExcluirCandidato(candidato.id)}
+                  onClick={() => setCandidatoParaExcluir(candidato)}
                   className="min-h-[44px] px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-950/70 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/70 font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-98 transition-all cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4 shrink-0" />
@@ -586,6 +599,66 @@ export const PeneiraView: React.FC<PeneiraViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação Obrigatória antes de Excluir Teste */}
+      {candidatoParaExcluir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 relative">
+            <button
+              type="button"
+              onClick={() => !excluindoCandidato && setCandidatoParaExcluir(null)}
+              disabled={excluindoCandidato}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Fechar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-11 h-11 rounded-xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-black text-slate-900 dark:text-white">
+                Excluir teste?
+              </h3>
+            </div>
+
+            <div className="my-4 space-y-2">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+                Você tem certeza que deseja excluir o teste do atleta{' '}
+                <strong className="font-black">
+                  {candidatoParaExcluir.nome} - {candidatoParaExcluir.posicao} -{' '}
+                  {candidatoParaExcluir.categoria}
+                </strong>
+                ?
+              </p>
+              <p className="text-xs font-bold text-red-600 dark:text-red-400">
+                Essa ação não pode ser desfeita.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setCandidatoParaExcluir(null)}
+                disabled={excluindoCandidato}
+                className="min-h-[44px] py-2.5 px-4 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmarExcluirCandidato}
+                disabled={excluindoCandidato}
+                className="min-h-[44px] py-2.5 px-4 rounded-xl text-xs font-black text-white bg-red-600 hover:bg-red-700 active:scale-98 transition shadow-xs disabled:opacity-50 cursor-pointer"
+                style={{ backgroundColor: '#dc2626', color: '#ffffff' }}
+              >
+                {excluindoCandidato ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
           </div>
         </div>
       )}
