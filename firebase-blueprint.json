@@ -148,6 +148,16 @@
         "criadoEm": { "type": "string" }
       },
       "required": ["nome", "posicao", "categoria", "dataTeste"]
+    },
+    "ConfiguracaoFinanceiroAcesso": {
+      "title": "ConfiguracaoFinanceiroAcesso",
+      "description": "Hash criptográfico da senha exclusiva de acesso ao módulo Financeiro",
+      "type": "object",
+      "properties": {
+        "hashSenha": { "type": "string" },
+        "atualizadoEm": { "type": "string" }
+      },
+      "required": ["hashSenha"]
     }
   },
   "firestore": {

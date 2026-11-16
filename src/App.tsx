@@ -19,6 +19,7 @@ import {
   Flame,
   FileCheck2,
   ClipboardCheck,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   Atleta,
@@ -61,6 +62,15 @@ import { CadastroPublicoAtletaView } from './components/CadastroPublicoAtletaVie
 import { CentralAjudaModal } from './components/CentralAjudaModal';
 import { DocumentosView } from './components/DocumentosView';
 import { PeneiraView } from './components/PeneiraView';
+import {
+  FinanceiroBloqueioTela,
+  FinanceiroAlterarSenhaModal,
+  FinanceiroResetAdmModal,
+} from './components/FinanceiroAuthModals';
+import {
+  getHashSenhaFinanceiroLocal,
+  salvarHashSenhaFinanceiroLocal,
+} from './services/financeiroAuth';
 import {
   TourGuiadoOverlay,
   TipoTourGuiado,
@@ -299,6 +309,12 @@ export default function App() {
   const [registrosFinanceiros, setRegistrosFinanceiros] = useState<
     Record<string, RegistroFinanceiroAtleta>
   >(() => storageService.getRegistrosFinanceiros());
+  const [financeiroDesbloqueado, setFinanceiroDesbloqueado] = useState(false);
+  const [hashSenhaFinanceiro, setHashSenhaFinanceiro] = useState<string | null>(() =>
+    getHashSenhaFinanceiroLocal()
+  );
+  const [isAlterarSenhaFinanceiroOpen, setIsAlterarSenhaFinanceiroOpen] = useState(false);
+  const [isResetAdmFinanceiroOpen, setIsResetAdmFinanceiroOpen] = useState(false);
 
   // Modais e seleções
   const [atletaSelecionado, setAtletaSelecionado] = useState<Atleta | null>(null);
@@ -415,9 +431,23 @@ export default function App() {
       storageService.salvarPeneiras(novasPeneiras);
     });
 
+    // 6. Hash da senha exclusiva do Financeiro
+    const unsubSenhaFinanceiro = firebaseService.observarHashSenhaFinanceiro((hashRemoto) => {
+      if (hashRemoto) {
+        setHashSenhaFinanceiro(hashRemoto);
+        salvarHashSenhaFinanceiroLocal(hashRemoto);
+      }
+    });
+
     // Inicialização
     async function inicializarDadosNoFirestore() {
       try {
+        const hashInicial = await firebaseService.buscarHashSenhaFinanceiro().catch(() => null);
+        if (hashInicial) {
+          setHashSenhaFinanceiro(hashInicial);
+          salvarHashSenhaFinanceiroLocal(hashInicial);
+        }
+
         // Sincroniza ou semeia categorias oficiais no Firestore
         const categoriasServidor = await firebaseService.buscarCategoriasServidor();
         if (categoriasServidor === null) {
@@ -455,6 +485,7 @@ export default function App() {
       unsubJogos();
       unsubTestes();
       unsubPeneiras();
+      unsubSenhaFinanceiro();
     };
   }, [isRotaCadastroPublico]);
 
@@ -1475,6 +1506,12 @@ export default function App() {
   const mudarAbaComMemoriaScroll = (novaAba: AbaNavegacao) => {
     if (novaAba === abaAtiva) return;
 
+    // Rebloqueia o módulo Financeiro ao sair dele para exigir senha na próxima entrada
+    if (abaAtiva === 'financeiro' && novaAba !== 'financeiro') {
+      setFinanceiroDesbloqueado(false);
+      setIsAlterarSenhaFinanceiroOpen(false);
+    }
+
     // 1. Salvar rolagem da aba atual que está saindo
     const currentY = window.scrollY || document.documentElement.scrollTop || 0;
     const chaveAtual = getChaveScrollAba(abaAtiva);
@@ -1884,6 +1921,18 @@ export default function App() {
               </button>
 
               <button
+                type="button"
+                onClick={() => {
+                  setMenuDrawerOpen(false);
+                  setIsResetAdmFinanceiroOpen(true);
+                }}
+                className="w-full text-left px-3.5 py-2.5 text-sm font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-xl flex items-center gap-2.5 transition"
+              >
+                <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>Área do ADM · Resetar Senha Financeiro</span>
+              </button>
+
+              <button
                 onClick={handleInstalarApp}
                 className="w-full text-left px-3.5 py-2.5 text-sm font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl flex items-center gap-2.5 transition"
               >
@@ -2018,20 +2067,33 @@ export default function App() {
           }}
           style={{ display: abaAtiva === 'financeiro' ? 'block' : 'none' }}
         >
-          <FinanceiroView
-            atletas={atletas}
-            categorias={categorias}
-            competicoes={competicoes}
-            registrosFinanceiros={registrosFinanceiros}
-            onAtualizarCompeticoes={(novas) => setCompeticoes(novas)}
-            onAtualizarRegistro={(novoReg) =>
-              setRegistrosFinanceiros((prev) => ({
-                ...prev,
-                [novoReg.atletaId]: novoReg,
-              }))
-            }
-            onExibirToast={exibirToast}
-          />
+          {abaAtiva === 'financeiro' &&
+            (financeiroDesbloqueado ? (
+              <FinanceiroView
+                atletas={atletas}
+                categorias={categorias}
+                competicoes={competicoes}
+                registrosFinanceiros={registrosFinanceiros}
+                onAtualizarCompeticoes={(novas) => setCompeticoes(novas)}
+                onAtualizarRegistro={(novoReg) =>
+                  setRegistrosFinanceiros((prev) => ({
+                    ...prev,
+                    [novoReg.atletaId]: novoReg,
+                  }))
+                }
+                onExibirToast={exibirToast}
+                onAbrirAlterarSenha={() => setIsAlterarSenhaFinanceiroOpen(true)}
+                onBloquearFinanceiro={() => {
+                  setFinanceiroDesbloqueado(false);
+                  setIsAlterarSenhaFinanceiroOpen(false);
+                }}
+              />
+            ) : (
+              <FinanceiroBloqueioTela
+                hashConfigurado={hashSenhaFinanceiro}
+                onDesbloquear={() => setFinanceiroDesbloqueado(true)}
+              />
+            ))}
         </div>
 
         {/* ABA: GESTÃO DE ATLETAS (LISTA DE ATLETAS + CADASTRAR NOVO ATLETA / LOTE) */}
@@ -2342,6 +2404,27 @@ export default function App() {
         onProximo={handleProximoPassoTour}
         onPular={handlePularTour}
         onTerminar={handleTerminarTour}
+      />
+
+      {/* Modal Alterar Senha Exclusiva do Financeiro */}
+      <FinanceiroAlterarSenhaModal
+        isOpen={isAlterarSenhaFinanceiroOpen}
+        hashConfigurado={hashSenhaFinanceiro}
+        onClose={() => setIsAlterarSenhaFinanceiroOpen(false)}
+        onSenhaAlterada={(novoHash) => setHashSenhaFinanceiro(novoHash)}
+        onExibirToast={exibirToast}
+      />
+
+      {/* Modal Reset de Senha do Financeiro (Somente ADM Principal) */}
+      <FinanceiroResetAdmModal
+        isOpen={isResetAdmFinanceiroOpen}
+        onClose={() => setIsResetAdmFinanceiroOpen(false)}
+        onSenhaResetada={(hashPadrao) => {
+          setHashSenhaFinanceiro(hashPadrao);
+          setFinanceiroDesbloqueado(false);
+          setIsAlterarSenhaFinanceiroOpen(false);
+        }}
+        onExibirToast={exibirToast}
       />
     </div>
   );

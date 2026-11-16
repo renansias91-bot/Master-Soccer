@@ -3,6 +3,7 @@ import { X, Calendar, Clock, MapPin, Shield, CheckCircle2 } from 'lucide-react';
 import { JogoAgenda, ItemCompeticaoTaxa } from '../types';
 import { formatarDataExibicao } from '../utils/dateUtils';
 import { normalizarNomeCompeticao } from '../services/storage';
+import { SeletorHorarioModal } from './SeletorHorarioModal';
 
 interface JogoModalProps {
   isOpen: boolean;
@@ -19,12 +20,6 @@ const aplicarMascaraData = (valor: string): string => {
   if (digitos.length <= 2) return digitos;
   if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
   return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`;
-};
-
-const aplicarMascaraHora = (valor: string): string => {
-  const digitos = valor.replace(/\D/g, '').slice(0, 4);
-  if (digitos.length <= 2) return digitos;
-  return `${digitos.slice(0, 2)}:${digitos.slice(2)}`;
 };
 
 export const JogoModal: React.FC<JogoModalProps> = ({
@@ -44,6 +39,7 @@ export const JogoModal: React.FC<JogoModalProps> = ({
   const [placar, setPlacar] = useState('');
   const [realizado, setRealizado] = useState(false);
   const [erro, setErro] = useState('');
+  const [seletorHoraAberto, setSeletorHoraAberto] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -69,6 +65,7 @@ export const JogoModal: React.FC<JogoModalProps> = ({
       setRealizado(false);
     }
     setErro('');
+    setSeletorHoraAberto(false);
   }, [isOpen, jogoEditando]);
 
   if (!isOpen) return null;
@@ -229,18 +226,22 @@ export const JogoModal: React.FC<JogoModalProps> = ({
                 Hora *
               </label>
               <div className="relative">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={5}
-                  value={hora}
-                  onChange={(e) => setHora(aplicarMascaraHora(e.target.value))}
-                  placeholder="HH:MM"
-                  className="w-full h-10 pl-3.5 pr-10 py-2 text-sm font-mono bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <button
                   type="button"
-                  onClick={() => setHora('')}
+                  onClick={() => setSeletorHoraAberto(true)}
+                  className="w-full h-10 pl-9 pr-10 py-2 text-left text-sm font-medium bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer flex items-center"
+                >
+                  <span className={hora ? 'text-slate-900 dark:text-white' : 'text-slate-400'}>
+                    {hora || 'HH:MM'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setHora('');
+                  }}
                   title="Limpar hora"
                   aria-label="Limpar hora"
                   className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md transition cursor-pointer ${
@@ -453,6 +454,17 @@ export const JogoModal: React.FC<JogoModalProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Pop-up Selecionar Horário (estilo Relógio / Alarme do Android) */}
+      <SeletorHorarioModal
+        isOpen={seletorHoraAberto}
+        valorInicial={hora}
+        onClose={() => setSeletorHoraAberto(false)}
+        onConfirm={(horaFormatada) => {
+          setHora(horaFormatada);
+          setSeletorHoraAberto(false);
+        }}
+      />
     </div>
   );
 };

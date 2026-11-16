@@ -18,10 +18,11 @@ import {
   getDocFromServer,
 } from 'firebase/firestore';
 
-import { getAuth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { Atleta, AvaliacaoJogo, ItemCompeticaoTaxa, RegistroFinanceiroAtleta, JogoAgenda, TesteFisicoAtleta, CandidatoPeneira, PosicaoPeneira } from '../types';
 import { normalizarCompeticao, normalizarRegistroFinanceiro } from './storage';
+import { isAdmPrincipalEmail } from './financeiroAuth';
 
 export enum OperationType {
   CREATE = 'create',
@@ -986,5 +987,76 @@ export const firebaseService = {
       }
     );
     return unsub;
+  },
+
+  // ==========================================
+  // ACESSO EXCLUSIVO DO FINANCEIRO (configuracoes/financeiro_acesso)
+  // ==========================================
+  async salvarHashSenhaFinanceiro(hashSenha: string): Promise<void> {
+    const path = 'configuracoes/financeiro_acesso';
+    const payload = cleanFirestoreData({
+      hashSenha,
+      atualizadoEm: new Date().toISOString(),
+    });
+    try {
+      await setDoc(doc(db, 'configuracoes', 'financeiro_acesso'), payload, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  },
+
+  async buscarHashSenhaFinanceiro(): Promise<string | null> {
+    try {
+      const snap = await getDoc(doc(db, 'configuracoes', 'financeiro_acesso'));
+      if (!snap.exists()) return null;
+      const d = snap.data();
+      return typeof d?.hashSenha === 'string' && d.hashSenha.trim() ? d.hashSenha.trim() : null;
+    } catch (error) {
+      console.warn('Aviso ao buscar acesso financeiro no Firestore:', error);
+      return null;
+    }
+  },
+
+  observarHashSenhaFinanceiro(onHash: (hash: string | null) => void): () => void {
+    const unsub = onSnapshot(
+      doc(db, 'configuracoes', 'financeiro_acesso'),
+      (docSnap) => {
+        if (!docSnap.exists()) return;
+        const d = docSnap.data();
+        if (typeof d?.hashSenha === 'string' && d.hashSenha.trim()) {
+          onHash(d.hashSenha.trim());
+        }
+      },
+      (error) => {
+        console.warn('Snapshot configuracoes/financeiro_acesso offline ou pausado:', error.message);
+      }
+    );
+    return unsub;
+  },
+
+  async autenticarAdmGoogle(): Promise<{ ok: boolean; email?: string; erro?: string }> {
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const res = await signInWithPopup(auth, provider);
+      const email = res.user?.email || '';
+      if (!isAdmPrincipalEmail(email)) {
+        return {
+          ok: false,
+          email,
+          erro: 'Esta conta Google não pertence ao ADM principal do clube.',
+        };
+      }
+      return { ok: true, email };
+    } catch (error: any) {
+      const msg = error?.code || error?.message || 'Não foi possível abrir o login Google.';
+      return {
+        ok: false,
+        erro:
+          msg === 'auth/popup-closed-by-user'
+            ? 'Login cancelado.'
+            : 'Não foi possível validar via pop-up Google. Use a confirmação por e-mail do ADM abaixo.',
+      };
+    }
   },
 };
