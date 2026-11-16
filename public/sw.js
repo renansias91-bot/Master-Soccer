@@ -1,5 +1,5 @@
 // Master Soccer Service Worker (Offline Cache)
-const CACHE_NAME = 'mastersoccer-v4';
+const CACHE_NAME = 'mastersoccer-v5';
 
 const STATIC_ASSETS = [
   '/',
@@ -39,11 +39,16 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Do not intercept Firebase / Firestore endpoints (Firestore SDK has its own IndexedDB persistence)
+  // Do not intercept Firebase / Firestore endpoints or Vite dev server module requests
   if (
     url.hostname.includes('googleapis.com') ||
     url.hostname.includes('firebase') ||
-    url.hostname.includes('identitytoolkit')
+    url.hostname.includes('identitytoolkit') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/node_modules/') ||
+    url.pathname.startsWith('/@') ||
+    url.pathname.includes('hot-update') ||
+    url.search.includes('v=')
   ) {
     return;
   }
