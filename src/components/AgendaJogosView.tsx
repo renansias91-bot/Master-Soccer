@@ -21,6 +21,9 @@ import {
   POSICOES_JOGO,
   TAGS_DESTAQUE_DISPONIVEIS,
   TAGS_ATENCAO_DISPONIVEIS,
+  TAGS_DESTAQUE_GOLEIRO,
+  TAGS_ATENCAO_GOLEIRO,
+  isPosicaoGoleiro,
 } from '../types';
 import { IconeQuadrinhoTatico, IconeExtraCampo } from './IconesPilares';
 import {
@@ -439,9 +442,12 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
         setMinutos2Tempo(total - metade);
       }
 
+      const posEscalacao = escalacaoInfo?.posicaoSlot?.toUpperCase().startsWith('GOL')
+        ? 'Goleiro'
+        : escalacaoInfo?.posicaoJogo;
       setPosicaoJogo(
-        avExistente.posicaoJogo ||
-          escalacaoInfo?.posicaoJogo ||
+        posEscalacao ||
+          avExistente.posicaoJogo ||
           (atletaObj ? atletaObj.posicao : 'Meia (10)')
       );
       setGols(avExistente.gols || 0);
@@ -480,7 +486,10 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       setDisciplinar(9.0);
       setMinutos1Tempo(40);
       setMinutos2Tempo(40);
-      setPosicaoJogo(escalacaoInfo?.posicaoJogo || (atletaObj ? atletaObj.posicao : 'Meia (10)'));
+      const posEscalacao = escalacaoInfo?.posicaoSlot?.toUpperCase().startsWith('GOL')
+        ? 'Goleiro'
+        : escalacaoInfo?.posicaoJogo;
+      setPosicaoJogo(posEscalacao || (atletaObj ? atletaObj.posicao : 'Meia (10)'));
       setGols(0);
       setAssistencias(0);
       setCartoesAmarelos(0);
@@ -919,6 +928,21 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               const escaladoInfo = jogoSelecionadoParaAvaliar.escalacao
                 ? jogoSelecionadoParaAvaliar.escalacao[atl.id]
                 : undefined;
+              const ehGoleiroNoJogo = aberto
+                ? isPosicaoGoleiro(
+                    posicaoJogo || escaladoInfo?.posicaoJogo || atl.posicao,
+                    !posicaoJogo ? escaladoInfo?.posicaoSlot : undefined
+                  )
+                : isPosicaoGoleiro(
+                    escaladoInfo?.posicaoJogo || atl.posicao,
+                    escaladoInfo?.posicaoSlot
+                  );
+              const tagsDestaqueAtivas = ehGoleiroNoJogo
+                ? TAGS_DESTAQUE_GOLEIRO
+                : TAGS_DESTAQUE_DISPONIVEIS;
+              const tagsAtencaoAtivas = ehGoleiroNoJogo
+                ? TAGS_ATENCAO_GOLEIRO
+                : TAGS_ATENCAO_DISPONIVEIS;
               const apelidoExibicao = atl.apelido?.trim() || atl.nome.split(' ')[0];
               const funcaoBadge = escaladoInfo
                 ? escaladoInfo.titular
@@ -1376,7 +1400,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                             )}
                           </div>
                           <div className="flex flex-wrap gap-1.5">
-                            {TAGS_DESTAQUE_DISPONIVEIS.map((tag) => {
+                            {tagsDestaqueAtivas.map((tag) => {
                               const ativo = pontosFortes.includes(tag);
                               return (
                                 <button
@@ -1419,7 +1443,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                             )}
                           </div>
                           <div className="flex flex-wrap gap-1.5">
-                            {TAGS_ATENCAO_DISPONIVEIS.map((tag) => {
+                            {tagsAtencaoAtivas.map((tag) => {
                               const ativo = pontosMelhoria.includes(tag);
                               return (
                                 <button

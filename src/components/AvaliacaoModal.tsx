@@ -6,6 +6,9 @@ import {
   NotasPilares,
   TAGS_DESTAQUE_DISPONIVEIS,
   TAGS_ATENCAO_DISPONIVEIS,
+  TAGS_DESTAQUE_GOLEIRO,
+  TAGS_ATENCAO_GOLEIRO,
+  isPosicaoGoleiro,
 } from '../types';
 import { getDataAtualBrasil, formatarDataExibicao } from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
@@ -1009,13 +1012,25 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
           </div>
 
           {/* Pontos em Destaque e Pontos de Atenção (Atalhos rápidos) */}
+          {(() => {
+            const ehGoleiro = isPosicaoGoleiro(
+              avaliacaoEditando?.posicaoJogo || atletaSelecionado?.posicao
+            );
+            const listaDestaque = ehGoleiro
+              ? TAGS_DESTAQUE_GOLEIRO
+              : TAGS_DESTAQUE_DISPONIVEIS;
+            const listaAtencao = ehGoleiro
+              ? TAGS_ATENCAO_GOLEIRO
+              : TAGS_ATENCAO_DISPONIVEIS;
+
+            return (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-blue-700 dark:text-blue-400 mb-1.5">
                 Pontos em Destaque
               </label>
               <div className="flex flex-wrap gap-1.5">
-                {TAGS_DESTAQUE_DISPONIVEIS.map((tag) => {
+                {listaDestaque.map((tag) => {
                   const ativo = pontosFortes.includes(tag);
                   return (
                     <button
@@ -1041,7 +1056,7 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
                 Pontos de Atenção
               </label>
               <div className="flex flex-wrap gap-1.5">
-                {TAGS_ATENCAO_DISPONIVEIS.map((tag) => {
+                {listaAtencao.map((tag) => {
                   const ativo = pontosMelhoria.includes(tag);
                   return (
                     <button
@@ -1062,6 +1077,8 @@ export const AvaliacaoModal: React.FC<AvaliacaoModalProps> = ({
               </div>
             </div>
           </div>
+            );
+          })()}
 
           {/* Nome do Avaliador */}
           <div>

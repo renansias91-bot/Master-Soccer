@@ -134,6 +134,43 @@ export const TAGS_ATENCAO_DISPONIVEIS = [
   'Pisar na área',
 ] as const;
 
+export const TAGS_DESTAQUE_GOLEIRO = [
+  'Saída de gol segura',
+  'Defesa 1x1',
+  'Posicionamento',
+  'Jogo com os pés',
+  'Reposição rápida',
+  'Leitura do jogo / Antecipação',
+  'Defesa de bola aérea / Cruzamento',
+  'Reflexo / Defesa difícil',
+  'Comunicação com a defesa',
+  'Pênalti defendido',
+  'Concentração o jogo todo',
+  'Saída em bola parada',
+] as const;
+
+export const TAGS_ATENCAO_GOLEIRO = [
+  'Saída indecisa',
+  'Reposição lenta',
+  'Posicionamento adiantado / atrasado',
+  'Rebote para o meio',
+  'Falha em bola aérea',
+  'Jogo com os pés inseguro',
+  'Pouca comunicação',
+  'Reposição mal direcionada',
+  'Não segurou bola defensável',
+  'Falha na saída em cruzamento',
+  'Desconcentração',
+  'Não orientou a barreira',
+] as const;
+
+export const isPosicaoGoleiro = (posicao?: string, slot?: string): boolean => {
+  const s = (slot || '').trim().toUpperCase();
+  if (s === 'GOL' || s.startsWith('GOL')) return true;
+  const p = (posicao || '').trim().toUpperCase();
+  return p === 'GOL' || p.includes('GOLEIR');
+};
+
 export type TipoJogo = 'Amistoso' | 'Campeonato' | 'Torneio' | string;
 
 export interface JogoAgenda {
