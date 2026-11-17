@@ -1,22 +1,30 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+  AlertCircle,
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Clock,
   FileCheck2,
   FileText,
   Printer,
+  RefreshCw,
   Search,
+  Share2,
   UserCheck,
   X,
 } from 'lucide-react';
 import { Atleta } from '../types';
-import { formatarDataExibicao } from '../utils/dateUtils';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { CabecalhoParceriaDocumento } from './MasterSoccerEscudo';
+import {
+  compartilharArquivoPdfPronto,
+  gerarPdfBlobDeElemento,
+  preAquecerCssPdf,
+} from '../utils/pdfShareUtils';
 
 interface DocumentosViewProps {
   atletas: Atleta[];
@@ -30,6 +38,36 @@ interface DocumentosViewProps {
 
 type FiltroStatusDocs = 'todas' | 'pendente' | 'ok';
 
+const MESES_PT = [
+  'janeiro',
+  'fevereiro',
+  'março',
+  'abril',
+  'maio',
+  'junho',
+  'julho',
+  'agosto',
+  'setembro',
+  'outubro',
+  'novembro',
+  'dezembro',
+];
+
+function formatarCidadeDataPadrao(): string {
+  const hoje = new Date();
+  const dia = String(hoje.getDate()).padStart(2, '0');
+  const mes = MESES_PT[hoje.getMonth()] || 'janeiro';
+  const ano = hoje.getFullYear();
+  return `Rio de Janeiro, ${dia} de ${mes} de ${ano}.`;
+}
+
+function sanitizarNomeArquivoPreservandoTexto(nome: string): string {
+  return nome
+    .replace(/[/\\:*?"<>|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export const DocumentosView: React.FC<DocumentosViewProps> = ({
   atletas,
   categorias,
@@ -40,16 +78,39 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
   const [statusFiltro, setStatusFiltro] = useState<FiltroStatusDocs>('todas');
   const [atletaExpandidoId, setAtletaExpandidoId] = useState<string | null>(null);
 
-  // Modal de Autorização de Viagem
-  const [atletaAutorizacao, setAtletaAutorizacao] = useState<Atleta | null>(null);
-  const [modoModal, setModoModal] = useState<'form' | 'print'>('form');
-  const [destino, setDestino] = useState('');
-  const [dataIda, setDataIda] = useState('');
-  const [dataVolta, setDataVolta] = useState('');
-  const [responsavel, setResponsavel] = useState('');
-  const [cpfResponsavel, setCpfResponsavel] = useState('');
-  const [motivo, setMotivo] = useState('');
+  // Modal de Declaração de Atleta (por atleta)
+  const [atletaDeclaracao, setAtletaDeclaracao] = useState<Atleta | null>(null);
+  const [modoDeclaracao, setModoDeclaracao] = useState<'form' | 'preview'>('form');
+  const [cpfManual, setCpfManual] = useState('');
+  const [evento, setEvento] = useState('');
+  const [dataHora, setDataHora] = useState('');
+  const [localEvento, setLocalEvento] = useState('');
+  const [cidadeData, setCidadeData] = useState('');
   const [erroForm, setErroForm] = useState('');
+
+  // Modal de Autorização de Viagem - Menor de 16 Anos (card fixo no topo, modelo oficial em branco)
+  const [autorizacaoPreviewAberta, setAutorizacaoPreviewAberta] = useState(false);
+
+  // Estado compartilhado de geração/compartilhamento de PDF (igual à Súmula)
+  const [compartilhando, setCompartilhando] = useState(false);
+  const [erroShare, setErroShare] = useState<string | null>(null);
+
+  const docDeclaracaoRef = useRef<HTMLDivElement | null>(null);
+  const docAutorizacaoRef = useRef<HTMLDivElement | null>(null);
+
+  // Pré-aquece o cache CSS quando qualquer prévia de PDF abre
+  useEffect(() => {
+    const algumaPreviaAberta =
+      autorizacaoPreviewAberta || (Boolean(atletaDeclaracao) && modoDeclaracao === 'preview');
+    if (algumaPreviaAberta) {
+      setErroShare(null);
+      setCompartilhando(false);
+      const timer = setTimeout(() => {
+        preAquecerCssPdf();
+      }, 40);
+      return () => clearTimeout(timer);
+    }
+  }, [autorizacaoPreviewAberta, atletaDeclaracao?.id, modoDeclaracao]);
 
   const categoriasLimpas = useMemo(() => {
     const base =
@@ -101,50 +162,103 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
     return atletasBaseFiltrados.filter((a) => !isAtletaDocsOk(a));
   }, [atletasBaseFiltrados, statusFiltro]);
 
-  const handleAbrirAutorizacao = (atleta: Atleta) => {
-    setAtletaAutorizacao(atleta);
-    setModoModal('form');
-    setDestino('');
-    setDataIda('');
-    setDataVolta('');
-    setResponsavel(atleta.nomeResponsavel || '');
-    setCpfResponsavel('');
-    setMotivo('');
-    setErroForm('');
-  };
-
-  const handleFecharModal = () => {
-    setAtletaAutorizacao(null);
-    setErroForm('');
-  };
-
-  const handleGerarEImprimir = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!destino.trim()) {
-      setErroForm('Informe o destino da viagem.');
-      return;
-    }
-    if (!dataIda) {
-      setErroForm('Informe a data de ida.');
-      return;
-    }
-    if (!dataVolta) {
-      setErroForm('Informe a data de volta.');
-      return;
-    }
-    if (!responsavel.trim()) {
-      setErroForm('Informe o nome do responsável que autoriza.');
-      return;
-    }
-
-    setErroForm('');
-    setModoModal('print');
-    setTimeout(() => {
-      window.print();
-    }, 250);
-  };
-
   const nomeExibicaoAtleta = (a: Atleta) => (a.nomeCompleto || a.nome || '').trim();
+
+  const handleAbrirDeclaracao = (atleta: Atleta) => {
+    setAtletaDeclaracao(atleta);
+    setModoDeclaracao('form');
+    setCpfManual((atleta.cpf || '').trim());
+    setEvento('');
+    setDataHora('');
+    setLocalEvento('');
+    setCidadeData(formatarCidadeDataPadrao());
+    setErroForm('');
+    setErroShare(null);
+  };
+
+  const handleFecharDeclaracao = () => {
+    if (compartilhando) return;
+    setAtletaDeclaracao(null);
+    setErroForm('');
+    setErroShare(null);
+  };
+
+  const handleAvancarParaPreviaDeclaracao = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!evento.trim()) {
+      setErroForm('Informe o nome do evento.');
+      return;
+    }
+    if (!dataHora.trim()) {
+      setErroForm('Informe a data e hora do evento.');
+      return;
+    }
+    if (!localEvento.trim()) {
+      setErroForm('Informe o local do evento.');
+      return;
+    }
+    if (!cidadeData.trim()) {
+      setErroForm('Informe a cidade e data da declaração.');
+      return;
+    }
+
+    setErroForm('');
+    setErroShare(null);
+    setModoDeclaracao('preview');
+  };
+
+  const handleCompartilharDocumento = async (tipo: 'declaracao' | 'autorizacao') => {
+    const elemento =
+      tipo === 'declaracao' ? docDeclaracaoRef.current : docAutorizacaoRef.current;
+    if (compartilhando || !elemento) return;
+
+    setErroShare(null);
+    setCompartilhando(true);
+
+    // Garante exibição imediata do overlay de carregamento e botão desativado antes de gerar o PDF
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => setTimeout(resolve, 0));
+    });
+
+    try {
+      let nomeArquivo = 'Autorização de Viagem - Paduano.pdf';
+      let titulo = 'Autorização de Viagem - Paduano';
+      let texto = 'Autorização para Menor de 16 Anos - Paduano Esporte Clube';
+
+      if (tipo === 'declaracao' && atletaDeclaracao) {
+        const nomeAtletaLimpo = sanitizarNomeArquivoPreservandoTexto(
+          nomeExibicaoAtleta(atletaDeclaracao) || 'Atleta'
+        );
+        nomeArquivo = `Declaração - ${nomeAtletaLimpo}.pdf`;
+        titulo = `Declaração - ${nomeAtletaLimpo}`;
+        texto = `Declaração Escolar - ${nomeAtletaLimpo} (${atletaDeclaracao.categoria || 'Base'})`;
+      }
+
+      const pdfBlob = await gerarPdfBlobDeElemento(elemento, {
+        paginaUnicaA4: true,
+      });
+
+      const arquivoPDF = new File([pdfBlob], nomeArquivo, {
+        type: 'application/pdf',
+        lastModified: Date.now(),
+      });
+
+      setCompartilhando(false);
+
+      const res = await compartilharArquivoPdfPronto(arquivoPDF, titulo, texto);
+      if (!res.sucesso && !res.cancelado) {
+        setErroShare('Não foi possível gerar o PDF. Tente novamente.');
+      }
+    } catch (err) {
+      console.error('Erro ao compartilhar documento PDF:', err);
+      setCompartilhando(false);
+      setErroShare('Não foi possível gerar o PDF. Tente novamente.');
+    }
+  };
+
+  const cpfDeclaracaoEfetivo = atletaDeclaracao
+    ? (atletaDeclaracao.cpf || cpfManual || '').trim()
+    : '';
 
   return (
     <div className="space-y-5 animate-in fade-in duration-300">
@@ -159,11 +273,33 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               Documentos dos Atletas
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-              Controle rápido de Atestado Médico, RG Autenticada e Autorização de Viagem
+              Controle rápido de Atestado Médico, RG Autenticada, Declaração de Atleta e Autorização de Viagem
             </p>
           </div>
         </div>
       </div>
+
+      {/* Card FIXO no topo: AUTORIZAÇÃO DE VIAGEM - MENOR DE 16 ANOS (modelo oficial em branco) */}
+      <button
+        type="button"
+        onClick={() => setAutorizacaoPreviewAberta(true)}
+        className="w-full text-left bg-white dark:bg-slate-900 hover:bg-blue-50/70 dark:hover:bg-blue-950/30 rounded-2xl border-2 border-blue-200 dark:border-blue-800/80 p-4 sm:p-5 shadow-xs transition-all cursor-pointer active:scale-[0.995] flex items-center justify-between gap-3 group"
+      >
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="p-3 rounded-xl bg-blue-600 text-white shadow-xs shrink-0">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+              AUTORIZAÇÃO DE VIAGEM - MENOR DE 16 ANOS
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+              Modelo oficial em branco do Paduano · Toque para visualizar, compartilhar ou imprimir
+            </p>
+          </div>
+        </div>
+        <ChevronRight className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+      </button>
 
       {/* 1. Filtro por Categoria (botões grandes fáceis de tocar no celular) */}
       <div className="flex flex-wrap items-center gap-2">
@@ -342,18 +478,18 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Ações à direita: + Autorização de Viagem + Seta expandir */}
+                  {/* Ações à direita: DECLARAÇÃO DE ATLETA + Seta expandir */}
                   <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleAbrirAutorizacao(atleta);
+                        handleAbrirDeclaracao(atleta);
                       }}
                       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 transition-all cursor-pointer active:scale-98"
                     >
                       <FileText className="w-3.5 h-3.5" />
-                      <span>+ Autorização de Viagem</span>
+                      <span>DECLARAÇÃO DE ATLETA</span>
                     </button>
 
                     <div className="p-1.5 rounded-lg text-slate-400 dark:text-slate-500">
@@ -366,7 +502,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                   </div>
                 </div>
 
-                {/* Conteúdo Expandido: SOMENTE 2 documentos, sem upload */}
+                {/* Conteúdo Expandido: Atestado Médico e RG Autenticada */}
                 {expandido && (
                   <div className="px-4 pb-4 pt-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30 space-y-2.5 animate-in fade-in duration-150">
                     {/* 1. Atestado Médico */}
@@ -454,9 +590,11 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
         </div>
       )}
 
-      {/* Modal de Formulário de Autorização de Viagem */}
-      {atletaAutorizacao &&
-        modoModal === 'form' &&
+      {/* =================================================================== */}
+      {/* MODAL 1A: FORMULÁRIO DE DECLARAÇÃO DE ATLETA                        */}
+      {/* =================================================================== */}
+      {atletaDeclaracao &&
+        modoDeclaracao === 'form' &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/65 backdrop-blur-xs animate-in fade-in duration-150 no-print">
             <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
@@ -465,12 +603,12 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                 <div className="flex items-center gap-2.5">
                   <FileText className="w-5 h-5 text-blue-600" />
                   <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                    Autorização de Viagem
+                    DECLARAÇÃO DE ATLETA
                   </h3>
                 </div>
                 <button
                   type="button"
-                  onClick={handleFecharModal}
+                  onClick={handleFecharDeclaracao}
                   className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition cursor-pointer"
                   aria-label="Fechar"
                 >
@@ -479,11 +617,11 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
               </div>
 
               <form
-                onSubmit={handleGerarEImprimir}
+                onSubmit={handleAvancarParaPreviaDeclaracao}
                 className="p-5 space-y-4 overflow-y-auto"
               >
                 {/* Aviso caso esteja PENDENTE nos documentos */}
-                {!isAtletaDocsOk(atletaAutorizacao) && (
+                {!isAtletaDocsOk(atletaDeclaracao) && (
                   <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 flex items-start gap-2.5">
                     <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                     <div>
@@ -493,8 +631,8 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                       <div className="text-xs font-medium text-amber-800 dark:text-amber-300 mt-0.5">
                         Pendência em:{' '}
                         {[
-                          !atletaAutorizacao.docAtestadoOk ? 'Atestado Médico' : null,
-                          !atletaAutorizacao.docRgAutenticadaOk ? 'RG Autenticada' : null,
+                          !atletaDeclaracao.docAtestadoOk ? 'Atestado Médico' : null,
+                          !atletaDeclaracao.docRgAutenticadaOk ? 'RG Autenticada' : null,
                         ]
                           .filter(Boolean)
                           .join(' e ')}
@@ -504,102 +642,100 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                   </div>
                 )}
 
-                {/* Atleta (preenchido automático) */}
+                {/* Atleta (Nome, CPF e Categoria puxados automático do cadastro) */}
                 <div>
                   <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                    Atleta
+                    Dados do Atleta (Puxado Automático)
                   </label>
-                  <div className="w-full px-3.5 py-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <UserCheck className="w-4 h-4 text-blue-600 shrink-0" />
-                      <span className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
-                        {nomeExibicaoAtleta(atletaAutorizacao)}
+                  <div className="w-full px-3.5 py-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <UserCheck className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                          {nomeExibicaoAtleta(atletaDeclaracao)}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 shrink-0">
+                        {atletaDeclaracao.categoria || 'Sem categoria'}
                       </span>
                     </div>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 shrink-0">
-                      {atletaAutorizacao.categoria || 'Sem categoria'}
-                    </span>
+                    <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 pl-6">
+                      CPF:{' '}
+                      <span className="font-extrabold text-slate-900 dark:text-white">
+                        {atletaDeclaracao.cpf?.trim() || 'Não cadastrado'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Destino da Viagem */}
-                <div>
-                  <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                    Destino da Viagem *
-                  </label>
-                  <input
-                    type="text"
-                    value={destino}
-                    onChange={(e) => setDestino(e.target.value)}
-                    placeholder="Ex: Saquarema - RJ"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Data de Ida e Data de Volta */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Se o atleta ainda não tiver CPF salvo no cadastro, permite informar aqui opcionalmente */}
+                {!atletaDeclaracao.cpf?.trim() && (
                   <div>
                     <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                      Data de Ida *
+                      CPF do Atleta (opcional — não cadastrado na ficha)
                     </label>
                     <input
-                      type="date"
-                      value={dataIda}
-                      onChange={(e) => setDataIda(e.target.value)}
+                      type="text"
+                      value={cpfManual}
+                      onChange={(e) => setCpfManual(e.target.value)}
+                      placeholder="Ex: 000.000.000-00"
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                      Data de Volta / Até *
-                    </label>
-                    <input
-                      type="date"
-                      value={dataVolta}
-                      onChange={(e) => setDataVolta(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
+                )}
 
-                {/* Responsável / Quem autoriza */}
+                {/* Evento */}
                 <div>
                   <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                    Responsável / Quem autoriza *
+                    Evento *
                   </label>
                   <input
                     type="text"
-                    value={responsavel}
-                    onChange={(e) => setResponsavel(e.target.value)}
-                    placeholder="Nome completo do pai, mãe ou responsável"
+                    value={evento}
+                    onChange={(e) => setEvento(e.target.value)}
+                    placeholder="Ex: COPA VAR FIFA"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
-                {/* CPF do Responsável (opcional) */}
+                {/* Data e hora */}
                 <div>
                   <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                    CPF do Responsável (opcional)
+                    Data e hora *
                   </label>
                   <input
                     type="text"
-                    value={cpfResponsavel}
-                    onChange={(e) => setCpfResponsavel(e.target.value)}
-                    placeholder="Ex: 000.000.000-00 (se não preencher, fica em branco)"
+                    value={dataHora}
+                    onChange={(e) => setDataHora(e.target.value)}
+                    placeholder="Ex: 11/09/2026 às 9h"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
-                {/* Motivo / Competição */}
+                {/* Local */}
                 <div>
                   <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
-                    Motivo / Competição
+                    Local *
                   </label>
                   <input
                     type="text"
-                    value={motivo}
-                    onChange={(e) => setMotivo(e.target.value)}
-                    placeholder="Ex: Campeonato, Amistoso"
+                    value={localEvento}
+                    onChange={(e) => setLocalEvento(e.target.value)}
+                    placeholder="Ex: Granja Comary em Teresópolis"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Cidade e data da declaração */}
+                <div>
+                  <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">
+                    Cidade e data da declaração *
+                  </label>
+                  <input
+                    type="text"
+                    value={cidadeData}
+                    onChange={(e) => setCidadeData(e.target.value)}
+                    placeholder="Ex: Rio de Janeiro, 09 de setembro de 2026."
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -613,7 +749,7 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                 <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <button
                     type="button"
-                    onClick={handleFecharModal}
+                    onClick={handleFecharDeclaracao}
                     className="px-4 py-2.5 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                   >
                     Cancelar
@@ -623,8 +759,8 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                     style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-extrabold hover:bg-blue-700 transition shadow-sm cursor-pointer active:scale-98"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span>Gerar e Imprimir</span>
+                    <FileText className="w-4 h-4" />
+                    <span>Visualizar Declaração</span>
                   </button>
                 </div>
               </form>
@@ -633,36 +769,66 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
           document.body
         )}
 
-      {/* Visualização e Impressão da Autorização de Viagem */}
-      {atletaAutorizacao &&
-        modoModal === 'print' &&
+      {/* =================================================================== */}
+      {/* MODAL 1B: PRÉVIA / PDF / IMPRESSÃO DA DECLARAÇÃO ESCOLAR            */}
+      {/* =================================================================== */}
+      {atletaDeclaracao &&
+        modoDeclaracao === 'preview' &&
         createPortal(
-          <div className="print-modal-root fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/70 backdrop-blur-xs animate-in fade-in duration-150">
-            <div className="print-modal-card relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[94vh]">
-              {/* Barra de ações (oculta na impressão) */}
-              <div className="no-print flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3.5 border-b border-slate-200 bg-slate-50 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setModoModal('form')}
-                  className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 transition cursor-pointer"
-                >
-                  ← Editar Dados
-                </button>
+          <div className="print-modal-root fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/65 backdrop-blur-xs animate-in fade-in duration-150">
+            {/* Overlay bloqueador em tela cheia enquanto gera o PDF */}
+            {compartilhando && (
+              <div
+                className="no-print fixed inset-0 z-[80] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+                role="status"
+                aria-live="assertive"
+              >
+                <div className="w-full max-w-xs bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 text-center space-y-4">
+                  <div className="mx-auto w-14 h-14 rounded-full border-4 border-emerald-100 border-t-emerald-600 animate-spin" />
+                  <div className="space-y-1">
+                    <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                      Gerando... Aguarde um instante
+                    </p>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                      Preparando PDF em 1 folha A4 para compartilhar
+                    </p>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                    <div className="h-full w-2/3 rounded-full bg-emerald-600 animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            )}
 
-                <div className="flex items-center gap-2">
+            <div className="print-modal-card relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[94vh]">
+              {/* Barra Superior (oculta na impressão) */}
+              <div className="no-print flex items-center justify-between gap-2.5 px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <FileText className="w-5 h-5 text-blue-600 shrink-0" />
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate">
+                      Declaração de Atleta — Prévia
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
+                      {nomeExibicaoAtleta(atletaDeclaracao)} · {atletaDeclaracao.categoria}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => window.print()}
-                    style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold hover:bg-blue-700 transition shadow-xs cursor-pointer"
+                    disabled={compartilhando}
+                    onClick={() => setModoDeclaracao('form')}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer disabled:opacity-40"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span>Imprimir / Salvar PDF</span>
+                    ← Editar
                   </button>
                   <button
                     type="button"
-                    onClick={handleFecharModal}
-                    className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-200/70 transition cursor-pointer"
+                    disabled={compartilhando}
+                    onClick={handleFecharDeclaracao}
+                    className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Fechar"
                   >
                     <X className="w-5 h-5" />
@@ -670,123 +836,382 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                 </div>
               </div>
 
-              {/* Folha Imprimível */}
-              <div className="print-modal-scroll overflow-y-auto p-6 sm:p-10 bg-white text-slate-900">
-                <div className="print-page max-w-2xl mx-auto space-y-7">
-                  {/* Cabeçalho Oficial com Parceria */}
-                  <CabecalhoParceriaDocumento
-                    logoSize={52}
-                    tituloDocumento="Autorização de Viagem"
-                    subtituloDocumento="Master Soccer RJ · Departamento de Futebol de Base"
-                    infoDireita={
-                      <div className="text-right">
-                        <div className="text-[11px] font-black uppercase tracking-widest text-slate-500">
-                          Documento Oficial
-                        </div>
-                        <div className="text-xs font-bold text-slate-700">
-                          Emissão: {new Date().toLocaleDateString('pt-BR')}
-                        </div>
-                      </div>
-                    }
-                  />
+              {/* Documento Imprimível e Compartilhável */}
+              <div className="print-modal-scroll overflow-y-auto flex-1 bg-white">
+                <div
+                  ref={docDeclaracaoRef}
+                  id="declaracao-escolar-doc"
+                  style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
+                  className="p-6 sm:p-10 bg-white text-slate-900"
+                >
+                  <div className="print-page max-w-2xl mx-auto space-y-8">
+                    {/* Cabeçalho Oficial com as 2 Logos (Master Soccer + PEC) */}
+                    <CabecalhoParceriaDocumento logoSize={48} />
 
-                  {/* Quadro Resumo */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-slate-300 bg-slate-50 text-sm">
-                    <div>
-                      <span className="text-[11px] font-bold uppercase text-slate-500 block">
-                        Atleta
-                      </span>
-                      <span className="font-extrabold text-slate-900">
-                        {nomeExibicaoAtleta(atletaAutorizacao)}
-                      </span>
+                    {/* Título Oficial */}
+                    <div className="pt-4 text-center">
+                      <h1
+                        className="text-lg sm:text-xl font-black uppercase underline tracking-wide"
+                        style={{ color: '#020617' }}
+                      >
+                        DECLARAÇÃO ESCOLAR
+                      </h1>
                     </div>
-                    <div>
-                      <span className="text-[11px] font-bold uppercase text-slate-500 block">
-                        Categoria
-                      </span>
-                      <span className="font-extrabold text-slate-900">
-                        {atletaAutorizacao.categoria || 'Sem categoria'}
-                      </span>
+
+                    {/* Texto Oficial da Declaração Escolar do Paduano */}
+                    <div
+                      className="text-[15px] sm:text-[17px] leading-[1.85] text-justify font-normal"
+                      style={{ color: '#0f172a' }}
+                    >
+                      O{' '}
+                      <strong className="font-black" style={{ color: '#1e3a8a' }}>
+                        PADUANO ESPORTE CLUBE
+                      </strong>
+                      , devidamente inscrito no CNPJ sob o nº 29.244.662/0001-99 e
+                      representado pelo Presidente Márcio Barros, declara para fins escolares, que
+                      o atleta{' '}
+                      <strong className="font-black uppercase">
+                        {nomeExibicaoAtleta(atletaDeclaracao)}
+                      </strong>
+                      , CPF:{' '}
+                      <strong className="font-bold">
+                        {cpfDeclaracaoEfetivo || '___________________'}
+                      </strong>
+                      , da categoria{' '}
+                      <span>{atletaDeclaracao.categoria || '___'}</span>, está escalado para
+                      participar da <strong className="font-black">{evento.trim()}</strong>, que
+                      será realizada no dia <span>{dataHora.trim()}</span> na{' '}
+                      <span>{localEvento.trim()}</span>.
                     </div>
-                    <div>
-                      <span className="text-[11px] font-bold uppercase text-slate-500 block">
-                        Destino da Viagem
-                      </span>
-                      <span className="font-extrabold text-slate-900">{destino.trim()}</span>
+
+                    {/* Cidade e Data da Declaração */}
+                    <div
+                      className="pt-4 text-center sm:text-right text-[15px] sm:text-base font-medium"
+                      style={{ color: '#0f172a' }}
+                    >
+                      {cidadeData.trim()}
                     </div>
-                    <div>
-                      <span className="text-[11px] font-bold uppercase text-slate-500 block">
-                        Período
-                      </span>
-                      <span className="font-extrabold text-slate-900">
-                        {formatarDataExibicao(dataIda)} a {formatarDataExibicao(dataVolta)}
-                      </span>
-                    </div>
-                    {motivo.trim() && (
-                      <div className="sm:col-span-2">
-                        <span className="text-[11px] font-bold uppercase text-slate-500 block">
-                          Motivo / Competição
+
+                    {/* Linha de Assinatura e Paduano Esporte Clube */}
+                    <div className="pt-14 pb-4 text-center print-break-inside-avoid">
+                      <div
+                        className="w-72 max-w-full mx-auto pt-2"
+                        style={{ borderTop: '1px solid #0f172a' }}
+                      >
+                        <span
+                          className="text-sm sm:text-base font-bold"
+                          style={{ color: '#0f172a' }}
+                        >
+                          Paduano Esporte Clube
                         </span>
-                        <span className="font-extrabold text-slate-900">{motivo.trim()}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Texto de Autorização */}
-                  <div className="py-3 text-base sm:text-lg leading-relaxed text-slate-900 font-medium text-justify">
-                    Eu autorizo o atleta{' '}
-                    <strong className="font-black">
-                      {nomeExibicaoAtleta(atletaAutorizacao)}
-                    </strong>{' '}
-                    a viajar para <strong className="font-black">{destino.trim()}</strong> no
-                    período de{' '}
-                    <strong className="font-black">{formatarDataExibicao(dataIda)}</strong> a{' '}
-                    <strong className="font-black">{formatarDataExibicao(dataVolta)}</strong>
-                    {motivo.trim() ? (
-                      <>
-                        , para participação em{' '}
-                        <strong className="font-black">{motivo.trim()}</strong>
-                      </>
-                    ) : null}
-                    .
-                  </div>
-
-                  {/* Área em branco para assinatura à caneta no papel (sem assinatura digital no celular) */}
-                  <div className="pt-8 mt-6 border-t border-slate-300 space-y-6 text-sm text-slate-900 print-break-inside-avoid">
-                    <div className="space-y-2">
-                      <div>
-                        <span className="font-bold">Nome do Responsável:</span>{' '}
-                        <span className="font-extrabold">{responsavel.trim()}</span>
-                      </div>
-
-                      <div>
-                        <span className="font-bold">CPF do Responsável:</span>{' '}
-                        {cpfResponsavel.trim() ? (
-                          <span className="font-extrabold">{cpfResponsavel.trim()}</span>
-                        ) : (
-                          <span className="inline-block w-56 border-b border-slate-800 align-bottom h-4" />
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="pt-8">
-                      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
-                        <div className="flex-1">
-                          <div className="border-b border-slate-900 h-8 w-full" />
-                          <div className="text-xs font-bold text-slate-700 mt-1.5">
-                            Assinatura do Responsável
-                          </div>
-                        </div>
-
-                        <div className="w-52 shrink-0">
-                          <div className="text-sm font-bold text-slate-900">
-                            Data: ____ / ____ / ________
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Aviso de Erro ao Gerar / Compartilhar */}
+              {erroShare && (
+                <div className="no-print px-4 py-2.5 bg-red-50 dark:bg-red-950/60 border-t border-red-200 dark:border-red-800 flex items-center justify-between gap-2 text-xs text-red-900 dark:text-red-200 shrink-0">
+                  <div className="flex items-center gap-2 font-bold">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>{erroShare}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setErroShare(null)}
+                    className="p-1 text-red-700 hover:text-red-950 dark:text-red-300 cursor-pointer"
+                    aria-label="Fechar aviso"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Rodapé com SOMENTE 3 botões, igual à Súmula: [ Fechar ] [ Compartilhar ] [ Imprimir Agora ] */}
+              <div className="no-print p-3.5 sm:p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5 bg-slate-50 dark:bg-slate-800/60 flex-wrap shrink-0">
+                <button
+                  type="button"
+                  disabled={compartilhando}
+                  onClick={handleFecharDeclaracao}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Fechar
+                </button>
+
+                <button
+                  type="button"
+                  disabled={compartilhando}
+                  onClick={() => handleCompartilharDocumento('declaracao')}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black text-white hover:opacity-95 active:scale-95 shadow-md flex items-center gap-2 transition disabled:cursor-not-allowed"
+                  style={
+                    compartilhando
+                      ? { backgroundColor: '#94a3b8', color: '#ffffff' }
+                      : { backgroundColor: '#059669', color: '#ffffff', cursor: 'pointer' }
+                  }
+                >
+                  {compartilhando ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <span>Gerando PDF... Aguarde</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-4 h-4 text-white" />
+                      <span>Compartilhar</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={compartilhando}
+                  onClick={() => window.print()}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black text-white hover:opacity-95 active:scale-95 shadow-md flex items-center gap-2 cursor-pointer transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Imprimir Agora</span>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* =================================================================== */}
+      {/* MODAL 2: PRÉVIA / PDF / IMPRESSÃO DA AUTORIZAÇÃO DE VIAGEM EM BRANCO*/}
+      {/* =================================================================== */}
+      {autorizacaoPreviewAberta &&
+        createPortal(
+          <div className="print-modal-root fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/65 backdrop-blur-xs animate-in fade-in duration-150">
+            {/* Overlay bloqueador em tela cheia enquanto gera o PDF */}
+            {compartilhando && (
+              <div
+                className="no-print fixed inset-0 z-[80] bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4"
+                role="status"
+                aria-live="assertive"
+              >
+                <div className="w-full max-w-xs bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 text-center space-y-4">
+                  <div className="mx-auto w-14 h-14 rounded-full border-4 border-emerald-100 border-t-emerald-600 animate-spin" />
+                  <div className="space-y-1">
+                    <p className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                      Gerando... Aguarde um instante
+                    </p>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                      Preparando PDF em 1 folha A4 para compartilhar
+                    </p>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                    <div className="h-full w-2/3 rounded-full bg-emerald-600 animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="print-modal-card relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[94vh]">
+              {/* Barra Superior (oculta na impressão) */}
+              <div className="no-print flex items-center justify-between gap-2.5 px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <FileText className="w-5 h-5 text-blue-600 shrink-0" />
+                  <div className="min-w-0">
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate">
+                      Autorização de Viagem — Menor de 16 Anos
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
+                      Modelo oficial em branco (Paduano Esporte Clube)
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={compartilhando}
+                  onClick={() => {
+                    if (!compartilhando) {
+                      setAutorizacaoPreviewAberta(false);
+                      setErroShare(null);
+                    }
+                  }}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  aria-label="Fechar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Documento Imprimível e Compartilhável */}
+              <div className="print-modal-scroll overflow-y-auto flex-1 bg-white">
+                <div
+                  ref={docAutorizacaoRef}
+                  id="autorizacao-viagem-doc"
+                  style={{ backgroundColor: '#ffffff', color: '#0f172a' }}
+                  className="p-5 sm:p-8 bg-white text-slate-900"
+                >
+                  <div className="print-page max-w-2xl mx-auto space-y-4">
+                    {/* Cabeçalho Oficial com as 2 Logos (Master Soccer + PEC) */}
+                    <CabecalhoParceriaDocumento logoSize={44} compacto />
+
+                    {/* Título Oficial do Paduano */}
+                    <div className="text-center space-y-1.5 pt-1">
+                      <div
+                        className="text-sm sm:text-base font-black uppercase underline tracking-wide"
+                        style={{ color: '#1e3a8a' }}
+                      >
+                        PADUANO ESPORTE CLUBE
+                      </div>
+                      <h1
+                        className="text-sm sm:text-base font-black uppercase underline tracking-wide"
+                        style={{ color: '#020617' }}
+                      >
+                        AUTORIZAÇÃO PARA MENOR DE 16 ANOS
+                      </h1>
+                    </div>
+
+                    {/* Corpo Completo Igual ao Modelo Oficial em Branco */}
+                    <div
+                      className="space-y-3.5 text-[12.5px] sm:text-[13.5px] leading-[1.68] text-justify font-normal"
+                      style={{ color: '#0f172a' }}
+                    >
+                      <p>
+                        Eu, _______________________________________, _____________________ (estado
+                        civil), _____________________ (profissão), inscrito(a) no CPF sob o nº
+                        _______________________ e no RG nº ___________________, residente e
+                        domiciliado(a) à ________________________________________________________,
+                        telefone _______________________, Responsável,
+                      </p>
+
+                      <p>
+                        <strong className="font-black">AUTORIZO</strong> o menor,
+                        _______________________________________, inscrito(a) no CPF sob o nº
+                        _______________________, nascido(a) em ____/____/________,{' '}
+                        <strong className="font-black">a viajar para o município de</strong>{' '}
+                        _________________________ - <strong className="font-black">Estado</strong>{' '}
+                        _____, assim como para o posterior retorno, acompanhado(a) do(a) Sr(a){' '}
+                        ________________________________________, _____________________
+                        (nacionalidade), __________________ (estado civil), __________________
+                        (profissão), inscrito(a) no CPF sob o nº _______________________ e no RG nº
+                        ___________________, residente e domiciliado(a) à
+                        _________________________________________________________________, telefone:
+                        ______________________, conforme o artigo 83, § 1º, b, 2, da Lei nº
+                        8.069/1990 - Estatuto da Criança e do Adolescente - ECA, sendo esta
+                        autorização válida por 12 (doze) meses.
+                      </p>
+
+                      <p>
+                        <strong className="font-black">Autorizo</strong> ainda{' '}
+                        <strong className="font-black">a cessão do uso da imagem do</strong> menor
+                        informado acima em decorrência das competições as quais este irá participar
+                        no ano de 202____.
+                      </p>
+
+                      <p>
+                        Outrossim declaro sob minha responsabilidade que realizamos todas as
+                        consultas e exames médicos solicitados para participação na prática do
+                        desporto pelo{' '}
+                        <strong className="font-black" style={{ color: '#1e3a8a' }}>
+                          PADUANO ESPORTE CLUBE
+                        </strong>
+                        .
+                      </p>
+                    </div>
+
+                    {/* Data */}
+                    <div
+                      className="pt-2 text-center sm:text-right text-[13px] sm:text-sm font-medium"
+                      style={{ color: '#0f172a' }}
+                    >
+                      Rio de Janeiro, RJ, ______ de _______________________ de 202____.
+                    </div>
+
+                    {/* Espaço para Assinatura */}
+                    <div className="pt-8 space-y-1.5 print-break-inside-avoid">
+                      <div
+                        className="w-full pt-2"
+                        style={{ borderTop: '1px solid #0f172a' }}
+                      >
+                        <div className="pl-4 sm:pl-12 text-[13px] sm:text-sm font-medium space-y-1">
+                          <div>Responsável:</div>
+                          <div>CPF:</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Rodapé Obrigatório em Vermelho */}
+                    <div
+                      className="pt-3 text-center text-[11px] sm:text-xs font-bold"
+                      style={{ color: '#dc2626' }}
+                    >
+                      OBS: Reconhecer Firma dos Responsáveis por AUTENTICIDADE ou assinar pelo
+                      GOV.BR
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Aviso de Erro ao Gerar / Compartilhar */}
+              {erroShare && (
+                <div className="no-print px-4 py-2.5 bg-red-50 dark:bg-red-950/60 border-t border-red-200 dark:border-red-800 flex items-center justify-between gap-2 text-xs text-red-900 dark:text-red-200 shrink-0">
+                  <div className="flex items-center gap-2 font-bold">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>{erroShare}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setErroShare(null)}
+                    className="p-1 text-red-700 hover:text-red-950 dark:text-red-300 cursor-pointer"
+                    aria-label="Fechar aviso"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Rodapé com SOMENTE 3 botões, igual à Súmula: [ Fechar ] [ Compartilhar ] [ Imprimir Agora ] */}
+              <div className="no-print p-3.5 sm:p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5 bg-slate-50 dark:bg-slate-800/60 flex-wrap shrink-0">
+                <button
+                  type="button"
+                  disabled={compartilhando}
+                  onClick={() => setAutorizacaoPreviewAberta(false)}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Fechar
+                </button>
+
+                <button
+                  type="button"
+                  disabled={compartilhando}
+                  onClick={() => handleCompartilharDocumento('autorizacao')}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black text-white hover:opacity-95 active:scale-95 shadow-md flex items-center gap-2 transition disabled:cursor-not-allowed"
+                  style={
+                    compartilhando
+                      ? { backgroundColor: '#94a3b8', color: '#ffffff' }
+                      : { backgroundColor: '#059669', color: '#ffffff', cursor: 'pointer' }
+                  }
+                >
+                  {compartilhando ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <span>Gerando PDF... Aguarde</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-4 h-4 text-white" />
+                      <span>Compartilhar</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={compartilhando}
+                  onClick={() => window.print()}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black text-white hover:opacity-95 active:scale-95 shadow-md flex items-center gap-2 cursor-pointer transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: '#2563eb', color: '#ffffff' }}
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Imprimir Agora</span>
+                </button>
               </div>
             </div>
           </div>,
