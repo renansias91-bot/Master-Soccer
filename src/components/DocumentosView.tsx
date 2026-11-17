@@ -892,18 +892,31 @@ export const DocumentosView: React.FC<DocumentosViewProps> = ({
                       {cidadeData.trim()}
                     </div>
 
-                    {/* Linha de Assinatura e Paduano Esporte Clube */}
-                    <div className="pt-14 pb-4 text-center print-break-inside-avoid">
+                    {/* Assinatura Oficial do Presidente Márcio Barros + Linha + Identificação */}
+                    <div className="pt-8 pb-4 text-center print-break-inside-avoid">
+                      <img
+                        src="/assets/assinatura_marcio_barros.png?v=1"
+                        alt="Assinatura Oficial - Presidente Márcio Barros"
+                        className="mx-auto h-12 sm:h-14 w-auto object-contain select-none mb-1"
+                        loading="eager"
+                        decoding="sync"
+                      />
                       <div
-                        className="w-72 max-w-full mx-auto pt-2"
+                        className="w-72 max-w-full mx-auto pt-2 space-y-0.5"
                         style={{ borderTop: '1px solid #0f172a' }}
                       >
-                        <span
-                          className="text-sm sm:text-base font-bold"
+                        <div
+                          className="text-sm sm:text-base font-bold leading-tight"
                           style={{ color: '#0f172a' }}
                         >
-                          Paduano Esporte Clube
-                        </span>
+                          Márcio Barros
+                        </div>
+                        <div
+                          className="text-xs sm:text-sm font-semibold leading-tight"
+                          style={{ color: '#334155' }}
+                        >
+                          Presidente - Paduano Esporte Clube
+                        </div>
                       </div>
                     </div>
                   </div>
