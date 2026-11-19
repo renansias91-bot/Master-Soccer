@@ -33,6 +33,7 @@ import {
   ordenarJogosAgenda,
 } from '../utils/dateUtils';
 import { tituloNota } from '../utils/avaliacaoUtils';
+import { extrairPlacarNumerico, formatarPlacarLimpo } from '../utils/placarUtils';
 import { obterIniciaisApelido } from '../utils/apelidoUtils';
 import { MasterSoccerEscudo } from './MasterSoccerEscudo';
 
@@ -700,7 +701,7 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
       minutos1Tempo: Number(minutos1Tempo) || 0,
       minutos2Tempo: Number(minutos2Tempo) || 0,
       minutosJogados: totalMinutos,
-      resultado: jogoSelecionadoParaAvaliar.placar || undefined,
+      resultado: formatarPlacarLimpo(jogoSelecionadoParaAvaliar.placar) || undefined,
       titular: escaladoInfo ? escaladoInfo.titular : true,
       posicaoJogo: posicaoJogo || atletaAlvo.posicao || 'Meia (10)',
       gols: Number(gols) || 0,
@@ -834,11 +835,26 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
                 <span className="text-[11px] uppercase tracking-wider text-blue-200 font-extrabold">
                   AVALIAÇÃO DA PARTIDA
                 </span>
-                {jogoSelecionadoParaAvaliar.placar && (
-                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-400 text-slate-900">
-                    Placar: {jogoSelecionadoParaAvaliar.placar}
-                  </span>
-                )}
+                {jogoSelecionadoParaAvaliar.placar && (() => {
+                  const placarInfo = extrairPlacarNumerico(jogoSelecionadoParaAvaliar.placar);
+                  if (!placarInfo) return null;
+                  return (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-400 text-slate-900">
+                      <span>Placar: {placarInfo.textoLimpo}</span>
+                      <span
+                        className={`w-4 h-4 rounded-full inline-flex items-center justify-center text-[10px] font-black ${
+                          placarInfo.resultado === 'V'
+                            ? 'bg-emerald-600 text-white'
+                            : placarInfo.resultado === 'E'
+                            ? 'bg-amber-600 text-white'
+                            : 'bg-red-600 text-white'
+                        }`}
+                      >
+                        {placarInfo.resultado}
+                      </span>
+                    </span>
+                  );
+                })()}
               </div>
               <h2 className="text-lg sm:text-2xl font-black tracking-tight text-white mt-0.5 break-words">
                 Master Soccer vs {adversarioLimpo}
@@ -1514,8 +1530,9 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
     // 1. Jogo Finalizado (Card cinza com placar grande + botão vermelho [Excluir] e [Ver avaliação >])
     if (jogo.realizado) {
       const nomeAdv = jogo.adversario.replace(/^vs\s*/i, '').trim();
-      const placarExibicao = jogo.placar
-        ? `Master ${jogo.placar} ${nomeAdv}`
+      const placarInfo = extrairPlacarNumerico(jogo.placar);
+      const placarExibicao = placarInfo
+        ? `Master ${placarInfo.golsMaster} x ${placarInfo.golsAdversario} ${nomeAdv}`
         : `Master Soccer vs ${nomeAdv}`;
       const dataAmigavel = formatarDataAmigavelJogo(jogo.dataJogo, jogo.hora);
 
@@ -1551,9 +1568,31 @@ export const AgendaJogosView: React.FC<AgendaJogosViewProps> = ({
               </span>
             </div>
 
-            <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
-              {placarExibicao}
-            </h4>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h4 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                {placarExibicao}
+              </h4>
+              {placarInfo && (
+                <span
+                  title={
+                    placarInfo.resultado === 'V'
+                      ? 'Vitória'
+                      : placarInfo.resultado === 'E'
+                      ? 'Empate'
+                      : 'Derrota'
+                  }
+                  className={`w-7 h-7 rounded-full inline-flex items-center justify-center text-xs font-black shadow-xs shrink-0 ${
+                    placarInfo.resultado === 'V'
+                      ? 'bg-emerald-600 text-white'
+                      : placarInfo.resultado === 'E'
+                      ? 'bg-amber-400 text-slate-950'
+                      : 'bg-red-600 text-white'
+                  }`}
+                >
+                  {placarInfo.resultado}
+                </span>
+              )}
+            </div>
 
             <div className="space-y-1.5 text-[15px] text-slate-600 dark:text-slate-300 font-medium">
               <div className="flex items-center gap-1.5 font-mono font-semibold flex-wrap">

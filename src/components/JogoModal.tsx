@@ -3,6 +3,7 @@ import { X, Calendar, Clock, MapPin, Shield, CheckCircle2 } from 'lucide-react';
 import { JogoAgenda, ItemCompeticaoTaxa } from '../types';
 import { formatarDataExibicao } from '../utils/dateUtils';
 import { normalizarNomeCompeticao } from '../services/storage';
+import { calcularResultadoPlacar, extrairPlacarNumerico } from '../utils/placarUtils';
 import { SeletorHorarioModal } from './SeletorHorarioModal';
 
 interface JogoModalProps {
@@ -36,7 +37,8 @@ export const JogoModal: React.FC<JogoModalProps> = ({
   const [categoria, setCategoria] = useState('');
   const [local, setLocal] = useState('');
   const [tipo, setTipo] = useState('');
-  const [placar, setPlacar] = useState('');
+  const [golsMaster, setGolsMaster] = useState('');
+  const [golsAdversario, setGolsAdversario] = useState('');
   const [realizado, setRealizado] = useState(false);
   const [erro, setErro] = useState('');
   const [seletorHoraAberto, setSeletorHoraAberto] = useState(false);
@@ -51,8 +53,11 @@ export const JogoModal: React.FC<JogoModalProps> = ({
       setCategoria(jogoEditando.categoria || '');
       setLocal(jogoEditando.local || '');
       setTipo(jogoEditando.tipo || '');
-      setPlacar(jogoEditando.placar || '');
-      setRealizado(Boolean(jogoEditando.realizado));
+      const jaRealizado = Boolean(jogoEditando.realizado);
+      setRealizado(jaRealizado);
+      const parsedPlacar = jaRealizado ? extrairPlacarNumerico(jogoEditando.placar) : null;
+      setGolsMaster(parsedPlacar ? String(parsedPlacar.golsMaster) : '');
+      setGolsAdversario(parsedPlacar ? String(parsedPlacar.golsAdversario) : '');
     } else {
       // Todos os campos abrem completamente EM BRANCO ao cadastrar novo jogo
       setAdversario('');
@@ -61,7 +66,8 @@ export const JogoModal: React.FC<JogoModalProps> = ({
       setCategoria('');
       setLocal('');
       setTipo('');
-      setPlacar('');
+      setGolsMaster('');
+      setGolsAdversario('');
       setRealizado(false);
     }
     setErro('');
@@ -100,6 +106,21 @@ export const JogoModal: React.FC<JogoModalProps> = ({
       return;
     }
 
+    let placarFinalLimpo: string | undefined = undefined;
+    if (realizado) {
+      if (golsMaster.trim() === '' || golsAdversario.trim() === '') {
+        setErro('Por favor, informe os Gols do Master e os Gols do Adversário.');
+        return;
+      }
+      if (!/^\d+$/.test(golsMaster.trim()) || !/^\d+$/.test(golsAdversario.trim())) {
+        setErro('Os campos de gols aceitam apenas números.');
+        return;
+      }
+      const gm = parseInt(golsMaster.trim(), 10);
+      const ga = parseInt(golsAdversario.trim(), 10);
+      placarFinalLimpo = `${gm} x ${ga}`;
+    }
+
     const adversarioFormatado = adversario.trim().toLowerCase().startsWith('vs')
       ? adversario.trim()
       : `vs ${adversario.trim()}`;
@@ -112,8 +133,8 @@ export const JogoModal: React.FC<JogoModalProps> = ({
       categoria: categoria.trim(),
       local: local.trim(),
       tipo: tipo.trim(),
-      placar: placar.trim() || undefined,
-      realizado: realizado || Boolean(placar.trim()),
+      placar: placarFinalLimpo,
+      realizado: Boolean(realizado),
       criadoEm: jogoEditando?.criadoEm || new Date().toISOString(),
       escalacao: jogoEditando?.escalacao || {},
       formacao: jogoEditando?.formacao,
@@ -122,6 +143,30 @@ export const JogoModal: React.FC<JogoModalProps> = ({
     onSave(novoJogo);
     onClose();
   };
+
+  const limparSomenteNumeros = (valor: string): string => valor.replace(/\D/g, '').slice(0, 2);
+
+  const bloquearTeclasNaoNumericas = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const teclasPermitidas = [
+      'Backspace',
+      'Delete',
+      'Tab',
+      'ArrowLeft',
+      'ArrowRight',
+      'Home',
+      'End',
+      'Enter',
+    ];
+    if (teclasPermitidas.includes(e.key) || e.ctrlKey || e.metaKey) return;
+    if (!/^\d$/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
+
+  const resultadoCalculado =
+    realizado && /^\d+$/.test(golsMaster) && /^\d+$/.test(golsAdversario)
+      ? calcularResultadoPlacar(parseInt(golsMaster, 10), parseInt(golsAdversario, 10))
+      : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
@@ -389,13 +434,24 @@ export const JogoModal: React.FC<JogoModalProps> = ({
             </div>
           </div>
 
-          {/* Status de Realizado & Placar */}
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-2.5">
+          {/* Status de Realizado & Placar (2 campos numéricos separados e obrigatórios) */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 space-y-3">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={realizado}
-                onChange={(e) => setRealizado(e.target.checked)}
+                onChange={(e) => {
+                  const marcado = e.target.checked;
+                  setRealizado(marcado);
+                  if (!marcado) {
+                    setGolsMaster('');
+                    setGolsAdversario('');
+                  } else if (!jogoEditando?.realizado) {
+                    setGolsMaster('');
+                    setGolsAdversario('');
+                  }
+                  setErro('');
+                }}
                 className="w-4 h-4 rounded text-blue-600 accent-blue-600 focus:ring-blue-500"
               />
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
@@ -404,32 +460,96 @@ export const JogoModal: React.FC<JogoModalProps> = ({
             </label>
 
             {realizado && (
-              <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700 space-y-1">
-                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                  Placar Final (Opcional):
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={placar}
-                    onChange={(e) => setPlacar(e.target.value)}
-                    placeholder="Ex: 2 x 1"
-                    className="w-full h-9 pl-3 pr-9 py-1.5 text-xs font-mono font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setPlacar('')}
-                    title="Limpar placar"
-                    aria-label="Limpar placar"
-                    className={`absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-md transition cursor-pointer ${
-                      placar
-                        ? 'text-slate-500 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-700'
-                        : 'text-slate-300 dark:text-slate-600 cursor-default'
-                    }`}
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+              <div className="pt-2.5 border-t border-slate-200/70 dark:border-slate-700 space-y-2.5">
+                <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2.5">
+                  <div>
+                    <label
+                      htmlFor="gols-master-input"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1"
+                    >
+                      Gols do Master *
+                    </label>
+                    <input
+                      id="gols-master-input"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={2}
+                      required
+                      autoComplete="off"
+                      value={golsMaster}
+                      onKeyDown={bloquearTeclasNaoNumericas}
+                      onChange={(e) => {
+                        setGolsMaster(limparSomenteNumeros(e.target.value));
+                        setErro('');
+                      }}
+                      className="w-full h-11 px-3 text-center text-lg font-mono font-black bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="pb-2.5 text-base font-black text-slate-400 select-none">x</div>
+
+                  <div>
+                    <label
+                      htmlFor="gols-adversario-input"
+                      className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1"
+                    >
+                      Gols do Adversário *
+                    </label>
+                    <input
+                      id="gols-adversario-input"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={2}
+                      required
+                      autoComplete="off"
+                      value={golsAdversario}
+                      onKeyDown={bloquearTeclasNaoNumericas}
+                      onChange={(e) => {
+                        setGolsAdversario(limparSomenteNumeros(e.target.value));
+                        setErro('');
+                      }}
+                      className="w-full h-11 px-3 text-center text-lg font-mono font-black bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
+
+                {resultadoCalculado && (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                      Resultado calculado automaticamente:
+                    </span>
+                    <div className="inline-flex items-center gap-2">
+                      <span
+                        className={`w-6 h-6 rounded-full inline-flex items-center justify-center text-xs font-black shadow-2xs ${
+                          resultadoCalculado === 'V'
+                            ? 'bg-emerald-600 text-white'
+                            : resultadoCalculado === 'E'
+                            ? 'bg-amber-400 text-slate-950'
+                            : 'bg-red-600 text-white'
+                        }`}
+                      >
+                        {resultadoCalculado}
+                      </span>
+                      <span
+                        className={`text-xs font-extrabold ${
+                          resultadoCalculado === 'V'
+                            ? 'text-emerald-700 dark:text-emerald-400'
+                            : resultadoCalculado === 'E'
+                            ? 'text-amber-700 dark:text-amber-400'
+                            : 'text-red-700 dark:text-red-400'
+                        }`}
+                      >
+                        {resultadoCalculado === 'V'
+                          ? 'Vitória'
+                          : resultadoCalculado === 'E'
+                          ? 'Empate'
+                          : 'Derrota'}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
